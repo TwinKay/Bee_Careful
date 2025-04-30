@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: becareful
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration:
+    access-token: 3600000 #60*60*0100
+    refresh-token: 86400000 # 60*60*24*1000
+
+client:
+  base-url: ${}
