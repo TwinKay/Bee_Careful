@@ -1,0 +1,50 @@
+{
+  "name": "beecareful",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest",
+    "e2e": "cypress open"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^4.5.2",
+    "@tanstack/react-query": "^5.18.1",
+    "react-hook-form": "^7.50.1",
+    "firebase": "^10.8.0",
+    "@capacitor/core": "^5.6.0",
+    "@capacitor/push-notifications": "^5.1.0",
+    "@capacitor/network": "^5.0.6",
+    "tailwindcss": "^3.4.1",
+    "remixicon": "^4.2.0",
+    "recharts": "^2.12.0",
+    "react-zoom-pan-pinch": "^3.3.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8.26.1",
+    "vite": "^6.3.1",
+    "vite-plugin-pwa": "^0.18.1",
+    "vitest": "^1.2.2",
+    "cypress": "^13.6.4",
+    "postcss": "^8.4.33",
+    "autoprefixer": "^10.4.17",
+    "@capacitor/cli": "^5.6.0",
+    "prettier": "^3.2.5",
+    "prettier-plugin-tailwindcss": "^0.5.11"
+  }
+}
