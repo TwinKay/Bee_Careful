@@ -26,6 +26,13 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 
+/db/master/data/
+/grafana
+src/main/resources/firebase
+
+### docker-compose ###
+.env
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
