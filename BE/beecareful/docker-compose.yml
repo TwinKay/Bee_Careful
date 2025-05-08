@@ -1,5 +1,5 @@
 services:
-  becareful-db:
+  beecareful-db:
     image: mysql:8.0
     restart: always
     ports:
