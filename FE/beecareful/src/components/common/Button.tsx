@@ -5,7 +5,13 @@
 import React from 'react';
 
 // 버튼의 모든 가능한 변형을 정의
-export type ButtonVariantType = 'primary' | 'secondary' | 'outline' | 'text';
+export type ButtonVariantType =
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'neutral'
+  | 'outline'
+  | 'text';
 export type ButtonSizeType = 'sm' | 'md' | 'lg';
 
 export type ButtonPropsType = {
