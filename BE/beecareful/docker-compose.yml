@@ -1,12 +1,32 @@
 services:
-  becareful-db:
+  beecareful-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    image: beecareful-backend:latest
+    container_name: beecareful-backend
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATASOURCE_URL: ${MYSQL_DATASOURCE_URL}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+    depends_on:
+      - beecareful-db
+
+  beecareful-db:
     image: mysql:8.0
     restart: always
     ports:
       - "3306:3306"
+    container_name: beecareful-db
+    env_file:
+      - .env
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       TZ: UTC

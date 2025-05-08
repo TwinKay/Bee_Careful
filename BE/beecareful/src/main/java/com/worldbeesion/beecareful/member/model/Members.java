@@ -1,11 +1,13 @@
 package com.worldbeesion.beecareful.member.model;
 
 import jakarta.persistence.*;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name="members")
+@NoArgsConstructor
 public class Members {
 
     @Id
@@ -27,4 +29,11 @@ public class Members {
 
     @Column(name="deleted_at", nullable = true)
     private LocalDateTime deletedAt;
+
+    public Members(String memberName, String phone, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.memberName = memberName;
+        this.phone = phone;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 }

@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AuthMembersRepository extends JpaRepository<AuthMembers, Long> {
+    boolean existsByLoginId(String loginId);
 }
