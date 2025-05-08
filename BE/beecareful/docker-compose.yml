@@ -12,7 +12,7 @@ services:
     environment:
       MYSQL_DATASOURCE_URL: ${MYSQL_DATASOURCE_URL}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_USER: ${MYSQL_USERNAME}
     depends_on:
       - beecareful-db
 

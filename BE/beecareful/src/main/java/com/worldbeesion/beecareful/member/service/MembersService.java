@@ -37,9 +37,8 @@ public class MembersService {
             }
 
             Members member = new Members(memberName, phone, LocalDateTime.now(), LocalDateTime.now());
-            AuthMembers authMember = new AuthMembers(member, passwordEncoder.encode(password), memberLoginId);
-
             membersRepository.save(member);
+            AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
             authMembersRepository.save(authMember);
         } catch (CommonException e) {
             throw e;

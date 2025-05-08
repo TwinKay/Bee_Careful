@@ -1,6 +1,6 @@
 CREATE TABLE `members`
 (
-    `member_id`   bigint       NOT NULL PRIMARY KEY,
+    `member_id`   bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `member_name` varchar(255) NOT NULL,
     `phone`       varchar(255) NOT NULL,
     `created_at`  timestamp    NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE `members`
 
 CREATE TABLE `auth_members`
 (
-    `auth_member_id`  bigint       NOT NULL PRIMARY KEY,
+    `auth_member_id`  bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `member_id`       bigint       NOT NULL,
     `member_login_id` varchar(100) NOT NULL,
     `password`        varchar(100) NOT NULL
@@ -18,21 +18,21 @@ CREATE TABLE `auth_members`
 
 CREATE TABLE `member_roles`
 (
-    `member_role_id` bigint NOT NULL PRIMARY KEY,
+    `member_role_id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `member_id`      bigint NOT NULL,
     `name`           enum('ADMIN', 'USER', 'GUEST') NULL
 );
 
 CREATE TABLE `apiaries`
 (
-    `apiary_id` bigint       NOT NULL PRIMARY KEY,
+    `apiary_id` bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `member_id` bigint       NOT NULL,
     `name`      varchar(100) NOT NULL
 );
 
 CREATE TABLE `beehives`
 (
-    `beehive_id`         bigint       NOT NULL PRIMARY KEY,
+    `beehive_id`         bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `apiary_id`          bigint       NOT NULL,
     `nickname`           varchar(100) NOT NULL,
     `created_at`         timestamp    NOT NULL,
@@ -45,21 +45,21 @@ CREATE TABLE `beehives`
 
 CREATE TABLE `turrets`
 (
-    `turret_id`  bigint       NOT NULL PRIMARY KEY,
+    `turret_id`  bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `beehive_id` bigint       NOT NULL,
     `code`       varchar(100) NOT NULL
 );
 
 CREATE TABLE `diagnoses`
 (
-    `diagnosis_id` bigint    NOT NULL PRIMARY KEY,
+    `diagnosis_id` bigint    NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `beehive_id`   bigint    NOT NULL,
     `created_at`   timestamp NOT NULL
 );
 
 CREATE TABLE `original_photos`
 (
-    `original_photo_id` bigint NOT NULL PRIMARY KEY,
+    `original_photo_id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `diagnosis_id`      bigint NOT NULL,
     `file_metadata_id`  bigint NOT NULL,
     `status`            enum('UNRECIEVED', 'FAIL', 'SUCCESS', 'ANALYZING', 'WAITING') NULL
@@ -67,7 +67,7 @@ CREATE TABLE `original_photos`
 
 CREATE TABLE `analyzed_photos`
 (
-    `analyzed_photo_id` bigint NOT NULL PRIMARY KEY,
+    `analyzed_photo_id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `original_photo_id` bigint NOT NULL,
     `file_metadata_id`  bigint NOT NULL,
     `diagnosis_id`      bigint NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE `analyzed_photos`
 
 CREATE TABLE `analyzed_photo_diseases`
 (
-    `analyzed_photo_disease_id` bigint NOT NULL PRIMARY KEY,
+    `analyzed_photo_disease_id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `analyzed_photo_id`         bigint NOT NULL,
     `disease_id`                bigint NOT NULL,
     `count`                     bigint NOT NULL
@@ -85,14 +85,14 @@ CREATE TABLE `analyzed_photo_diseases`
 
 CREATE TABLE `diseases`
 (
-    `disease_id` bigint       NOT NULL PRIMARY KEY,
+    `disease_id` bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name`       varchar(200) NOT NULL,
     `stage`      enum('성충', '유충') NOT NULL
 );
 
 CREATE TABLE `file_metadatas`
 (
-    `file_metadata_id`  bigint NOT NULL PRIMARY KEY,
+    `file_metadata_id`  bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `original_filename` varchar(255) NULL,
     `s3_key`            varchar(255) NULL,
     `size`              bigint NULL,
