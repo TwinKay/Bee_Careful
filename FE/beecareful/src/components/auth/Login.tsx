@@ -1,10 +1,8 @@
-'use client';
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
-// import useAuth from '@/hooks/useAuth';
+import { Button } from '@/components/common/Button';
 
 type LoginFormType = {
   username: string;
@@ -13,7 +11,6 @@ type LoginFormType = {
 
 const Login = () => {
   const navigate = useNavigate();
-  // const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,9 +24,8 @@ const Login = () => {
     try {
       setIsLoading(true);
       setError(null);
-      // await login(data.username, data.password);
       /**
-       * @TODO API 연결 후 삭제
+       * @todo API 개발 완료 후 적용
        */
       console.log(data);
       navigate(ROUTES.BEEHIVES);
@@ -50,7 +46,7 @@ const Login = () => {
       <div className="w-full max-w-md px-4">
         <div className="mb-8 flex flex-col items-center">
           <img src="/icons/beecareful-logo.svg" alt="비케어풀 로고" className="mb-4 w-64" />
-          <h1 className="font-ygJalnan text-bc-brown-90 text-5xl font-bold">비케어풀</h1>
+          <h1 className="text-bc-brown-90 font-ygJalnan text-5xl font-bold">비케어풀</h1>
           <p className="text-bc-brown-60 mt-2 text-xl font-semibold">꿀벌 통합 관리 시스템</p>
         </div>
         <div className="w-full">
@@ -61,7 +57,11 @@ const Login = () => {
               <input
                 type="text"
                 placeholder="아이디"
-                className="w-full rounded-2xl p-4 text-lg focus:border-red-500 focus:outline-none"
+                className={`w-full rounded-2xl p-4 text-lg focus:outline-none ${
+                  errors.username
+                    ? 'border-2 border-red-500 focus:border-red-500'
+                    : 'focus:border-amber-500'
+                }`}
                 {...register('username', { required: '아이디를 입력해주세요' })}
               />
               {errors.username && (
@@ -75,7 +75,11 @@ const Login = () => {
               <input
                 type="password"
                 placeholder="비밀번호"
-                className="mt-4 w-full rounded-2xl p-4 text-lg focus:border-red-500 focus:outline-none"
+                className={`mt-4 w-full rounded-2xl p-4 text-lg focus:outline-none ${
+                  errors.password
+                    ? 'border-2 border-red-500 focus:border-red-500'
+                    : 'focus:border-amber-500'
+                }`}
                 {...register('password', { required: '비밀번호를 입력해주세요' })}
               />
               {errors.password && (
@@ -85,21 +89,20 @@ const Login = () => {
               )}
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="bg-bc-brown-90 hover:bg-olive-800 mt-14 w-full rounded-2xl p-4 text-lg text-white transition disabled:opacity-70"
+              variant="primary"
+              size="lg"
+              fullWidth
+              isLoading={isLoading}
+              className="mt-14"
             >
-              {isLoading ? '로그인 중...' : '로그인'}
-            </button>
+              로그인
+            </Button>
 
-            <button
-              type="button"
-              onClick={handleSignUp}
-              className="bg-bc-brown-20 mt-4 w-full rounded-2xl bg-amber-700 p-4 text-lg text-white transition hover:bg-amber-600"
-            >
+            <Button size="lg" variant="secondary" fullWidth onClick={handleSignUp} className="mt-4">
               회원가입
-            </button>
+            </Button>
           </form>
         </div>
       </div>
