@@ -19,10 +19,12 @@
     "@capacitor/network": "^5.0.6",
     "@capacitor/push-notifications": "^5.1.0",
     "@tanstack/react-query": "^5.18.1",
+    "axios": "^1.9.0",
     "firebase": "^10.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.50.1",
+    "react-router-dom": "^7.5.3",
     "react-zoom-pan-pinch": "^3.3.0",
     "recharts": "^2.12.0",
     "remixicon": "^4.2.0",
@@ -34,6 +36,7 @@
     "@eslint/js": "^9.22.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/react-router-dom": "^5.3.3",
     "@typescript-eslint/eslint-plugin": "^8.32.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.17",
@@ -51,7 +54,7 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.1",
-    "vite-plugin-pwa": "^0.18.1",
+    "vite-plugin-pwa": "^1.0.0",
     "vitest": "^1.2.2"
   }
 }
