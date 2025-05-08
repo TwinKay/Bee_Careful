@@ -1,24 +1,34 @@
 export default {
-    theme: {
-      extend: {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+
+  theme: {
+    extend: {
+      fontFamily: {
+        pretendard: ['Pretendard', 'sans-serif'],
+        ygJalnan: ['yg-jalnan'],
+      },
+      colors: {
+        'bc-yellow-100': '#917922',
+        'bc-yellow-90': '#F7D143',
+        'bc-yellow-80': '#F8D75B',
+        'bc-yellow-70': '#F9DC72',
+        'bc-yellow-60': '#FAE28A',
+        'bc-yellow-50': '#FAE28A',
+        'bc-yellow-40': '#FBE8A1',
+        'bc-yellow-30': '#FBE8A1',
+        'bc-yellow-20': '#FEF9E8',
+        'bc-brown-100': '#403601',
+        'bc-brown-90': '#493D05',
+        'bc-brown-80': '#524508',
+        'bc-brown-70': '#5B4C0C',
+        'bc-brown-60': '#645410',
+        'bc-brown-50': '#6D5B13',
+        'bc-brown-40': '#766317',
+        'bc-brown-30': '#7F6A1B',
+        'bc-brown-20': '#88721E',
+        'bc-brown-10': '#917922',
       },
     },
-    plugins: [
-    //   // Tailwind 클래스 순서를 강제하는 플러그인 (선택사항)
-    //   require('tailwindcss-classnames-sorter')({
-    //     // 레이아웃 → 박스 모델 → 타이포그래피 → 기타 순서로 정렬
-    //     order: [
-    //       // 레이아웃
-    //       'flex', 'grid', 'block', 'inline', 'hidden', 'container',
-    //       // 박스 모델
-    //       'p', 'm', 'w', 'h', 'min', 'max', 'border', 'rounded',
-    //       // 타이포그래피
-    //       'font', 'text', 'leading',
-    //       // 기타 (색상, 효과 등)
-    //       'bg', 'text-color', 'shadow', 'opacity', 'cursor',
-    //       // 상태 변형
-    //       'hover', 'focus', 'active',
-    //     ],
-    //   }),
-    ],
-  };
+  },
+  plugins: [],
+};
