@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: beecareful
+  config:
+    import:
