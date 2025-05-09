@@ -1,5 +1,3 @@
 spring:
-  application:
-    name: beecareful
-  config:
-    import:
+  profiles:
+    active: local

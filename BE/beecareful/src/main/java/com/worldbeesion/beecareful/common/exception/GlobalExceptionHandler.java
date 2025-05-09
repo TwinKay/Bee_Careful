@@ -38,10 +38,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler  {
     }
 
     @ExceptionHandler(value = CommonException.class)
-    public ResponseEntity<ErrorResponseDto> businessExceptionHandler(CommonException ex) {
-        return ResponseEntity
-                .status(ex.getErrorCode().getStatus())
-                .body(ErrorResponseDto.of(ex.getErrorCode().getMessage()));
+    public ResponseEntity<?> businessExceptionHandler(CommonException ex) {
+        return ex.toResponseEntity();
     }
 
 
