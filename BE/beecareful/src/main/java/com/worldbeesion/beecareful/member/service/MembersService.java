@@ -28,25 +28,19 @@ public class MembersService {
 
     @Transactional
     public void signUp(MemberSignUpRequestDto memberSignUpRequestDto) {
-        try {
-            String memberLoginId = memberSignUpRequestDto.memberLoginId();
-            String password = memberSignUpRequestDto.password();
-            String memberName = memberSignUpRequestDto.memberName();
-            String phone = memberSignUpRequestDto.phone();
+        String memberLoginId = memberSignUpRequestDto.memberLoginId();
+        String password = memberSignUpRequestDto.password();
+        String memberName = memberSignUpRequestDto.memberName();
+        String phone = memberSignUpRequestDto.phone();
 
-            if(authMembersRepository.existsByLoginId(memberLoginId)) {
-                throw new AlreadyExistMemberName();
-            }
-
-            Members member = new Members(memberName, phone);
-            membersRepository.save(member);
-            AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
-            authMembersRepository.save(authMember);
-        } catch (CommonException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new BadRequestException();
+        if(authMembersRepository.existsByLoginId(memberLoginId)) {
+            throw new AlreadyExistMemberName();
         }
+
+        Members member = new Members(memberName, phone);
+        membersRepository.save(member);
+        AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
+        authMembersRepository.save(authMember);
 
     }
 }
