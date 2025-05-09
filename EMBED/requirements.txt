@@ -10,6 +10,8 @@ adafruit-circuitpython-typing==1.11.2
 Adafruit-PlatformDetect==3.78.0
 Adafruit-PureIO==1.1.11
 binho-host-adapter==0.1.6
+colorzero==2.0
+gpiozero==2.0.1
 lgpio==0.2.2.0
 pyftdi==0.56.0
 pyserial==3.5
