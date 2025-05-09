@@ -1,8 +1,10 @@
 package com.worldbeesion.beecareful.common.exception;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
+@Getter
 public class ErrorResponseDto {
 
     String message;

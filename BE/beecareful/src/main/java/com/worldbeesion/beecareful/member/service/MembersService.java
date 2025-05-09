@@ -10,6 +10,7 @@ import com.worldbeesion.beecareful.member.repository.AuthMembersRepository;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MembersService {
 
     private final MembersRepository membersRepository;
@@ -36,7 +38,7 @@ public class MembersService {
                 throw new AlreadyExistMemberName();
             }
 
-            Members member = new Members(memberName, phone, LocalDateTime.now(), LocalDateTime.now());
+            Members member = new Members(memberName, phone);
             membersRepository.save(member);
             AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
             authMembersRepository.save(authMember);
