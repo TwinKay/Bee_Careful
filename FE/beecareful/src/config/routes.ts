@@ -3,10 +3,9 @@
  */
 
 export const ROUTES = {
-  HOME: '/',
+  BEEHIVES: '/',
   LOGIN: '/login',
   SIGNUP: '/signup',
-  BEEHIVES: '/beehives',
   BEEHIVE_DETAIL: (id: string) => `/beehives/${id}`,
   DIAGNOSIS_CREATE: '/diagnosis/create',
   DIAGNOSIS_DETAIL: '/diagnosis/detail',

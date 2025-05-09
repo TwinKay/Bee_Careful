@@ -5,6 +5,8 @@ import { ROUTES } from '@/config/routes';
 import MainLayout from '@/layouts/MainLayout';
 import DiagnosisCreatePage from '@/pages/diagnosis/DiagnosisCreatePage';
 import DiagnosisDetailPage from '@/pages/diagnosis/DiagnosisDetailPage';
+import BeehiveListPage from '@/pages/beehive/BeehiveListPage';
+import BeehiveDetailPage from '@/pages/beehive/BeehiveDetailPage';
 
 const router = createBrowserRouter([
   {
@@ -17,6 +19,20 @@ const router = createBrowserRouter([
       {
         path: ROUTES.SIGNUP,
         Component: SignUpPage,
+      },
+      {
+        path: ROUTES.BEEHIVES,
+        Component: BeehiveListPage,
+      },
+      {
+        path: ROUTES.BEEHIVE_DETAIL(':id'),
+        Component: () => MainLayout('ri-more-2-fill'),
+        children: [
+          {
+            index: true,
+            Component: BeehiveDetailPage,
+          },
+        ],
       },
       {
         path: ROUTES.DIAGNOSIS_DETAIL,
