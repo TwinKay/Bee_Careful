@@ -1,9 +1,8 @@
 package com.worldbeesion.beecareful.member.service;
 
-import com.worldbeesion.beecareful.common.exception.CommonException;
 import com.worldbeesion.beecareful.member.exception.AlreadyExistMemberName;
-import com.worldbeesion.beecareful.member.exception.BadRequestException;
 import com.worldbeesion.beecareful.member.model.AuthMembers;
+import com.worldbeesion.beecareful.member.model.MemberLoginRequestDto;
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
 import com.worldbeesion.beecareful.member.model.Members;
 import com.worldbeesion.beecareful.member.repository.AuthMembersRepository;
@@ -41,6 +40,13 @@ public class MembersService {
         membersRepository.save(member);
         AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
         authMembersRepository.save(authMember);
+
+    }
+
+    public void login(MemberLoginRequestDto memberLoginRequestDto) {
+        String memberLoginId = memberLoginRequestDto.memberLoginId();
+        String password = memberLoginRequestDto.password();
+
 
     }
 }
