@@ -11,18 +11,30 @@ spring:
     password: ${MYSQL_PASSWORD}
   jpa:
     hibernate:
+<<<<<<< Updated upstream
       ddl-auto: none
+=======
+      ddl-auto: validate
+>>>>>>> Stashed changes
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+<<<<<<< Updated upstream
   data:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
+=======
+>>>>>>> Stashed changes
 
 logging:
   level:
     org.springframework.security : DEBUG
+<<<<<<< Updated upstream
     org.springframework.web : DEBUG
+=======
+    org.springframework.web : DEBUG
+    com.worldbeesion.beecareful : debug
+>>>>>>> Stashed changes

@@ -35,8 +35,6 @@ public class S3FileMetadata {
     @Column(name = "s3_file_metadata_id")
     private Long id;
 
-    private Long memberId;
-
     @Column(name="original_filename", nullable = false)
     private String originalFilename;
 
@@ -68,7 +66,7 @@ public class S3FileMetadata {
         this.status = status;
     }
 
-    public void delete(){
+    public void remove(){
         this.status = FileStatus.DELETED;
         this.deletedAt = LocalDateTime.now();
     }

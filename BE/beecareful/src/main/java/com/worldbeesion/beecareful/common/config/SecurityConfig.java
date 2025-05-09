@@ -27,7 +27,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()));
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/members/**").permitAll());
+//                        .requestMatchers("/api/v1/members/**").permitAll());
+                        .requestMatchers("/**").permitAll());
         return http.build();
     }
 

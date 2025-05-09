@@ -12,9 +12,19 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN,"권한이 없습니다"),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE,"지원하지 않는 형식입니다"),
     PARAMETER_VALIDATION_FAIL(HttpStatus.BAD_REQUEST,"입력값 형식 오류입니다."),
+<<<<<<< Updated upstream
 
     // Member
     DUPLICATE_MEMBER_LOGIN_ID(HttpStatus.CONFLICT, "이미 존재하는 아이디 입니다.");
+=======
+
+
+    // S3
+    S3_CONNECT_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"내부 서버 오류입니다"),
+
+    ;
+
+>>>>>>> Stashed changes
 
 
     private final HttpStatus status;
