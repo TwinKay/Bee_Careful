@@ -90,9 +90,9 @@ CREATE TABLE `diseases`
     `stage`      enum('성충', '유충') NOT NULL
 );
 
-CREATE TABLE `file_metadatas`
+CREATE TABLE `s3_file_metadatas`
 (
-    `file_metadata_id`  bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `s3_file_metadatas_id`  bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `original_filename` varchar(255) NULL,
     `s3_key`            varchar(255) NULL,
     `size`              bigint NULL,
