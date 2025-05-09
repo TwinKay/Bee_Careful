@@ -1,4 +1,5 @@
 @import 'remixicon/fonts/remixicon.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -42,7 +43,49 @@
 
 @font-face {
   font-family: 'yg-jalnan';
-  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_four@1.2/JalnanOTF00.woff') format('woff');
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_four@1.2/JalnanOTF00.woff')
+    format('woff');
   font-weight: normal;
   font-style: normal;
+}
+
+/* 지도 컨테이너 - 스크롤바 숨기기 */
+.map-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Chrome, Safari, Edge */
+.map-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* 텍스트 선택 방지 */
+.map-container,
+.map-container * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* iOS 탭 하이라이트 제거 */
+.map-container * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 이미지 저장 방지 */
+.map-container img,
+.map-container svg {
+  -webkit-touch-callout: none;
+  touch-callout: none;
+  pointer-events: auto;
+  user-drag: none;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* 드래그 중 요소 컨테이너 */
+.hive-container {
+  touch-action: none;
 }
