@@ -27,6 +27,7 @@ out/
 !**/src/test/**/out/
 
 /db/master/data/
+/redis/data/
 /grafana
 src/main/resources/firebase
 

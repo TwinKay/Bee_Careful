@@ -1,4 +1,4 @@
-package com.worldbeesion.beecareful.s3.entity;
+package com.worldbeesion.beecareful.s3.model.entity;
 
 
 import com.worldbeesion.beecareful.s3.constant.FileStatus;
@@ -35,18 +35,16 @@ public class S3FileMetadata {
     @Column(name = "s3_file_metadata_id")
     private Long id;
 
-    private Long memberId;
-
-    @Column(name="original_filename", nullable = false)
+    @Column(name="original_filename")
     private String originalFilename;
 
-    @Column(name="s3_key",nullable = false, unique = true)
+    @Column(name="s3_key", unique = true)
     private String s3Key;
 
-    @Column(name="url", nullable = false,unique = true)
+    @Column(name="url", unique = true)
     private String url;
 
-    @Column(name="size", nullable = false)
+    @Column(name="size")
     private Long size; // 파일 크기 (바이트)
 
     @Column(name="content_type")
@@ -68,7 +66,7 @@ public class S3FileMetadata {
         this.status = status;
     }
 
-    public void delete(){
+    public void remove(){
         this.status = FileStatus.DELETED;
         this.deletedAt = LocalDateTime.now();
     }

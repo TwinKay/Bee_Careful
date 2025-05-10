@@ -47,7 +47,7 @@ CREATE TABLE `turrets`
 (
     `turret_id`  bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `beehive_id` bigint       NOT NULL,
-    `code`       varchar(100) NOT NULL
+    `serial`     varchar(100) NOT NULL
 );
 
 CREATE TABLE `diagnoses`
@@ -61,7 +61,7 @@ CREATE TABLE `original_photos`
 (
     `original_photo_id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `diagnosis_id`      bigint NOT NULL,
-    `file_metadata_id`  bigint NOT NULL,
+    `s3_file_metadata_id`  bigint NOT NULL,
     `status`            enum('UNRECIEVED', 'FAIL', 'SUCCESS', 'ANALYZING', 'WAITING') NULL
 );
 
@@ -69,7 +69,7 @@ CREATE TABLE `analyzed_photos`
 (
     `analyzed_photo_id` bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `original_photo_id` bigint NOT NULL,
-    `file_metadata_id`  bigint NOT NULL,
+    `s3_file_metadata_id`  bigint NOT NULL,
     `diagnosis_id`      bigint NOT NULL,
     `imago_count`       bigint NOT NULL,
     `larva_count`       bigint NOT NULL
@@ -90,9 +90,9 @@ CREATE TABLE `diseases`
     `stage`      enum('성충', '유충') NOT NULL
 );
 
-CREATE TABLE `file_metadatas`
+CREATE TABLE `s3_file_metadatas`
 (
-    `file_metadata_id`  bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `s3_file_metadata_id`  bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `original_filename` varchar(255) NULL,
     `s3_key`            varchar(255) NULL,
     `size`              bigint NULL,

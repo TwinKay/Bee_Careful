@@ -1,45 +1,85 @@
 package com.worldbeesion.beecareful.s3.service;
 
-import com.worldbeesion.beecareful.s3.entity.S3FileMetadata;
+import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
+import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import java.time.Duration;
-import lombok.RequiredArgsConstructor;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 
-@RequiredArgsConstructor
+
 @Service
 public class S3PresignService {
-
-    private final S3Presigner presigner;
-    private final RedisTemplate<String, String> redisTemplate;
-
     private static final Duration PUT_EXPIRATION = Duration.ofMinutes(10);
     private static final Duration GET_EXPIRATION = Duration.ofMinutes(60);
+    private static final List<String> allowedExtensions = Arrays.asList("jpg", "png", "gif", "jpeg","webp");
 
-    public String generatePutUrl(String originalFilename, String bucketName) {
+    private final S3FileMetadataRepository s3FileMetadataRepository;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final S3Presigner presigner;
+    private final String bucketName;
+
+    public S3PresignService(
+            RedisTemplate<String,String> redisTemplate,
+            S3FileMetadataRepository s3FileMetadataRepository,
+            S3Presigner s3Presigner,
+            @Value("${cloud.aws.s3.bucket}") String bucketName){
+        this.s3FileMetadataRepository = s3FileMetadataRepository;
+        this.presigner = s3Presigner;
+        this.redisTemplate = redisTemplate;
+        this.bucketName = bucketName;
+    }
+
+
+    @Transactional
+    public GeneratePutUrlResponse generatePutUrl(String originalFilename, String contentType) {
+
+        String key = generateUniqueFilename(contentType);
+
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
-                .key(originalFilename)
-                .contentType("image/png") // 필요에 따라 조정
+                .key(key)
+                .contentType(contentType)
                 .build();
 
         PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(builder -> builder
-                .signatureDuration(PUT_EXPIRATION) // 유효시간 설정
+                .signatureDuration(PUT_EXPIRATION)
                 .putObjectRequest(objectRequest)
         );
-        return presignedRequest.url().toString();
+
+        S3FileMetadata s3FileMetadata = S3FileMetadata.builder()
+                .s3Key(originalFilename)
+                .originalFilename(originalFilename)
+                .status(FileStatus.PENDING)
+                .contentType(contentType)
+                .build();
+
+        S3FileMetadata save = s3FileMetadataRepository.save(s3FileMetadata);
+
+        String url = presignedRequest.url().toString();
+        GeneratePutUrlResponse response = GeneratePutUrlResponse.builder()
+                .preSignedUrl(url)
+                .s3FileMetadata(s3FileMetadata).build();
+        return response;
     }
 
     // GET 용 Presigned URL 생성 (조회용)
-    public String generateGetUrl(S3FileMetadata s3FileMetadata, String bucketName) {
+    public String generateGetUrl(S3FileMetadata s3FileMetadata) {
 
         String s3Key = s3FileMetadata.getS3Key();
-
         String cacheKey = "s3:presigned:get:" + s3Key;
         String url = redisTemplate.opsForValue().get(cacheKey);
 
@@ -62,6 +102,9 @@ public class S3PresignService {
         return getUrl;
     }
 
+    private String generateUniqueFilename(String fileExtension) {
+        return UUID.randomUUID() + "." + fileExtension;
+    }
 
 //    public String generateGetUrl(String s3Key, String bucketName) {
 //

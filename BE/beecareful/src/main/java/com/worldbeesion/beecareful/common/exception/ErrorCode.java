@@ -14,7 +14,12 @@ public enum ErrorCode {
     PARAMETER_VALIDATION_FAIL(HttpStatus.BAD_REQUEST,"입력값 형식 오류입니다."),
 
     // Member
-    DUPLICATE_MEMBER_LOGIN_ID(HttpStatus.CONFLICT, "이미 존재하는 아이디 입니다.");
+    DUPLICATE_MEMBER_LOGIN_ID(HttpStatus.CONFLICT, "이미 존재하는 아이디 입니다."),
+
+    // S3
+    S3_CONNECT_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"내부 서버 오류입니다"),
+    IMAGE_UPLOAD_FAIL(HttpStatus.BAD_REQUEST,"이미지 업로드에 실패하였습니다."),
+    ;
 
 
     private final HttpStatus status;
