@@ -1,5 +1,6 @@
 package com.worldbeesion.beecareful.common.util;
 
+import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.model.MemberInfoDto;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -25,6 +26,11 @@ public class JwtTokenUtil {
         this.secretKey =  Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
+    public Long getMemberIdFromToken(String token) {
+        return Long.valueOf(parseClaims(token).getSubject());
+    }
+
+
     // JWT의 페이로드에서 클레임을 추출하는 코드 . 페이로드 == 클레임
     public Claims parseClaims(String accessToken) {
         try {
@@ -39,18 +45,20 @@ public class JwtTokenUtil {
     }
 
 
-    public String accessTokenGenerate(MemberInfoDto infoDto) {
-        Claims claims = Jwts.claims();
-        claims.setSubject(String.valueOf(infoDto.memberId()));
+    private String generateAccessToken (Long memberId) {
 
         ZonedDateTime now = ZonedDateTime.now();
         ZonedDateTime expiresAt = now.plusSeconds(EXPIRED_TIME_IN_SECONDS);
         Date expiresAtDate = Date.from(expiresAt.toInstant());
 
         return Jwts.builder()
-                .setSubject(String.valueOf(infoDto.memberId()))
+                .setSubject(String.valueOf(memberId))
                 .setExpiration(expiresAtDate)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String createAccessToken(UserDetailsImpl userDetails) {
+        return generateAccessToken(userDetails.getMemberId());
     }
 }

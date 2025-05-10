@@ -1,4 +1,4 @@
-package com.worldbeesion.beecareful.common.filter;
+package com.worldbeesion.beecareful.common.auth.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.worldbeesion.beecareful.common.constant.CookieConstant;

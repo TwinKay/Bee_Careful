@@ -15,6 +15,7 @@ public enum ErrorCode {
 
     // Member
     DUPLICATE_MEMBER_LOGIN_ID(HttpStatus.CONFLICT, "이미 존재하는 아이디 입니다."),
+    USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "ID 또는 비밀번호가 잘못되었습니다."),
 
 
     // Auth

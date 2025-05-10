@@ -1,6 +1,5 @@
 package com.worldbeesion.beecareful.member.controller;
 
-import com.worldbeesion.beecareful.member.model.MemberLoginRequestDto;
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
 import com.worldbeesion.beecareful.member.service.MembersService;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +23,6 @@ public class MembersController {
     public ResponseEntity<?> signUp(@RequestBody MemberSignUpRequestDto memberSignUpRequestDto) {
         memberService.signUp(memberSignUpRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody MemberLoginRequestDto memberLoginRequestDto) {
-        memberService.login(memberLoginRequestDto);
-        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
 }

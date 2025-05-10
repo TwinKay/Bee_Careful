@@ -1,6 +1,7 @@
 package com.worldbeesion.beecareful.member.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
 @Table(name="members")
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+@Getter
 public class Members {
 
     @Id

@@ -7,6 +7,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 import java.util.Arrays;
+import java.util.Optional;
 
 @Component
 public class CookieUtil {
@@ -32,17 +33,15 @@ public class CookieUtil {
 
 
 
-
-    // 쿠키에서 jwt 토큰 추출하기
-    private String extractJwtFromCookie(HttpServletRequest request) {
-        if(request.getCookies() == null) {
-            throw new CookieNotFoundException();
+    public Optional<String> extractCookieValue(HttpServletRequest request, String key) {
+        if (request.getCookies() == null) {
+            return Optional.empty();
         }
         return Arrays.stream(request.getCookies())
-                .filter(cookie -> cookie.getName().equals(CookieConstant.AUTH_TOKEN))
-                .map(Cookie::getValue)
+                .filter(cookie -> cookie.getName().equals(key))
                 .findFirst()
-                .orElseThrow(() -> new TokenNotFoundException());
+                .map(Cookie::getValue);
     }
+
 
 }

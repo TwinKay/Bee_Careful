@@ -2,7 +2,6 @@ package com.worldbeesion.beecareful.member.service;
 
 import com.worldbeesion.beecareful.member.exception.AlreadyExistMemberName;
 import com.worldbeesion.beecareful.member.model.AuthMembers;
-import com.worldbeesion.beecareful.member.model.MemberLoginRequestDto;
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
 import com.worldbeesion.beecareful.member.model.Members;
 import com.worldbeesion.beecareful.member.repository.AuthMembersRepository;
@@ -12,9 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -43,10 +39,4 @@ public class MembersService {
 
     }
 
-    public void login(MemberLoginRequestDto memberLoginRequestDto) {
-        String memberLoginId = memberLoginRequestDto.memberLoginId();
-        String password = memberLoginRequestDto.password();
-
-
-    }
 }
