@@ -1,12 +1,20 @@
 import Button from '@/components/common/Button';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import RemixIcon from '@/components/common/RemixIcon';
+import { removeMetadata } from '@/utils/removeMetadata';
 import { useState } from 'react';
 
 const DiagnosisCreatePage = () => {
   const [images, setImages] = useState<File[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+
+  const captureImage = () => {
+    const fileInput = document.getElementById('capture-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
 
   const getImages = () => {
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -20,6 +28,16 @@ const DiagnosisCreatePage = () => {
       const newImages = [...images];
       newImages.splice(index, 1);
       setImages(newImages);
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      const promises = files.map(removeMetadata);
+      Promise.all(promises).then((cleanFiles) => {
+        setImages((prevImages) => [...prevImages, ...cleanFiles]);
+      });
     }
   };
 
@@ -59,18 +77,25 @@ const DiagnosisCreatePage = () => {
       )}
       <div className="flex w-full flex-col gap-4 p-4">
         <input
+          id="capture-input"
+          className="hidden"
           type="file"
           accept="image/*"
           multiple
-          onChange={(e) => {
-            if (e.target.files) {
-              const files = Array.from(e.target.files);
-              setImages(files);
-            }
-          }}
-          className="hidden"
-          id="file-input"
+          capture="environment"
+          onChange={handleFileChange}
         />
+        <input
+          id="file-input"
+          className="hidden"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+        />
+        <Button variant={`${images.length === 0 ? 'success' : 'neutral'}`} onClick={captureImage}>
+          <p className="text-lg font-bold">사진 촬영</p>
+        </Button>
         <Button variant={`${images.length === 0 ? 'success' : 'neutral'}`} onClick={getImages}>
           <p className="text-lg font-bold">사진 업로드</p>
         </Button>
