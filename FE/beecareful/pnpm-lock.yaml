@@ -17,9 +17,6 @@ importers:
       '@capacitor/push-notifications':
         specifier: ^5.1.0
         version: 5.1.2(@capacitor/core@5.7.8)
-      '@remixicon/react':
-        specifier: ^4.6.0
-        version: 4.6.0(react@19.1.0)
       '@tanstack/react-query':
         specifier: ^5.18.1
         version: 5.75.0(react@19.1.0)
@@ -1341,11 +1338,6 @@ packages:
 
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
-
-  '@remixicon/react@4.6.0':
-    resolution: {integrity: sha512-bY56maEgT5IYUSRotqy9h03IAKJC85vlKtWFg2FKzfs8JPrkdBAYSa9dxoUSKFwGzup8Ux6vjShs9Aec3jvr2w==}
-    peerDependencies:
-      react: '>=18.2.0'
 
   '@rollup/plugin-babel@5.3.1':
     resolution: {integrity: sha512-WFfdLWU/xVWKeRQnKmIAQULUI7Il0gZnBIH/ZFO069wYIfPu+8zrfp/KMW0atmELoRDq8FbiP3VCss9MhCut7Q==}
@@ -5784,10 +5776,6 @@ snapshots:
   '@protobufjs/pool@1.1.0': {}
 
   '@protobufjs/utf8@1.1.0': {}
-
-  '@remixicon/react@4.6.0(react@19.1.0)':
-    dependencies:
-      react: 19.1.0
 
   '@rollup/plugin-babel@5.3.1(@babel/core@7.27.1)(@types/babel__core@7.20.5)(rollup@2.79.2)':
     dependencies:
