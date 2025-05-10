@@ -1,7 +1,7 @@
 package com.worldbeesion.beecareful.member.controller;
 
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
-import com.worldbeesion.beecareful.member.service.MembersService;
+import com.worldbeesion.beecareful.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/members")
 public class MembersController {
 
-    private final MembersService memberService;
+    private final MemberService memberService;
 
     @PostMapping("")
     public ResponseEntity<?> signUp(@RequestBody MemberSignUpRequestDto memberSignUpRequestDto) {

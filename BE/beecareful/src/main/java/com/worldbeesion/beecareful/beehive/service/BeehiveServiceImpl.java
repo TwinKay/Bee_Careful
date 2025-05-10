@@ -2,16 +2,19 @@ package com.worldbeesion.beecareful.beehive.service;
 
 
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
-import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisDto;
-import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisRequestDto;
-import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisResponseDto;
-import com.worldbeesion.beecareful.beehive.model.dto.Photo;
+import com.worldbeesion.beecareful.beehive.model.dto.*;
+import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
 import com.worldbeesion.beecareful.beehive.model.entity.Beehive;
 import com.worldbeesion.beecareful.beehive.model.entity.Diagnosis;
 import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
+import com.worldbeesion.beecareful.beehive.repository.ApiaryRepository;
 import com.worldbeesion.beecareful.beehive.repository.BeehiveRepository;
 import com.worldbeesion.beecareful.beehive.repository.DiagnosisRepository;
 import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
+import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
+import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
+import com.worldbeesion.beecareful.member.model.Members;
+import com.worldbeesion.beecareful.member.repository.MembersRepository;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.service.S3FileService;
@@ -33,6 +36,30 @@ public class BeehiveServiceImpl implements BeehiveService{
     private final BeehiveRepository beehiveRepository;
     private final DiagnosisRepository diagnosisRepository;
     private final OriginalPhotoRepository originalPhotoRepository;
+    private final ApiaryRepository apiaryRepository;
+    private final MembersRepository membersRepository;
+
+    @Override
+    @Transactional
+    public void addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails) {
+        String nickname = beehiveRequestDto.nickname();
+        Long xDirection = beehiveRequestDto.xDirection();
+        Long yDirection = beehiveRequestDto.yDirection();
+
+        Long memberId = userDetails.getMemberId();
+        Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+
+        Apiary apiary = apiaryRepository.findByMembers(members);
+
+        Beehive beehive = Beehive.builder()
+                .apiary(apiary)
+                .nickname(nickname)
+                .xDirection(xDirection)
+                .yDirection(yDirection)
+                .build();
+
+        beehiveRepository.save(beehive);
+    }
 
 
     @Transactional
@@ -82,5 +109,6 @@ public class BeehiveServiceImpl implements BeehiveService{
 
         return response;
     }
+
 
 }

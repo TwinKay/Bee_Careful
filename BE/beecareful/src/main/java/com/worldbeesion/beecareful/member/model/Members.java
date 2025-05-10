@@ -1,5 +1,6 @@
 package com.worldbeesion.beecareful.member.model;
 
+import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,6 +38,7 @@ public class Members {
 
     @Column(name="deleted_at", nullable = true)
     private LocalDateTime deletedAt;
+
 
     public Members(String memberName, String phone) {
         this.memberName = memberName;

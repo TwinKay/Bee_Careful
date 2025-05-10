@@ -26,8 +26,7 @@ CREATE TABLE `member_roles`
 CREATE TABLE `apiaries`
 (
     `apiary_id` bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `member_id` bigint       NOT NULL,
-    `name`      varchar(100) NOT NULL
+    `member_id` bigint       NOT NULL
 );
 
 CREATE TABLE `beehives`

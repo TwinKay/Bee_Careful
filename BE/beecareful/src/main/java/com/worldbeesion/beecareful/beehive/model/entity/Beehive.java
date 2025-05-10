@@ -52,6 +52,6 @@ public class Beehive {
     private Long xDirection;
 
     @Column(name = "y_direction", nullable = false)
-    private Long YDirection;
+    private Long yDirection;
 
 }
