@@ -23,6 +23,9 @@ spring:
       port: 6379
       password: ${REDIS_PASSWORD}
 
+jwt:
+  secretKey: ${JWT_SECRET}
+
 logging:
   level:
     org.springframework.security : DEBUG

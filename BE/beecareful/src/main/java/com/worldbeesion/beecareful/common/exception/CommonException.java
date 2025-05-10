@@ -7,7 +7,7 @@ public abstract class CommonException extends RuntimeException {
     public ResponseEntity<?> toResponseEntity() {
         return ResponseEntity
                 .status(getErrorCode().getStatus())
-                .body(getErrorCode().getMessage());
+                .body(ErrorResponseDto.of(getErrorCode().getMessage()));
     }
 
     public abstract ErrorCode getErrorCode();
