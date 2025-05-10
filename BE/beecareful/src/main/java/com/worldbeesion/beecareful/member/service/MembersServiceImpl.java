@@ -1,5 +1,7 @@
 package com.worldbeesion.beecareful.member.service;
 
+import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
+import com.worldbeesion.beecareful.beehive.repository.ApiaryRepository;
 import com.worldbeesion.beecareful.member.exception.AlreadyExistMemberName;
 import com.worldbeesion.beecareful.member.model.AuthMembers;
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
@@ -15,11 +17,12 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class MembersService {
+public class MembersServiceImpl implements MemberService {
 
     private final MembersRepository membersRepository;
     private final AuthMembersRepository authMembersRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApiaryRepository apiaryRepository;
 
     @Transactional
     public void signUp(MemberSignUpRequestDto memberSignUpRequestDto) {
@@ -37,6 +40,11 @@ public class MembersService {
         AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
         authMembersRepository.save(authMember);
 
+        Apiary apiary = Apiary.builder()
+                .members(member)
+                .build();
+
+        apiaryRepository.save(apiary);
     }
 
 }

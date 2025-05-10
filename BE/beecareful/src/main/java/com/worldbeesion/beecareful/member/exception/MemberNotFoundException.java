@@ -3,7 +3,7 @@ package com.worldbeesion.beecareful.member.exception;
 import com.worldbeesion.beecareful.common.exception.CommonException;
 import com.worldbeesion.beecareful.common.exception.ErrorCode;
 
-public class UserNotFoundException extends CommonException {
+public class MemberNotFoundException extends CommonException {
 
     @Override
     public ErrorCode getErrorCode() {

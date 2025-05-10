@@ -1,13 +1,13 @@
 package com.worldbeesion.beecareful.beehive.controller;
 
 
-import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisDto;
-import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisRequestDto;
-import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisResponseDto;
-import com.worldbeesion.beecareful.beehive.model.dto.Photo;
+import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
+import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +19,12 @@ public class BeehiveController {
 
     private final BeehiveService beehiveService;
 
+    @PostMapping("")
+    public ResponseEntity<?> createBeehive(@RequestBody BeehiveRequestDto beehiveRequestDto,
+                                           @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        beehiveService.addBeehive(beehiveRequestDto, userDetails);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
 
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){

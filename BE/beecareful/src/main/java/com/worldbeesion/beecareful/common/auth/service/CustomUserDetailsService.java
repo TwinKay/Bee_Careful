@@ -1,7 +1,7 @@
 package com.worldbeesion.beecareful.common.auth.service;
 
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
-import com.worldbeesion.beecareful.member.exception.UserNotFoundException;
+import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
 import com.worldbeesion.beecareful.member.model.AuthMembers;
 import com.worldbeesion.beecareful.member.model.MemberInfoDto;
 import com.worldbeesion.beecareful.member.model.Members;
@@ -12,8 +12,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +25,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         AuthMembers authMembers = authMembersRepository.findByLoginId(username);
 
         if (authMembers == null) {
-            throw new UserNotFoundException();
+            throw new MemberNotFoundException();
         }
 
         Members members = authMembers.getMember();

@@ -1,6 +1,7 @@
 package com.worldbeesion.beecareful.beehive.model.entity;
 
 
+import com.worldbeesion.beecareful.member.model.Members;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,9 +24,8 @@ public class Apiary {
     @Column(name = "apiary_id")
     private Long id;
 
-    @Column(name = "member_id", nullable = false)
-    private Long memberId;
+    @OneToOne
+    @JoinColumn(name = "member_id", nullable = false)
+    private Members members;
 
-    @Column(name = "name", length = 100, nullable = false)
-    private String name;
 }
