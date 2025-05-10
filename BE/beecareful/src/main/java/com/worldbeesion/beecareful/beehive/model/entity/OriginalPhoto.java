@@ -2,7 +2,7 @@ package com.worldbeesion.beecareful.beehive.model.entity;
 
 
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
-import com.worldbeesion.beecareful.s3.entity.S3FileMetadata;
+import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,5 +34,5 @@ public class OriginalPhoto {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private DiagnosisStatus stasus;
+    private DiagnosisStatus status;
 }

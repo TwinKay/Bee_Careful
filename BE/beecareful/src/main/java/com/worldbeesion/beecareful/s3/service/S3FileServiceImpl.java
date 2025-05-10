@@ -3,7 +3,7 @@ package com.worldbeesion.beecareful.s3.service;
 import com.worldbeesion.beecareful.common.exception.BadRequestException;
 import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
 import com.worldbeesion.beecareful.s3.constant.FileStatus;
-import com.worldbeesion.beecareful.s3.entity.S3FileMetadata;
+import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.exception.FileUploadFailException;
 import com.worldbeesion.beecareful.s3.exception.S3ConnectionException;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
