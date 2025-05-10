@@ -7,6 +7,8 @@ import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.exception.FileUploadFailException;
 import com.worldbeesion.beecareful.s3.exception.S3ConnectionException;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
+
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -75,8 +77,9 @@ public class S3FileServiceImpl implements S3FileService {
             }
         }catch(S3Exception e){
             throw e;
-        }catch (Exception e){
-
+        }catch (IOException e){
+            //TODO Exception 정의
+            throw new RuntimeException();
         }
 
         return entity;
