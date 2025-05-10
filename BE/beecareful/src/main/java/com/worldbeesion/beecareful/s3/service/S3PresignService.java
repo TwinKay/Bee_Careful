@@ -4,12 +4,16 @@ import com.worldbeesion.beecareful.s3.constant.FileStatus;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -21,6 +25,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 public class S3PresignService {
     private static final Duration PUT_EXPIRATION = Duration.ofMinutes(10);
     private static final Duration GET_EXPIRATION = Duration.ofMinutes(60);
+    private static final List<String> allowedExtensions = Arrays.asList("jpg", "png", "gif", "jpeg","webp");
 
     private final S3FileMetadataRepository s3FileMetadataRepository;
     private final RedisTemplate<String, String> redisTemplate;
@@ -40,13 +45,13 @@ public class S3PresignService {
 
 
     @Transactional
-    public GeneratePutUrlResponse generatePutUrl(String originalFilename) {
+    public GeneratePutUrlResponse generatePutUrl(String originalFilename, String contentType) {
 
-        String contentType = "image/png";
+        String key = generateUniqueFilename(contentType);
 
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
-                .key(originalFilename)
+                .key(key)
                 .contentType(contentType)
                 .build();
 
@@ -97,6 +102,9 @@ public class S3PresignService {
         return getUrl;
     }
 
+    private String generateUniqueFilename(String fileExtension) {
+        return UUID.randomUUID() + "." + fileExtension;
+    }
 
 //    public String generateGetUrl(String s3Key, String bucketName) {
 //

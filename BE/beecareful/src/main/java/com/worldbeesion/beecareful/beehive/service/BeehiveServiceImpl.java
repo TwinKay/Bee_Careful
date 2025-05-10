@@ -55,7 +55,7 @@ public class BeehiveServiceImpl implements BeehiveService{
         List<DiagnosisResponseDto> response= new ArrayList<>();
 
         for(Photo photo : photos){
-            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutUrl(photo.filename());
+            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutUrl(photo.filename(),photo.contentType());
             S3FileMetadata s3FileMetadata = putUrlDto.s3FileMetadata();
             String putUrl = putUrlDto.preSignedUrl();
 
