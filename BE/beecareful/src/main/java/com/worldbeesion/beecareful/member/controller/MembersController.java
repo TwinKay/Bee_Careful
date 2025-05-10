@@ -1,7 +1,6 @@
 package com.worldbeesion.beecareful.member.controller;
 
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
-import com.worldbeesion.beecareful.member.model.MemberSignUpResponseDto;
 import com.worldbeesion.beecareful.member.service.MembersService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +20,7 @@ public class MembersController {
     private final MembersService memberService;
 
     @PostMapping("")
-    public ResponseEntity<MemberSignUpResponseDto> signUp(@RequestBody MemberSignUpRequestDto memberSignUpRequestDto) {
+    public ResponseEntity<?> signUp(@RequestBody MemberSignUpRequestDto memberSignUpRequestDto) {
         memberService.signUp(memberSignUpRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

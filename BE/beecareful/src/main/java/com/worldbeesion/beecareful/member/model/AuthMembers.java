@@ -1,11 +1,13 @@
 package com.worldbeesion.beecareful.member.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "auth_members")
 @NoArgsConstructor
+@Getter
 public class AuthMembers {
 
     @Id
