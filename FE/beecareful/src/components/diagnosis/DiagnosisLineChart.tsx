@@ -1,3 +1,5 @@
+import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import { useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -8,46 +10,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-
-export type ChartDataType = {
-  date: string;
-  name: string;
-  '응애(진드기)': number;
-  부저병: number;
-  석고병: number;
-  날개바이러스: number;
-};
+import CustomLegend from './CustomLegend';
 
 export type ChartPropsType = {
-  data: ChartDataType[];
+  data: DiagnosisDataType[];
 };
 
-const Chart: React.FC<ChartPropsType> = ({ data }) => {
-  const renderLegend = (props) => {
-    const { payload } = props;
-
-    return (
-      <div className="mt-2 flex flex-row flex-wrap items-center justify-center gap-x-4 gap-y-2">
-        {payload.map((entry, index) => {
-          return (
-            <div key={`item-${index}`} className="flex flex-row items-center gap-1">
-              <div
-                style={{
-                  backgroundColor: entry.color,
-                  width: 14,
-                  height: 5,
-                  marginRight: 4,
-                  marginBottom: 3,
-                }}
-              ></div>
-              <span className="text-sm font-bold text-gray-600">{entry.value}</span>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
+const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -77,10 +46,25 @@ const Chart: React.FC<ChartPropsType> = ({ data }) => {
     return null;
   };
 
+  const parsedData = useMemo(() => {
+    return data.map((item) => {
+      const date = new Date(item.createdAt);
+      const monthDate = date.toLocaleString('ko-kr', { month: 'long', day: 'numeric' });
+
+      return {
+        name: `${monthDate}`,
+        '진드기(응애)': item.diagnosis.larva?.varroaRatio,
+        부저병: item.diagnosis.larva?.foulBroodRatio,
+        석고병: item.diagnosis.larva?.chalkBroodRatio,
+        날개바이러스: item.diagnosis.imago?.dwvRatio,
+      };
+    });
+  }, [data]);
+
   return (
     <ResponsiveContainer width="100%" height={320}>
       <LineChart
-        data={data}
+        data={parsedData}
         margin={{
           right: 30,
         }}
@@ -99,7 +83,7 @@ const Chart: React.FC<ChartPropsType> = ({ data }) => {
           }}
           content={<CustomTooltip />}
         />
-        <Legend content={renderLegend} />
+        <Legend content={<CustomLegend />} />
         <Line dataKey="응애(진드기)" strokeWidth={2.3} stroke="#E57373" fill="#E57373" />
         <Line dataKey="부저병" strokeWidth={2.3} stroke="#64B5F6" fill="#64B5F6" />
         <Line dataKey="석고병" strokeWidth={2.3} stroke="#81C784" fill="#81C784" />
@@ -109,4 +93,4 @@ const Chart: React.FC<ChartPropsType> = ({ data }) => {
   );
 };
 
-export default Chart;
+export default DiagnosisLineChart;
