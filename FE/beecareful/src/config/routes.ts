@@ -8,7 +8,6 @@ export const ROUTES = {
   SIGNUP: '/signup',
   BEEHIVE_DETAIL: (id: string) => `/beehives/${id}`,
   DIAGNOSIS_CREATE: '/diagnosis/create',
-  DIAGNOSIS_DETAIL: '/diagnosis/detail',
   NOTIFICATIONS: '/notifications',
 } as const;
 
