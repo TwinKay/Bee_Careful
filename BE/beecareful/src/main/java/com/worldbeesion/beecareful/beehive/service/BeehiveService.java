@@ -11,7 +11,7 @@ import java.util.Map;
 public interface BeehiveService {
     List<DiagnosisResponseDto> generateDiagnosisPresignedUrl(DiagnosisDto dto);
     void addBeehive(BeehiveRequestDto beehiveRequestDto,UserDetailsImpl userDetails);
-    List<AllBeehiveResponseDto> getAllBeehives();
+    List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails);
     Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds);
     Map<Long, Long> calculateStatus(Map<Long, List<DiagnosisStatus>> group);
 }

@@ -27,8 +27,8 @@ public class BeehiveController {
     }
 
     @GetMapping("")
-    public ResponseEntity<?> getAllBeehives() {
-        List<AllBeehiveResponseDto> beehiveList = beehiveService.getAllBeehives();
+    public ResponseEntity<?> getAllBeehives(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        List<AllBeehiveResponseDto> beehiveList = beehiveService.getAllBeehives(userDetails);
         return ResponseEntity
                 .ok()
                 .body(beehiveList);

@@ -64,8 +64,12 @@ public class BeehiveServiceImpl implements BeehiveService{
     }
 
     @Override
-    public List<AllBeehiveResponseDto> getAllBeehives() {
-        List<Object[]> result = beehiveRepository.findAllBeehiveDto();
+    public List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails) {
+        Long memberId = userDetails.getMemberId();
+        Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+
+        List<Object[]> result = beehiveRepository.findAllBeehiveDto(apiary.getId());
 
         List<BeehiveDiagnosisDto> beehiveList = result.stream()
                 .map(row -> new BeehiveDiagnosisDto(
