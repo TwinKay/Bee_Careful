@@ -102,6 +102,11 @@ export default [
           selector: 'typeAlias',
           format: ['PascalCase'],
           suffix: ['Type'],
+          filter: {
+            // Vite의 글로벌 타입들 예외 처리
+            regex: '^(ImportMetaEnv|ImportMeta)$',
+            match: false,
+          },
         },
       ],
 
