@@ -26,6 +26,14 @@ public class BeehiveController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @GetMapping("")
+    public ResponseEntity<?> getAllBeehives() {
+        List<AllBeehiveResponseDto> beehiveList = beehiveService.getAllBeehives();
+        return ResponseEntity
+                .ok()
+                .body(beehiveList);
+    }
+
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){
         System.out.println("beeHiveId = " + beeHiveId);

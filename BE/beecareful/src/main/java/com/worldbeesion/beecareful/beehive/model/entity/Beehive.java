@@ -54,4 +54,7 @@ public class Beehive {
     @Column(name = "y_direction", nullable = false)
     private Long yDirection;
 
+    @Column(name = "isInfected", nullable = false)
+    private Boolean isInfected;
+
 }

@@ -39,7 +39,8 @@ CREATE TABLE `beehives`
     `hornet_appeared_at` timestamp NULL,
     `deleted_at`         timestamp NULL,
     `x_direction`        bigint       NOT NULL,
-    `y_direction`        bigint       NOT NULL
+    `y_direction`        bigint       NOT NULL,
+    `is_infected`        boolean       NOT NULL
 );
 
 CREATE TABLE `turrets`
@@ -85,8 +86,8 @@ CREATE TABLE `analyzed_photo_diseases`
 CREATE TABLE `diseases`
 (
     `disease_id` bigint       NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `name`       varchar(200) NOT NULL,
-    `stage`      enum('성충', '유충') NOT NULL
+    `name`       enum('VARROA', 'FOULBROOD', 'CHALKBROOD', 'DWV') NOT NULL,
+    `stage`      enum('IMAGO', 'LARVA') NOT NULL
 );
 
 CREATE TABLE `s3_file_metadatas`
