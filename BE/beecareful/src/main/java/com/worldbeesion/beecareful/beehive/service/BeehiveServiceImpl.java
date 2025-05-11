@@ -25,8 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
-import static com.worldbeesion.beecareful.common.util.TypeConversionUtil.toBoolean;
-import static com.worldbeesion.beecareful.common.util.TypeConversionUtil.toLocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -63,52 +61,41 @@ public class BeehiveServiceImpl implements BeehiveService{
         beehiveRepository.save(beehive);
     }
 
+
     @Override
     public List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails) {
         Long memberId = userDetails.getMemberId();
         Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
         Apiary apiary = apiaryRepository.findByMembers(members);
 
-        List<Object[]> result = beehiveRepository.findAllBeehiveDto(apiary.getId());
-
-        List<BeehiveDiagnosisDto> beehiveList = result.stream()
-                .map(row -> new BeehiveDiagnosisDto(
-                        ((Number) row[0]).longValue(),
-                        (String) row[1],
-                        toLocalDateTime(row[2]),
-                        ((Number) row[3]).longValue(),
-                        ((Number) row[4]).longValue(),
-                        toLocalDateTime(row[5]),
-                        toBoolean(row[6]),
-                        toLocalDateTime(row[7]),
-                        toLocalDateTime(row[8]),
-                        row[9] != null ? ((Number) row[9]).longValue() : null
-                ))
-                .toList();
+        List<BeehiveDiagnosisProjection> beehiveList = beehiveRepository.findAllBeehiveDto(apiary.getId());
 
         List<Long> diagnosisIds = beehiveList.stream()
-                .map(BeehiveDiagnosisDto::lastDiagnosisId)
+                .map(BeehiveDiagnosisProjection::getLastDiagnosisId)
                 .filter(Objects::nonNull)
                 .toList();
 
-        Map<Long, Long> statusMap = getStatusEachBeehive(diagnosisIds); // 진단 ID별 상태
+        Map<Long, Long> statusMap = getStatusEachBeehive(diagnosisIds);
 
-        List<AllBeehiveResponseDto> beehiveResult = new ArrayList<>();
-        for (BeehiveDiagnosisDto dto : beehiveList) {
-            Long status = statusMap.get(dto.lastDiagnosisId());
-            beehiveResult.add(new AllBeehiveResponseDto(
-                    dto.beehiveId(), dto.nickname(), dto.createdAt(), dto.xDirection(), dto.yDirection(),
-                    dto.hornetAppearedAt(), dto.isInfected(), dto.recordCreatedAt(), dto.lastDiagnosedAt(),
-                    dto.lastDiagnosisId(), status
-            ));
-        }
-
-        return beehiveResult;
+        return beehiveList.stream()
+                .map(dto -> new AllBeehiveResponseDto(
+                        dto.getBeehiveId(),
+                        dto.getNickname(),
+                        dto.getCreatedAt(),
+                        dto.getXDirection(),
+                        dto.getYDirection(),
+                        dto.getHornetAppearedAt(),
+                        dto.getIsInfected(),
+                        dto.getRecordCreatedAt(),
+                        dto.getLastDiagnosedAt(),
+                        dto.getLastDiagnosisId(),
+                        statusMap.get(dto.getLastDiagnosisId())
+                ))
+                .toList();
     }
 
 
-    @Override
-    public Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds) {
+    private Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds) {
         List<OriginalPhotoStatusDto> statusList = originalPhotoRepository.findStatusesByDiagnosisIds(diagnosisIds);
         Map<Long, List<DiagnosisStatus>> group = new HashMap<>();
 
@@ -119,8 +106,8 @@ public class BeehiveServiceImpl implements BeehiveService{
         return calculateStatus(group);
     }
 
-    @Override
-    public Map<Long, Long> calculateStatus(Map<Long, List<DiagnosisStatus>> group) {
+
+    private Map<Long, Long> calculateStatus(Map<Long, List<DiagnosisStatus>> group) {
         Map<Long, Long> result = new HashMap<>();
         for(Map.Entry<Long, List<DiagnosisStatus>> entry : group.entrySet()) {
             List<DiagnosisStatus> diagnosisStatuses = entry.getValue();

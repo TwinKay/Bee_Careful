@@ -12,6 +12,7 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN,"권한이 없습니다"),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE,"지원하지 않는 형식입니다"),
     PARAMETER_VALIDATION_FAIL(HttpStatus.BAD_REQUEST,"입력값 형식 오류입니다."),
+    CANNOT_MATCH_TYPE(HttpStatus.INTERNAL_SERVER_ERROR, "지정한 형식의 타입이 아닙니다."),
 
     // Member
     DUPLICATE_MEMBER_LOGIN_ID(HttpStatus.CONFLICT, "이미 존재하는 아이디 입니다."),
@@ -26,6 +27,7 @@ public enum ErrorCode {
     COOKIE_NOT_FOUND(HttpStatus.UNAUTHORIZED, "쿠키가 존재하지 않습니다"),
     JWT_NOT_FOUND(HttpStatus.UNAUTHORIZED, "토큰이 존재하지 않습니다. "),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다.");
+
 
     private final HttpStatus status;
     private final String message;
