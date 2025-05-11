@@ -26,7 +26,7 @@ const BeehiveDetailPage = () => {
           <p className="text-lg font-bold">벌통이름10자미만</p>
           <p className="font-semibold text-bc-yellow-100">벌통</p>
         </div>
-        <Button disabled>
+        <Button disabled className="py-2">
           <p className="font-bold text-gray-600">장치 미연동</p>
         </Button>
       </div>

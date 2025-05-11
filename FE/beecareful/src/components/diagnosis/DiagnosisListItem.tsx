@@ -24,12 +24,12 @@ const DiagnosisListItem: React.FC<DiagnosisListItemPropsType> = ({
   return (
     <Link to={ROUTES.DIAGNOSIS_DETAIL}>
       <Card className="flex-row items-center justify-between bg-gray-100 p-4 py-4">
-        <div className="flex w-full justify-between">
+        <div className="flex w-full items-center justify-between">
           <div className="flex flex-col items-start gap-1">
             <h1 className="font-bold text-bc-yellow-100">질병 검사표</h1>
             <p className="text-xl font-bold">{localeDateString}</p>
           </div>
-          <Button size="sm">
+          <Button size="sm" className="h-fit py-2">
             <p className="text-base font-bold">결과보기</p>
           </Button>
         </div>
