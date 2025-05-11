@@ -53,10 +53,10 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
 
       return {
         name: `${monthDate}`,
-        '진드기(응애)': item.diagnosis.larva?.varroaRatio,
-        부저병: item.diagnosis.larva?.foulBroodRatio,
-        석고병: item.diagnosis.larva?.chalkBroodRatio,
-        날개바이러스: item.diagnosis.imago?.dwvRatio,
+        '진드기(응애)': item.diagnosis.larva.varroaRatio,
+        부저병: item.diagnosis.larva.foulBroodRatio,
+        석고병: item.diagnosis.larva.chalkBroodRatio,
+        날개바이러스: item.diagnosis.imago.dwvRatio,
       };
     });
   }, [data]);
@@ -84,7 +84,7 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
           content={<CustomTooltip />}
         />
         <Legend content={<CustomLegend />} />
-        <Line dataKey="응애(진드기)" strokeWidth={2.3} stroke="#E57373" fill="#E57373" />
+        <Line dataKey="진드기(응애)" strokeWidth={2.3} stroke="#E57373" fill="#E57373" />
         <Line dataKey="부저병" strokeWidth={2.3} stroke="#64B5F6" fill="#64B5F6" />
         <Line dataKey="석고병" strokeWidth={2.3} stroke="#81C784" fill="#81C784" />
         <Line dataKey="날개바이러스" strokeWidth={2.3} stroke="#FFB74D" fill="#FFB74D" />
