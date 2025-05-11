@@ -35,16 +35,6 @@ const router = createBrowserRouter([
         ],
       },
       {
-        path: ROUTES.DIAGNOSIS_DETAIL,
-        Component: () => MainLayout('ri-more-2-fill'),
-        children: [
-          {
-            index: true,
-            Component: DiagnosisDetailPage,
-          },
-        ],
-      },
-      {
         path: ROUTES.DIAGNOSIS_CREATE,
         Component: () => MainLayout('ri-information-line'),
         children: [
