@@ -1,4 +1,4 @@
-import BeehiveMap from '@/components/beehive/BeeHiveMap';
+import BeehiveMap from '@/components/beehive/BeehiveMap';
 import Button from '@/components/common/Button';
 import { ROUTES } from '@/config/routes';
 import { Link } from 'react-router-dom';
