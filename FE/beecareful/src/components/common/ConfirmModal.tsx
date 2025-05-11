@@ -2,7 +2,7 @@ import React from 'react';
 import RemixIcon from './RemixIcon';
 import Button from './Button';
 
-type ConfirmModalPropsType = {
+export type ConfirmModalPropsType = {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
