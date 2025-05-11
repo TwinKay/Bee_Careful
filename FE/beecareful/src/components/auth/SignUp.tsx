@@ -3,6 +3,9 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Button } from '@/components/common/Button';
+import { signup } from '@/services/auth';
+import type { ToastType, ToastPositionType } from '@/components/common/Toast';
+import Toast from '@/components/common/Toast';
 
 type SignupFormType = {
   username: string;
@@ -15,8 +18,13 @@ type SignupFormType = {
 const Signup = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isFormValid, setIsFormValid] = useState(false);
+
+  // Toast 상태
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('info');
+  const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
+  const [showToast, setShowToast] = useState(false);
 
   const {
     register,
@@ -69,22 +77,46 @@ const Signup = () => {
     }
   }, [phone, setValue]);
 
+  // Toast 표시 함수
+  const showToastMessage = (
+    message: string,
+    type: ToastType = 'info',
+    position: ToastPositionType = 'middle',
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastPosition(position);
+    setShowToast(true);
+  };
+
   const onSubmit = async (data: SignupFormType) => {
     try {
       setIsLoading(true);
-      setError(null);
-      // 전화번호에서 하이픈 제거 (DB 저장 전)
-      const cleanPhone = data.phone.replace(/-/g, '');
-      const cleanedData = { ...data, phone: cleanPhone };
 
-      /**
-       * @todo API 회원가입 처리 구현 필요
-       */
-      console.log(cleanedData);
-      // 회원가입 성공 시 로그인 페이지로 이동
-      navigate(ROUTES.LOGIN);
+      // 백엔드 API 명세에 맞게 데이터 변환
+      const requestData = {
+        memberLoginId: data.username,
+        password: data.password,
+        memberName: data.name,
+        phone: data.phone.replace(/-/g, ''),
+      };
+
+      await signup(requestData);
+
+      // 회원가입 성공 토스트
+      showToastMessage('회원가입이 완료되었습니다', 'success', 'middle');
+
+      // 약간의 지연 후 로그인 페이지로 이동
+      setTimeout(() => {
+        navigate(ROUTES.LOGIN);
+      }, 2000);
     } catch (err) {
-      setError('회원가입에 실패했습니다. 다시 시도해주세요.');
+      // API에서 에러 메시지 처리
+      if (err instanceof Error) {
+        showToastMessage(err.message, 'warning', 'middle');
+      } else {
+        showToastMessage('회원가입에 실패했습니다. 다시 시도해주세요.', 'warning', 'middle');
+      }
       console.error('Signup error:', err);
     } finally {
       setIsLoading(false);
@@ -102,6 +134,15 @@ const Signup = () => {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
+      {/* Toast 컴포넌트 */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        position={toastPosition}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
+
       <div className="w-full max-w-md px-6">
         <div className="mb-12 flex flex-col items-start">
           <p className="mt-2 text-2xl font-bold text-bc-brown-100">안녕하세요!</p>
@@ -110,8 +151,6 @@ const Signup = () => {
         </div>
 
         <div className="w-full">
-          {error && <div className="mb-4 rounded bg-red-100 p-3 text-sm text-red-700">{error}</div>}
-
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
             <div>
               <input
