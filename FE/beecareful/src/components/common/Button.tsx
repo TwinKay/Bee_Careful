@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { twMerge } from 'tailwind-merge';
 
 // 버튼의 모든 가능한 변형을 정의
 export type ButtonVariantType =
@@ -104,13 +105,13 @@ export const Button = ({
     <button
       type={type}
       disabled={disabled || isLoading}
-      className={`
-        ${baseClasses} 
-        ${sizeClasses[size]} 
-        ${variantClasses[variant]} 
-        ${widthClass} 
-        ${className}
-      `}
+      className={twMerge(
+        baseClasses,
+        sizeClasses[size],
+        variantClasses[variant],
+        widthClass,
+        className,
+      )}
       {...props}
     >
       {content}

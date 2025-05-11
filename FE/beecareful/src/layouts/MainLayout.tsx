@@ -9,7 +9,9 @@ const MainLayout = (icon?: string) => {
         <RemixIcon name={'ri-arrow-left-s-line'} onClick={() => route(-1)} />
         {icon && <RemixIcon name={icon} />}
       </header>
-      <Outlet />
+      <div className="flex w-full flex-col items-center gap-4 overflow-y-scroll p-4">
+        <Outlet />
+      </div>
     </div>
   );
 };

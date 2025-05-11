@@ -1,6 +1,7 @@
 import Button from '@/components/common/Button';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import RemixIcon from '@/components/common/RemixIcon';
+import { MAX_UPLOAD_IMAGE_COUNT } from '@/config/constants';
 import { removeMetadata } from '@/utils/removeMetadata';
 import { useState } from 'react';
 
@@ -36,13 +37,21 @@ const DiagnosisCreatePage = () => {
       const files = Array.from(event.target.files);
       const promises = files.map(removeMetadata);
       Promise.all(promises).then((cleanFiles) => {
-        setImages((prevImages) => [...prevImages, ...cleanFiles]);
+        const totalImageCount = images.length + cleanFiles.length;
+        console.log('totalImageCount', totalImageCount);
+        if (MAX_UPLOAD_IMAGE_COUNT < totalImageCount) {
+          alert(`사진은 최대 ${MAX_UPLOAD_IMAGE_COUNT}장까지 업로드 가능합니다.`);
+        }
+        setImages((prevImages) => [
+          ...prevImages,
+          ...cleanFiles.slice(0, MAX_UPLOAD_IMAGE_COUNT - prevImages.length),
+        ]);
       });
     }
   };
 
   return (
-    <div className="flex h-screen flex-col items-center">
+    <div className="flex h-screen w-full flex-col items-center">
       {images.length > 0 ? (
         <div className="flex h-full w-full flex-col items-center gap-8">
           <div className="flex w-full flex-wrap">
@@ -121,7 +130,6 @@ const DiagnosisCreatePage = () => {
           deleteImage(selectedImageIndex);
         }}
         title="사진을 삭제하시겠어요?"
-        // description="삭제된 사진은 복구할 수 없습니다."
         confirmText="삭제"
       />
     </div>
