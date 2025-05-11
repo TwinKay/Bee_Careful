@@ -2,6 +2,7 @@ package com.worldbeesion.beecareful.beehive.model.entity;
 
 
 import com.worldbeesion.beecareful.beehive.constant.BeeStage;
+import com.worldbeesion.beecareful.beehive.constant.DiseaseName;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,8 +25,9 @@ public class Disease {
     @Column(name = "disease_id")
     private Long id;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "name", nullable = false, length = 200)
-    private String name;
+    private DiseaseName name;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "stage")

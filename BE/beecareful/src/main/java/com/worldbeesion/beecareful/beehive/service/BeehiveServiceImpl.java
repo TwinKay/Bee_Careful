@@ -23,9 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+
 
 @Service
 @RequiredArgsConstructor
@@ -56,9 +55,71 @@ public class BeehiveServiceImpl implements BeehiveService{
                 .nickname(nickname)
                 .xDirection(xDirection)
                 .yDirection(yDirection)
+                .isInfected(false)
                 .build();
 
         beehiveRepository.save(beehive);
+    }
+
+
+    @Override
+    public List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails) {
+        Long memberId = userDetails.getMemberId();
+        Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+
+        List<BeehiveDiagnosisProjection> beehiveList = beehiveRepository.findAllBeehiveDto(apiary.getId());
+
+        List<Long> diagnosisIds = beehiveList.stream()
+                .map(BeehiveDiagnosisProjection::getLastDiagnosisId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Map<Long, Long> statusMap = getStatusEachBeehive(diagnosisIds);
+
+        return beehiveList.stream()
+                .map(dto -> new AllBeehiveResponseDto(
+                        dto.getBeehiveId(),
+                        dto.getNickname(),
+                        dto.getCreatedAt(),
+                        dto.getXDirection(),
+                        dto.getYDirection(),
+                        dto.getHornetAppearedAt(),
+                        dto.getIsInfected(),
+                        dto.getRecordCreatedAt(),
+                        dto.getLastDiagnosedAt(),
+                        dto.getLastDiagnosisId(),
+                        statusMap.get(dto.getLastDiagnosisId())
+                ))
+                .toList();
+    }
+
+
+    private Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds) {
+        List<OriginalPhotoStatusDto> statusList = originalPhotoRepository.findStatusesByDiagnosisIds(diagnosisIds);
+        Map<Long, List<DiagnosisStatus>> group = new HashMap<>();
+
+        for(OriginalPhotoStatusDto originalPhotoStatusDto : statusList) {
+            group.computeIfAbsent(originalPhotoStatusDto.diagnosisId(), k -> new ArrayList<>()).add(originalPhotoStatusDto.status());
+        }
+
+        return calculateStatus(group);
+    }
+
+
+    private Map<Long, Long> calculateStatus(Map<Long, List<DiagnosisStatus>> group) {
+        Map<Long, Long> result = new HashMap<>();
+        for(Map.Entry<Long, List<DiagnosisStatus>> entry : group.entrySet()) {
+            List<DiagnosisStatus> diagnosisStatuses = entry.getValue();
+            if(diagnosisStatuses.contains(DiagnosisStatus.FAIL) || diagnosisStatuses.contains(DiagnosisStatus.UNRECIEVED)) {
+                result.put(entry.getKey(), 2L);
+            } else if (diagnosisStatuses.contains(DiagnosisStatus.WAITING) || diagnosisStatuses.contains(DiagnosisStatus.ANALYZING)) {
+                result.put(entry.getKey(), 0L);
+            } else {
+                result.put(entry.getKey(), 1L);
+            }
+        }
+        return result;
     }
 
 
