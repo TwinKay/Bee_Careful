@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import type { HiveStatusType } from '@/components/beehive/BeehiveCell';
 import BeehiveCell from '@/components/beehive/BeehiveCell';
+import type { ToastType, ToastPositionType } from '@/components/common/Toast';
+import Toast from '@/components/common/Toast';
 import 'remixicon/fonts/remixicon.css';
 
 type HiveType = {
   id: number;
   nickname: string;
-  status: HiveStatusType;
+  isInfected: boolean;
+  diagnosisStatus: number | null;
+  lastDiagnosisId: number | null;
   x: number;
   y: number;
 };
@@ -16,21 +19,86 @@ const BeehiveMap = () => {
   const MAP_HEIGHT = 2000;
   const HIVE_SIZE = 100;
 
+  // 임시 데이터
   const initialHives: HiveType[] = [
-    { id: 1, nickname: '벌통1', status: 'normal', x: 900, y: 900 },
-    { id: 2, nickname: '벌통테스트', status: 'normal', x: 1050, y: 900 },
-    { id: 3, nickname: '벌통이름어디', status: 'alert', x: 900, y: 1050 },
-    { id: 4, nickname: '벌통4', status: 'loading', x: 1050, y: 1050 },
-    { id: 5, nickname: '벌통5', status: 'success', x: 750, y: 900 },
-    { id: 6, nickname: '벌통7', status: 'warning', x: 750, y: 1050 },
-    { id: 7, nickname: '벌통8', status: 'alert', x: 900, y: 750 },
-    { id: 8, nickname: '벌통', status: 'waiting', x: 1050, y: 750 },
+    {
+      id: 1,
+      nickname: '벌통1',
+      isInfected: false,
+      diagnosisStatus: null,
+      lastDiagnosisId: null,
+      x: 900,
+      y: 900,
+    },
+    {
+      id: 2,
+      nickname: '벌통2',
+      isInfected: false,
+      diagnosisStatus: 0,
+      lastDiagnosisId: 200,
+      x: 1050,
+      y: 900,
+    },
+    {
+      id: 3,
+      nickname: '벌통3',
+      isInfected: false,
+      diagnosisStatus: 1,
+      lastDiagnosisId: 201,
+      x: 750,
+      y: 900,
+    },
+    {
+      id: 4,
+      nickname: '벌통4',
+      isInfected: false,
+      diagnosisStatus: 2,
+      lastDiagnosisId: 202,
+      x: 900,
+      y: 1050,
+    },
+    {
+      id: 5,
+      nickname: '벌통5',
+      isInfected: true,
+      diagnosisStatus: null,
+      lastDiagnosisId: null,
+      x: 1050,
+      y: 1050,
+    },
+    {
+      id: 6,
+      nickname: '벌통6',
+      isInfected: true,
+      diagnosisStatus: 0,
+      lastDiagnosisId: 203,
+      x: 750,
+      y: 1050,
+    },
+    {
+      id: 7,
+      nickname: '벌통7',
+      isInfected: true,
+      diagnosisStatus: 1,
+      lastDiagnosisId: 204,
+      x: 900,
+      y: 750,
+    },
+    {
+      id: 8,
+      nickname: '벌통8',
+      isInfected: true,
+      diagnosisStatus: 2,
+      lastDiagnosisId: 205,
+      x: 1050,
+      y: 750,
+    },
   ];
 
   const [hives, setHives] = useState<HiveType[]>(initialHives);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [autoScroll, setAutoScroll] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1); // 초기 배율을 1로 설정
+  const [scale, setScale] = useState(1);
   const [pinchStartDist, setPinchStartDist] = useState<number | null>(null);
   const [pinchStartScale, setPinchStartScale] = useState<number>(1);
 
@@ -41,12 +109,17 @@ const BeehiveMap = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
-  // const lastTouchTimeRef = useRef(0); // 터치 시간 추적
 
   const autoScrollThreshold = 50;
   const autoScrollSpeed = 10;
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
+
+  // Toast 상태
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('info');
+  const [ToastPositionType, setToastPosition] = useState<ToastPositionType>('top');
+  const [showToast, setShowToast] = useState(false);
 
   // 맵 중앙에 있는 벌통 위치(900, 900 주변)로 스크롤
   const centerToHives = useCallback(() => {
@@ -166,24 +239,13 @@ const BeehiveMap = () => {
     const scrollLeft = containerRef.current.scrollLeft;
     const scrollTop = containerRef.current.scrollTop;
 
-    // 화면 경계 체크 및 제한
-    const boundaryPadding = 20;
-    const clampedClientX = Math.max(
-      boundaryPadding,
-      Math.min(clientX, window.innerWidth - boundaryPadding),
-    );
-    const clampedClientY = Math.max(
-      boundaryPadding,
-      Math.min(clientY, window.innerHeight - boundaryPadding),
-    );
+    // 경계 체크를 제거하고 직접 계산
+    const newX = (clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
+    const newY = (clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
 
-    const newX =
-      (clampedClientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
-    const newY = (clampedClientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
-
-    // 맵 경계 내로 제한
-    const clampedX = Math.max(0, Math.min(newX, MAP_WIDTH));
-    const clampedY = Math.max(0, Math.min(newY, MAP_HEIGHT));
+    // 맵 경계 내로 제한만 수행
+    const clampedX = Math.max(HIVE_SIZE / 2, Math.min(newX, MAP_WIDTH - HIVE_SIZE / 2));
+    const clampedY = Math.max(HIVE_SIZE / 2, Math.min(newY, MAP_HEIGHT - HIVE_SIZE / 2));
 
     setHives((prev) =>
       prev.map((hive) => (hive.id === draggingId ? { ...hive, x: clampedX, y: clampedY } : hive)),
@@ -348,25 +410,15 @@ const BeehiveMap = () => {
         const scrollLeft = containerRef.current.scrollLeft;
         const scrollTop = containerRef.current.scrollTop;
 
-        // 터치 포인트를 화면 경계 내로 제한
-        const boundaryPadding = 20;
-        const clampedClientX = Math.max(
-          boundaryPadding,
-          Math.min(touch.clientX, window.innerWidth - boundaryPadding),
-        );
-        const clampedClientY = Math.max(
-          boundaryPadding,
-          Math.min(touch.clientY, window.innerHeight - boundaryPadding),
-        );
-
+        // 직접 계산하여 경계 체크 제거
         const newX =
-          (clampedClientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
+          (touch.clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
         const newY =
-          (clampedClientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
+          (touch.clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
 
         // 맵 경계 내로 제한
-        const clampedX = Math.max(0, Math.min(newX, MAP_WIDTH));
-        const clampedY = Math.max(0, Math.min(newY, MAP_HEIGHT));
+        const clampedX = Math.max(HIVE_SIZE / 2, Math.min(newX, MAP_WIDTH - HIVE_SIZE / 2));
+        const clampedY = Math.max(HIVE_SIZE / 2, Math.min(newY, MAP_HEIGHT - HIVE_SIZE / 2));
 
         setHives((prev) =>
           prev.map((hive) =>
@@ -484,6 +536,15 @@ const BeehiveMap = () => {
       }}
       onContextMenu={(e) => e.preventDefault()} // 컨텍스트 메뉴 방지
     >
+      {/* Toast 컴포넌트 */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        position={ToastPositionType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
+
       <div className="absolute bottom-4 right-4 z-10 flex space-x-2">
         <button
           onClick={() => handleZoom(Math.min(MAX_SCALE, scale * 1.2))}
@@ -577,7 +638,13 @@ const BeehiveMap = () => {
               onTouchEnd={() => handleDragEnd()}
               onMouseLeave={() => handleDragEnd()}
             >
-              <BeehiveCell beeHiveId={hive.id} nickname={hive.nickname} status={hive.status} />
+              <BeehiveCell
+                beeHiveId={hive.id}
+                nickname={hive.nickname}
+                isInfected={hive.isInfected}
+                diagnosisStatus={hive.diagnosisStatus}
+                lastDiagnosisId={hive.lastDiagnosisId}
+              />
             </div>
           ))}
         </div>
