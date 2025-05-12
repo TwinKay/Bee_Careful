@@ -1,4 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import BeehiveCell from '@/components/beehive/BeehiveCell';
 import type { ToastType, ToastPositionType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
@@ -14,7 +21,17 @@ type HiveType = {
   y: number;
 };
 
-const BeehiveMap = () => {
+// Props 타입 정의 추가
+type BeehiveMapPropsType = {
+  _unused?: never;
+};
+
+export type BeehiveMapRefType = {
+  getMapCenter: () => { x: number; y: number };
+  refreshMap: () => void;
+};
+
+const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, ref) => {
   const MAP_WIDTH = 2000;
   const MAP_HEIGHT = 2000;
   const HIVE_SIZE = 100;
@@ -118,8 +135,20 @@ const BeehiveMap = () => {
   // Toast 상태
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('info');
-  const [ToastPositionType, setToastPosition] = useState<ToastPositionType>('top');
+  const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
   const [showToast, setShowToast] = useState(false);
+
+  // Toast 표시 함수
+  const showToastMessage = (
+    message: string,
+    type: ToastType = 'info',
+    position: ToastPositionType = 'top',
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastPosition(position);
+    setShowToast(true);
+  };
 
   // 맵 중앙에 있는 벌통 위치(900, 900 주변)로 스크롤
   const centerToHives = useCallback(() => {
@@ -309,6 +338,61 @@ const BeehiveMap = () => {
     },
     [scale, MIN_SCALE, MAX_SCALE],
   );
+
+  // 맵 중앙 좌표를 가져오는 함수
+  const getMapCenter = useCallback(() => {
+    if (!containerRef.current) return { x: 10, y: 10 };
+
+    const container = containerRef.current;
+    const viewportWidth = container.clientWidth;
+    const viewportHeight = container.clientHeight;
+
+    // 뷰포트 중앙의 스크롤 위치
+    const centerScrollX = container.scrollLeft + viewportWidth / 2;
+    const centerScrollY = container.scrollTop + viewportHeight / 2;
+
+    // 스크롤 위치를 맵 좌표로 변환 (스케일 고려)
+    const mapX = centerScrollX / scale;
+    const mapY = centerScrollY / scale;
+
+    return { x: mapX, y: mapY };
+  }, [scale]);
+
+  // 맵 새로고침 함수
+  const refreshMap = useCallback(async () => {
+    try {
+      /**
+       * @todo 실제 API 호출로 벌통 데이터 다시 가져오기
+       */
+      // const response = await fetchBeehives();
+      // setHives(response);
+
+      // 데모용 임의 새로고침 로직
+      setHives((prev) => [...prev]);
+
+      // 토스트 메시지 표시
+      showToastMessage('맵이 새로고침되었습니다.', 'success', 'middle');
+
+      // 3초 후 토스트 메시지 숨기기
+      setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+    } catch (error) {
+      let errorMessage = '맵 새로고침 중 오류가 발생했습니다.';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      showToastMessage(errorMessage, 'warning', 'middle');
+    }
+  }, []);
+
+  // ref를 통해 외부에서 접근 가능한 메서드 노출
+  useImperativeHandle(ref, () => ({
+    getMapCenter,
+    refreshMap,
+  }));
 
   // 마우스 휠 이벤트 핸들러
   useEffect(() => {
@@ -540,7 +624,7 @@ const BeehiveMap = () => {
       <Toast
         message={toastMessage}
         type={toastType}
-        position={ToastPositionType}
+        position={toastPosition}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />
@@ -651,6 +735,6 @@ const BeehiveMap = () => {
       </div>
     </div>
   );
-};
+});
 
 export default BeehiveMap;

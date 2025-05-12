@@ -16,6 +16,13 @@ export type BeehiveType = {
   diagnosisStatus: number;
 };
 
+// 벌통 생성 요청 타입
+export type CreateBeehiveRequestType = {
+  nickname: string;
+  xDirection: number;
+  yDirection: number;
+};
+
 // 전체 벌통 조회
 export const getBeehives = async (): Promise<BeehiveType[]> => {
   try {
@@ -29,6 +36,26 @@ export const getBeehives = async (): Promise<BeehiveType[]> => {
 
     // 네트워크 에러 등
     console.error('벌통 목록 조회 에러:', error);
+    throw error;
+  }
+};
+
+// 벌통 추가
+export const createBeehive = async (beehiveData: CreateBeehiveRequestType): Promise<void> => {
+  try {
+    const response = await api.post('/api/v1/beehives', beehiveData);
+    // 201: 성공
+    if (response.status === 201) {
+      return;
+    }
+  } catch (error) {
+    // 에러 처리
+    if (error instanceof AxiosError && error.response) {
+      throw new Error(error.response.data?.message || '벌통 추가에 실패했습니다.');
+    }
+
+    // 네트워크 에러 등
+    console.error('벌통 추가 에러:', error);
     throw error;
   }
 };
