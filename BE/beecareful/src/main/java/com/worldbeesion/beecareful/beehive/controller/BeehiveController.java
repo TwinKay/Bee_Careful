@@ -35,10 +35,11 @@ public class BeehiveController {
                 .body(beehiveList);
     }
 
-//    @GetMapping("/{beeHiveId}?page=${page}&size=${size}")
-//    public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId, Pageable pageable) {
-//
-//    }
+    @GetMapping("/{beeHiveId}")
+    public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId, Pageable pageable) {
+        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, pageable);
+        return ResponseEntity.ok().body(responseDto);
+    }
 
 
     @PostMapping("/{beeHiveId}/diagnosis")

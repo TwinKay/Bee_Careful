@@ -1,17 +1,18 @@
 package com.worldbeesion.beecareful.beehive.model.dto;
 
+
+import java.time.LocalDateTime;
+
 public interface DiagnosisResultProjection {
+    // 진단 ID
+    Long getDiagnosisId();
+    LocalDateTime getCreatedAt();
     // Larva fields
     Long getLarvavarroaCount();
-    double getLarvaarroaRatio();
     Long getLarvafoulBroodCount();
-    double getLarvafoulBroodRatio();
     Long getLarvachalkBroodCount();
-    double getLarvachalkBroodRatio();
 
     // Imago fields
     Long getImagovarroaCount();
-    double getImagovarroaRatio();
     Long getImagodwvCount();
-    double getImagodwvRatio();
 }

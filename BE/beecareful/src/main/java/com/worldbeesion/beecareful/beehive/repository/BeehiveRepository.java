@@ -38,5 +38,6 @@ public interface BeehiveRepository extends JpaRepository<Beehive, Long> {
     """, nativeQuery = true)
     List<BeehiveDiagnosisProjection> findAllBeehiveDto(@Param("apiaryId") Long apiaryId);
 
+
 }
 
