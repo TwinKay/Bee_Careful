@@ -26,6 +26,11 @@ spring:
 jwt:
   secretKey: ${JWT_SECRET}
 
+aws:
+  s3:
+    bucketName: ${S3_BUCKET_NAME}
+    apiKey: ${S3_API_KEY}
+
 logging:
   level:
     org.springframework.security : DEBUG

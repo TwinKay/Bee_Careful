@@ -2,6 +2,7 @@ package com.worldbeesion.beecareful.s3.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,34 +19,30 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/s3") // Base path for the S3 event related endpoints
 @Slf4j
 public class S3EventController {
-
+	@Value("${aws.s3.bucketName}")
+	public String bucketName;
+	@Value("${aws.s3.apiKey}")
+	public String apiKey;
 	/**
 	 * Endpoint to receive S3 event notifications from the AWS Lambda function.
 	 *
 	 * @param eventPayload The S3EventPayload deserialized from the JSON request body.
-	 * @param apiKey       Optional API key passed in the header for security.
+	 * @param receivedApiKey       Optional API key passed in the header for security.
 	 * @return ResponseEntity indicating the outcome of the processing.
 	 */
 	@PostMapping
 	public ResponseEntity<String> receiveS3Event(
 		@RequestBody S3EventPayload eventPayload,
-		@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
+		@RequestHeader(value = "X-API-Key", required = true) String receivedApiKey
+	) {
 
-		// TODO: Security Check
-		// Replace "your-configured-api-key" with the actual key you configure
-		// It's better to load this from application properties or environment variables
-		String configuredApiKey = System.getenv("EXPECTED_API_KEY"); // Or inject from properties
-		if (configuredApiKey != null && !configuredApiKey.isEmpty()) {
-			if (apiKey == null || !apiKey.equals(configuredApiKey)) {
-			log.warn("Received request with missing or invalid API key. Might be a SECURITY ISSUE.");
-				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing API Key");
-			}
-		} else {
-			log.info("API Key check is not configured or EXPECTED_API_KEY is not set. Proceeding without key check.");
+		if (!apiKey.equals(receivedApiKey)) {
+		log.warn("Received request with missing or invalid API key. Might be a SECURITY ISSUE.");
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing API Key");
 		}
-		// --- End Security Check ---
 
-		log.info("Received S3 event notification: {}", eventPayload.toString());
+		// --- End Security Check ---
+		// log.info("Received S3 event notification: {}", eventPayload.toString());
 
 		// Log specific details
 		log.info("Bucket: {}, Key: {}, Event: {}",
