@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
 
 @RestController
-@RequestMapping("/api/s3-events") // Base path for the S3 event related endpoints
+@RequestMapping("/api/v1/s3") // Base path for the S3 event related endpoints
 public class S3EventController {
 
 	private static final Logger logger = LoggerFactory.getLogger(S3EventController.class);
