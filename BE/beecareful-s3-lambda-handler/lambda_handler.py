@@ -3,9 +3,8 @@ import os
 import urllib3 # Using urllib3 which is available in AWS Lambda environment
 
 # Environment variables for your API endpoint
-API_HOST = os.environ.get('API_HOST') # e.g., https://your-api.example.com
-API_PATH = os.environ.get('API_PATH') # e.g., /api/v1/s3/events
-# Optional: API Key if your endpoint is protected
+API_HOST = os.environ.get('API_HOST')
+API_PATH = os.environ.get('API_PATH')
 API_KEY = os.environ.get('API_KEY')
 
 http = urllib3.PoolManager()
@@ -29,6 +28,12 @@ def lambda_handler(event, context):
         return {
             'statusCode': 500,
             'body': json.dumps({'error': 'API_PATH not configured'})
+        }
+    if not API_KEY:
+        print("Error: API_KEY environment variable not set.")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': 'API_KEY not configured'})
         }
 
     # Construct the full API endpoint
@@ -66,10 +71,9 @@ def lambda_handler(event, context):
             print(f"Sending payload to API: {json.dumps(payload)}")
 
             headers = {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
             }
-            if API_KEY:
-                headers['X-API-Key'] = API_KEY # Example header for API key
 
             encoded_payload = json.dumps(payload).encode('utf-8')
 
@@ -145,7 +149,7 @@ if __name__ == '__main__':
             "s3SchemaVersion": "1.0",
             "configurationId": "testConfigRule",
             "bucket": {
-              "name": "my-example-bucket-us-east-1",
+              "name": "becareful-bucket",
               "ownerIdentity": {
                 "principalId": "EXAMPLE"
               },
