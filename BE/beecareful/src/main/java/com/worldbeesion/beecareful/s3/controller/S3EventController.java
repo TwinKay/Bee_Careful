@@ -12,11 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/v1/s3") // Base path for the S3 event related endpoints
+@Slf4j
 public class S3EventController {
-
-	private static final Logger logger = LoggerFactory.getLogger(S3EventController.class);
 
 	/**
 	 * Endpoint to receive S3 event notifications from the AWS Lambda function.
@@ -30,58 +31,34 @@ public class S3EventController {
 		@RequestBody S3EventPayload eventPayload,
 		@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
 
-		// --- Security Check (Optional but Recommended) ---
+		// TODO: Security Check
 		// Replace "your-configured-api-key" with the actual key you configure
 		// It's better to load this from application properties or environment variables
 		String configuredApiKey = System.getenv("EXPECTED_API_KEY"); // Or inject from properties
 		if (configuredApiKey != null && !configuredApiKey.isEmpty()) {
 			if (apiKey == null || !apiKey.equals(configuredApiKey)) {
-				logger.warn("Received request with missing or invalid API key. Remote Addr: {}", getRemoteAddr());
+			log.warn("Received request with missing or invalid API key. Might be a SECURITY ISSUE.");
 				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing API Key");
 			}
 		} else {
-			logger.info("API Key check is not configured or EXPECTED_API_KEY is not set. Proceeding without key check.");
+			log.info("API Key check is not configured or EXPECTED_API_KEY is not set. Proceeding without key check.");
 		}
 		// --- End Security Check ---
 
-		logger.info("Received S3 event notification: {}", eventPayload.toString());
+		log.info("Received S3 event notification: {}", eventPayload.toString());
 
-		// --- Business Logic ---
-		// Here you would typically:
-		// 1. Validate the payload further if needed.
-		// 2. Save the event details to a database.
-		// 3. Trigger other business processes (e.g., data processing, notifications).
-		// 4. Update the status of the upload in your system.
-
-		// Example: Log specific details
-		logger.info("Bucket: {}, Key: {}, Event: {}",
+		// Log specific details
+		log.info("Bucket: {}, Key: {}, Event: {}",
 			eventPayload.getBucketName(),
 			eventPayload.getObjectKey(),
 			eventPayload.getEventName());
 
-		// If you need to inspect the full original S3 record:
-		if (eventPayload.getSourceEvent() != null) {
-			// Be careful logging the full sourceEvent if it's very large
-			// logger.debug("Full source S3 event record: {}", eventPayload.getSourceEvent());
-		}
+		// TODO
+		// 1. Validate the payload
+		// 1-1. check bucketName, eventName
+		// 1-2. check objectKey, compare expectedSize and actualSize received
+		// 2. Update the status of the upload in your system.
 
-		// --- End Business Logic ---
-
-		// Respond to the Lambda function
 		return ResponseEntity.ok("Event received successfully: " + eventPayload.getObjectKey());
 	}
-
-	/**
-	 * Helper method to get client IP for logging (requires proper proxy setup if behind one)
-	 * This is a very basic implementation.
-	 */
-	private String getRemoteAddr() {
-		// In a real application, you'd use HttpServletRequest if available
-		// or rely on X-Forwarded-For headers if behind a proxy.
-		// This is a placeholder as HttpServletRequest is not directly available here.
-		return "N/A (requires HttpServletRequest for accurate IP)";
-	}
-
-	// You can add more specific endpoints if needed, e.g., for different event types
-	// or if you want to handle different versions of your payload.
 }
