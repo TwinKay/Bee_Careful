@@ -98,64 +98,27 @@ public class BeehiveServiceImpl implements BeehiveService{
     public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable) {
         Page<Diagnosis> diagnosisPage = diagnosisRepository.findByBeehiveId(beehiveId, pageable);
 
-        for (Diagnosis diagnosis : diagnosisPage.getContent()) {
-            System.out.println("Diagnosis id: " + diagnosis.getId());
-            System.out.println("Diagnosis createdAt: " + diagnosis.getCreatedAt());
-            // 필요한 다른 필드를 출력
-        }
-
-
-
         List<Long> diagnosisIds = new ArrayList<>();
         for(Diagnosis diagnosis : diagnosisPage.getContent()) {
             diagnosisIds.add(diagnosis.getId());
         }
 
-        if (diagnosisIds.isEmpty()) {
-            System.out.println("========================DiagnosisId 리스트가 비어있음=========================");
-        }
-
         List<AnalyzedPhotoResultDto> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisIds(diagnosisIds);
-
-        if (analyzedPhotoIds.isEmpty()) {
-            System.out.println("=============================analyzed포토아이디리스트 비어있음============================");
-        }
 
         List<Long> analyzedPhotoIdList = new ArrayList<>();
         for(AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
             analyzedPhotoIdList.add(analyzedPhotoResultDto.analyzedPhotoId());
         }
 
-        if(analyzedPhotoIdList.isEmpty()) {
-            System.out.println("===============================전체 분석 아이디 없음=============================");
-        }
-
 
         List<DiagnosisResultProjection> diagnosisResultList = analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(analyzedPhotoIdList);
-
-        if(diagnosisResultList.isEmpty()) {
-            System.out.println("=====================결과 가지고 오는 리스트 비어있음=======================");
-        }
-
-        // 반환된 리스트의 첫 번째 항목을 확인
-        if (!diagnosisResultList.isEmpty()) {
-            DiagnosisResultProjection firstItem = diagnosisResultList.get(0);
-            System.out.println("첫 번째 인자 제발 있나요 : " + firstItem.getDiagnosisId());
-            System.out.println("두 번째 인자(날짜) : " + firstItem.getCreatedAt());
-            System.out.println("세 번째 인자 : " + firstItem.getImagodwvCount());
-        } else {
-            System.out.println("No diagnosis results found");
-        }
 
         List<BeehiveDiagnosisInfoDto> beehiveDiagnosisInfoList = new ArrayList<>();
 
         for(DiagnosisResultProjection diagnosisResultProjection : diagnosisResultList) {
-            System.out.println("포문 안에 아이디 보기: " + diagnosisResultProjection.getDiagnosisId());
             TotalCountImagoLarvaProjection totalCountByDiagnosis = analyzedPhotoRepository.getTotalCountByDiagnosis(diagnosisResultProjection.getDiagnosisId());
             Long totalLarva = totalCountByDiagnosis.getLarvaCount();
-            System.out.println("totalLarva : " + totalLarva);
             Long totalImago = totalCountByDiagnosis.getImagoCount();
-            System.out.println("totalImago : " + totalImago);
 
             double larvaVarroaRatio = calculateDiseaseRatio(diagnosisResultProjection.getLarvavarroaCount(), totalLarva);
             double larvaFoulBroodRatio = calculateDiseaseRatio(diagnosisResultProjection.getLarvafoulBroodCount(), totalLarva);
