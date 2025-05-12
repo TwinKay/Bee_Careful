@@ -3,21 +3,29 @@ import 'remixicon/fonts/remixicon.css';
 import beehiveNormal from '/icons/beehive-normal.png';
 import beehiveAlert from '/icons/beehive-alert.png';
 
-export type HiveStatusType = 'normal' | 'alert' | 'loading' | 'success' | 'warning' | 'waiting';
-
 type HiveCellPropsType = {
   beeHiveId: number;
   nickname: string;
-  status: HiveStatusType;
+  isInfected: boolean; // alert 상태 결정
+  diagnosisStatus?: number | null; // 진단 상태 (0: loading, 1: success, 2: warning)
+  lastDiagnosisId?: number | null; // 진단이 있는지 확인용
 };
 
-// 각 벌통 컴포넌트
-const BeehiveCell: React.FC<HiveCellPropsType> = ({ beeHiveId, nickname, status }) => {
-  const svgSrc = status === 'alert' ? beehiveAlert : beehiveNormal;
+const BeehiveCell: React.FC<HiveCellPropsType> = ({
+  beeHiveId,
+  nickname,
+  isInfected,
+  diagnosisStatus,
+  lastDiagnosisId,
+}) => {
+  // 배경 이미지는 isInfected에 따라 결정
+  const svgSrc = isInfected ? beehiveAlert : beehiveNormal;
 
-  // 상태 아이콘이 있을 때 SVG를 흐리게 처리
-  const needsDimmedSvg =
-    status === 'loading' || status === 'success' || status === 'warning' || status === 'waiting';
+  // 진단 상태가 있고 lastDiagnosisId가 있을 때만 아이콘 표시
+  const showDiagnosisIcon = lastDiagnosisId !== null && diagnosisStatus !== null;
+
+  // 진단 아이콘이 있을 때 SVG를 흐리게 처리
+  const needsDimmedSvg = showDiagnosisIcon;
 
   // 롱프레스 타이머 ref
   const longPressTimerRef = useRef<number | null>(null);
@@ -65,9 +73,10 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ beeHiveId, nickname, status 
     }
   };
 
-  // 상태에 따른 아이콘 결정
+  // 진단 상태에 따른 아이콘 결정
   let statusIcon = null;
-  if (status === 'loading') {
+  if (showDiagnosisIcon && diagnosisStatus === 0) {
+    // loading
     statusIcon = (
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-2 shadow-sm">
@@ -75,7 +84,8 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ beeHiveId, nickname, status 
         </div>
       </div>
     );
-  } else if (status === 'success') {
+  } else if (showDiagnosisIcon && diagnosisStatus === 1) {
+    // success
     statusIcon = (
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
@@ -83,19 +93,12 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ beeHiveId, nickname, status 
         </div>
       </div>
     );
-  } else if (status === 'warning') {
+  } else if (showDiagnosisIcon && diagnosisStatus === 2) {
+    // warning
     statusIcon = (
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
           <i className="ri-information-line text-3xl text-red-500"></i>
-        </div>
-      </div>
-    );
-  } else if (status === 'waiting') {
-    statusIcon = (
-      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
-          <i className="ri-timer-line text-3xl text-gray-400"></i>
         </div>
       </div>
     );
@@ -166,8 +169,8 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ beeHiveId, nickname, status 
           </div>
         </div>
 
-        {/* 상태 아이콘 */}
-        {status !== 'normal' && status !== 'alert' && statusIcon}
+        {/* 진단 상태 아이콘 */}
+        {statusIcon}
       </div>
     </div>
   );
