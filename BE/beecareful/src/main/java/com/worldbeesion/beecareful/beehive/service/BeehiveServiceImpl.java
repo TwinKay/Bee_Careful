@@ -20,6 +20,8 @@ import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.service.S3FileService;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,6 +94,20 @@ public class BeehiveServiceImpl implements BeehiveService{
                         statusMap.get(dto.getLastDiagnosisId())
                 ))
                 .toList();
+    }
+
+    @Override
+    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable) {
+        Page<Diagnosis> diagnosisPage = diagnosisRepository.findByBeehiveId(beehiveId, pageable);
+
+        List<Long> diagnosisIds = new ArrayList<>();
+        for(Diagnosis diagnosis : diagnosisPage.getContent()) {
+            diagnosisIds.add(diagnosis.getId());
+        }
+
+
+
+        return null;
     }
 
 
