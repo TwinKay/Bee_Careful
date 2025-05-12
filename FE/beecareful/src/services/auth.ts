@@ -77,7 +77,7 @@ export const login = async (data: LoginRequestType): Promise<void> => {
 export function useSignup() {
   return useMutation({
     mutationFn: (newUser: SignupRequestType) =>
-      api.post('/api/v1/users', newUser).then((res) => res.data),
+      api.post('/api/v1/members', newUser).then((res) => res.data),
   });
 }
 
@@ -85,6 +85,6 @@ export function useSignup() {
 export function useLogin() {
   return useMutation({
     mutationFn: (credentials: LoginRequestType) =>
-      api.post('/api/v1/users/login', credentials).then((res) => res.data),
+      api.post('/api/v1/members/login', credentials).then((res) => res.data),
   });
 }

@@ -55,14 +55,14 @@ const Toast: React.FC<ToastPropsType> = ({
   return (
     <div
       className={`
-        fixed left-1/2 z-50 w-auto max-w-[90%] -translate-x-1/2 transform rounded-lg px-6
+        fixed left-1/2 z-50 w-[90%] max-w-md -translate-x-1/2 transform rounded-lg px-3
         py-3 shadow-lg transition-all duration-300 ease-in-out
         ${typeStyles[type]}
         ${positionStyles[position]}
         ${animationClasses}
       `}
     >
-      <p className="whitespace-pre-wrap break-words text-center">{message}</p>
+      <p className="whitespace-normal break-words text-center text-sm">{message}</p>
     </div>
   );
 };

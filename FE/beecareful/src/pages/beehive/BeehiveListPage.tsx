@@ -4,7 +4,7 @@ import Button from '@/components/common/Button';
 import { ROUTES } from '@/config/routes';
 import { Link } from 'react-router-dom';
 import BottomSheet from '@/components/common/BottomSheet';
-import { createBeehive } from '@/services/beehive';
+import { useCreateBeehive } from '@/services/beehive';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
 import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
@@ -47,8 +47,8 @@ const BeehiveListPage = () => {
     setShowToast(true);
   };
 
-  // 로딩 상태
-  const [isLoading, setIsLoading] = useState(false);
+  // TanStack Query 사용하여 벌통 생성 뮤테이션 설정
+  const createBeehiveMutation = useCreateBeehive();
 
   // 닉네임 바텀시트 열기
   const openNicknameBottomSheet = () => {
@@ -108,8 +108,6 @@ const BeehiveListPage = () => {
 
   // 장치 등록 여부를 파라미터로 받는 통합 함수
   const handleRegisterBeehive = async (withDevice = false) => {
-    setIsLoading(true);
-
     try {
       // 현재 맵 중앙 위치 가져오기
       let centerX = beehiveData.xDirection;
@@ -135,7 +133,7 @@ const BeehiveListPage = () => {
       }
 
       // 벌통 생성 API 호출
-      await createBeehive(beehiveCreateData);
+      await createBeehiveMutation.mutateAsync(beehiveCreateData);
 
       // 성공 메시지 표시 (장치 등록 여부에 따라 다른 메시지)
       const successMessage = withDevice
@@ -158,8 +156,6 @@ const BeehiveListPage = () => {
       }
 
       showToastMessage(errorMessage, 'warning', 'middle');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -247,17 +243,17 @@ const BeehiveListPage = () => {
             buttons={[
               {
                 id: 'register',
-                label: isLoading ? '등록 중...' : '등록하기',
+                label: createBeehiveMutation.isPending ? '등록 중...' : '등록하기',
                 variant: 'success',
                 onClick: () => handleRegisterBeehive(true),
-                disabled: isLoading,
+                disabled: createBeehiveMutation.isPending,
               },
               {
                 id: 'registerLater',
                 label: '다음에 등록하기',
                 variant: 'secondary',
                 onClick: () => handleRegisterBeehive(false),
-                disabled: isLoading,
+                disabled: createBeehiveMutation.isPending,
               },
             ]}
           />
