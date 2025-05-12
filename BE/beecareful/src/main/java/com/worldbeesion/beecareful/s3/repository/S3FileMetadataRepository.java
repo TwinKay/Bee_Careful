@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface S3FileMetadataRepository extends JpaRepository<S3FileMetadata,Long> {
 
-
+	S3FileMetadata findByS3Key(String s3Key);
 }
