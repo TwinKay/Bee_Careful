@@ -1,17 +1,13 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  forwardRef,
-  useImperativeHandle,
-} from 'react';
-import BeehiveCell from '@/components/beehive/BeehiveCell';
-import type { ToastType, ToastPositionType } from '@/components/common/Toast';
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import Toast from '@/components/common/Toast';
-import 'remixicon/fonts/remixicon.css';
+import type { ToastType, ToastPositionType } from '@/components/common/Toast';
+import MapControls from './MapControls';
+import MapContainer from './MapContainer';
+import useMapInteractions from '@/hooks/useMapInteractions';
+import { useGetBeehives } from '@/services/beehive';
+import type { BeehiveType } from '@/services/beehive';
 
-type HiveType = {
+export type HiveType = {
   id: number;
   nickname: string;
   isInfected: boolean;
@@ -21,7 +17,6 @@ type HiveType = {
   y: number;
 };
 
-// Props 타입 정의 추가
 type BeehiveMapPropsType = {
   _unused?: never;
 };
@@ -32,111 +27,36 @@ export type BeehiveMapRefType = {
 };
 
 const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, ref) => {
-  const MAP_WIDTH = 2000;
-  const MAP_HEIGHT = 2000;
-  const HIVE_SIZE = 100;
-
-  // 임시 데이터
-  const initialHives: HiveType[] = [
-    {
-      id: 1,
-      nickname: '벌통1',
-      isInfected: false,
-      diagnosisStatus: null,
-      lastDiagnosisId: null,
-      x: 900,
-      y: 900,
-    },
-    {
-      id: 2,
-      nickname: '벌통2',
-      isInfected: false,
-      diagnosisStatus: 0,
-      lastDiagnosisId: 200,
-      x: 1050,
-      y: 900,
-    },
-    {
-      id: 3,
-      nickname: '벌통3',
-      isInfected: false,
-      diagnosisStatus: 1,
-      lastDiagnosisId: 201,
-      x: 750,
-      y: 900,
-    },
-    {
-      id: 4,
-      nickname: '벌통4',
-      isInfected: false,
-      diagnosisStatus: 2,
-      lastDiagnosisId: 202,
-      x: 900,
-      y: 1050,
-    },
-    {
-      id: 5,
-      nickname: '벌통5',
-      isInfected: true,
-      diagnosisStatus: null,
-      lastDiagnosisId: null,
-      x: 1050,
-      y: 1050,
-    },
-    {
-      id: 6,
-      nickname: '벌통6',
-      isInfected: true,
-      diagnosisStatus: 0,
-      lastDiagnosisId: 203,
-      x: 750,
-      y: 1050,
-    },
-    {
-      id: 7,
-      nickname: '벌통7',
-      isInfected: true,
-      diagnosisStatus: 1,
-      lastDiagnosisId: 204,
-      x: 900,
-      y: 750,
-    },
-    {
-      id: 8,
-      nickname: '벌통8',
-      isInfected: true,
-      diagnosisStatus: 2,
-      lastDiagnosisId: 205,
-      x: 1050,
-      y: 750,
-    },
-  ];
-
-  const [hives, setHives] = useState<HiveType[]>(initialHives);
-  const [draggingId, setDraggingId] = useState<number | null>(null);
-  const [autoScroll, setAutoScroll] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
-  const [pinchStartDist, setPinchStartDist] = useState<number | null>(null);
-  const [pinchStartScale, setPinchStartScale] = useState<number>(1);
-
-  // 롱프레스 감지를 위한 추가 state
-  const [isLongPress, setIsLongPress] = useState(false);
-  const longPressTimeoutRef = useRef<number | null>(null);
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const dragOffsetRef = useRef({ x: 0, y: 0 });
-
-  const autoScrollThreshold = 50;
-  const autoScrollSpeed = 10;
-  const MIN_SCALE = 0.5;
-  const MAX_SCALE = 2;
+  const [hives, setHives] = useState<HiveType[]>([]);
 
   // Toast 상태
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('info');
   const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
   const [showToast, setShowToast] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { data: beehives, isLoading, isError, error, refetch } = useGetBeehives();
+
+  const {
+    scale,
+    draggingId,
+    isLongPress,
+    handleZoom,
+    handleDragStart,
+    handleDrag,
+    handleDragEnd,
+    centerToHives,
+    getMapCenter,
+  } = useMapInteractions({
+    containerRef,
+    hives,
+    setHives,
+    mapWidth: 2000,
+    mapHeight: 2000,
+    hiveSize: 100,
+  });
 
   // Toast 표시 함수
   const showToastMessage = (
@@ -150,243 +70,25 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
     setShowToast(true);
   };
 
-  // 맵 중앙에 있는 벌통 위치(900, 900 주변)로 스크롤
-  const centerToHives = useCallback(() => {
-    if (!containerRef.current) return;
-
-    const centerX = 900;
-    const centerY = 900;
-
-    const scrollLeft = centerX * scale - containerRef.current.clientWidth / 2;
-    const scrollTop = centerY * scale - containerRef.current.clientHeight / 2;
-
-    // 스크롤 값이 음수가 되지 않도록 조정
-    containerRef.current.scrollLeft = Math.max(0, scrollLeft);
-    containerRef.current.scrollTop = Math.max(0, scrollTop);
-  }, [scale]);
-
-  // 자동 스크롤 체크 함수
-  const checkAutoScroll = useCallback(
-    (clientX: number, clientY: number) => {
-      if (!containerRef.current) return;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      let scrollX = 0;
-      let scrollY = 0;
-
-      if (clientX - rect.left < autoScrollThreshold) {
-        scrollX = -autoScrollSpeed;
-      } else if (rect.right - clientX < autoScrollThreshold) {
-        scrollX = autoScrollSpeed;
-      }
-
-      if (clientY - rect.top < autoScrollThreshold) {
-        scrollY = -autoScrollSpeed;
-      } else if (rect.bottom - clientY < autoScrollThreshold) {
-        scrollY = autoScrollSpeed;
-      }
-
-      setAutoScroll({ x: scrollX, y: scrollY });
-    },
-    [autoScrollThreshold, autoScrollSpeed],
-  );
-
-  // 드래그 시작 핸들러
-  const handleDragStart = (id: number, e: React.MouseEvent | React.TouchEvent) => {
-    e.stopPropagation();
-    e.preventDefault(); // 텍스트 선택 방지
-
-    // 롱프레스 상태 초기화
-    setIsLongPress(false);
-
-    const hive = hives.find((h) => h.id === id);
-    if (!hive || !containerRef.current) return;
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const scrollLeft = containerRef.current.scrollLeft;
-    const scrollTop = containerRef.current.scrollTop;
-
-    // 롱프레스 타이머 설정
-    if (longPressTimeoutRef.current !== null) {
-      window.clearTimeout(longPressTimeoutRef.current);
-    }
-
-    longPressTimeoutRef.current = window.setTimeout(() => {
-      setIsLongPress(true);
-      setDraggingId(id);
-
-      // 롱프레스가 확인되면 드래그 오프셋 계산
-      if ('clientX' in e) {
-        const hiveScreenX = hive.x * scale - scrollLeft;
-        const hiveScreenY = hive.y * scale - scrollTop;
-
-        dragOffsetRef.current = {
-          x: e.clientX - hiveScreenX - containerRect.left,
-          y: e.clientY - hiveScreenY - containerRect.top,
-        };
-      } else if (e.touches && e.touches.length > 0) {
-        const touch = e.touches[0];
-        const hiveScreenX = hive.x * scale - scrollLeft;
-        const hiveScreenY = hive.y * scale - scrollTop;
-
-        dragOffsetRef.current = {
-          x: touch.clientX - hiveScreenX - containerRect.left,
-          y: touch.clientY - hiveScreenY - containerRect.top,
-        };
-      }
-
-      longPressTimeoutRef.current = null;
-    }, 1000); // 1초 롱프레스
-  };
-
-  const handleDrag = (e: React.MouseEvent | React.TouchEvent) => {
-    // 롱프레스가 아니면 드래그 처리 안 함
-    if (draggingId === null || !containerRef.current || !isLongPress) return;
-
-    // 핀치 줌 동작 중에는 드래그 처리하지 않음
-    if ('touches' in e && e.touches.length > 1) return;
-
-    let clientX, clientY;
-
-    if ('clientX' in e) {
-      clientX = e.clientX;
-      clientY = e.clientY;
-      e.preventDefault();
-    } else if (e.touches && e.touches.length > 0) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-      // 터치 드래그 중에는 기본 동작 방지
-      e.preventDefault();
-      e.stopPropagation();
-    } else {
-      return;
-    }
-
-    checkAutoScroll(clientX, clientY);
-
-    const containerRect = containerRef.current.getBoundingClientRect();
-    const scrollLeft = containerRef.current.scrollLeft;
-    const scrollTop = containerRef.current.scrollTop;
-
-    // 경계 체크를 제거하고 직접 계산
-    const newX = (clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
-    const newY = (clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
-
-    // 맵 경계 내로 제한만 수행
-    const clampedX = Math.max(HIVE_SIZE / 2, Math.min(newX, MAP_WIDTH - HIVE_SIZE / 2));
-    const clampedY = Math.max(HIVE_SIZE / 2, Math.min(newY, MAP_HEIGHT - HIVE_SIZE / 2));
-
-    setHives((prev) =>
-      prev.map((hive) => (hive.id === draggingId ? { ...hive, x: clampedX, y: clampedY } : hive)),
-    );
-  };
-
-  // 드래그 종료 핸들러
-  const handleDragEnd = useCallback(() => {
-    // 롱프레스 타이머 제거
-    if (longPressTimeoutRef.current !== null) {
-      window.clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-
-    setDraggingId(null);
-    setIsLongPress(false);
-    setAutoScroll({ x: 0, y: 0 });
-  }, []);
-
-  // 개선된 줌 핸들러 - 흔들림 제거 버전
-  const handleZoom = useCallback(
-    (newScale: number, clientX?: number, clientY?: number) => {
-      if (!containerRef.current) return;
-
-      const container = containerRef.current;
-      const rect = container.getBoundingClientRect();
-
-      // 이전 스케일 및 스크롤 위치 저장
-      const oldScale = scale;
-      const oldScrollLeft = container.scrollLeft;
-      const oldScrollTop = container.scrollTop;
-
-      // 줌 중심점 계산 (마우스 위치 또는 화면 중앙)
-      const pointX = clientX !== undefined ? clientX - rect.left : container.clientWidth / 2;
-      const pointY = clientY !== undefined ? clientY - rect.top : container.clientHeight / 2;
-
-      // 줌 중심점의 맵 좌표 계산 (이전 스케일 기준)
-      const mapX = (oldScrollLeft + pointX) / oldScale;
-      const mapY = (oldScrollTop + pointY) / oldScale;
-
-      // 스케일 적용 (제한된 범위 내에서)
-      const clampedScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
-
-      // 새 스케일로 스크롤 위치 계산
-      const newScrollLeft = mapX * clampedScale - pointX;
-      const newScrollTop = mapY * clampedScale - pointY;
-
-      // DOM 업데이트를 한 번만 수행하기 위해 requestAnimationFrame 사용
-      requestAnimationFrame(() => {
-        // 스케일과 스크롤 위치를 동시에 업데이트
-        setScale(clampedScale);
-
-        // 약간의 지연 후 스크롤 위치 조정 (스케일 변경이 반영된 후)
-        requestAnimationFrame(() => {
-          if (containerRef.current) {
-            containerRef.current.scrollLeft = newScrollLeft;
-            containerRef.current.scrollTop = newScrollTop;
-          }
-        });
-      });
-    },
-    [scale, MIN_SCALE, MAX_SCALE],
-  );
-
-  // 맵 중앙 좌표를 가져오는 함수
-  const getMapCenter = useCallback(() => {
-    if (!containerRef.current) return { x: 10, y: 10 };
-
-    const container = containerRef.current;
-    const viewportWidth = container.clientWidth;
-    const viewportHeight = container.clientHeight;
-
-    // 뷰포트 중앙의 스크롤 위치
-    const centerScrollX = container.scrollLeft + viewportWidth / 2;
-    const centerScrollY = container.scrollTop + viewportHeight / 2;
-
-    // 스크롤 위치를 맵 좌표로 변환 (스케일 고려)
-    const mapX = centerScrollX / scale;
-    const mapY = centerScrollY / scale;
-
-    return { x: mapX, y: mapY };
-  }, [scale]);
-
   // 맵 새로고침 함수
-  const refreshMap = useCallback(async () => {
+  const refreshMap = async () => {
     try {
-      /**
-       * @todo 실제 API 호출로 벌통 데이터 다시 가져오기
-       */
-      // const response = await fetchBeehives();
-      // setHives(response);
-
-      // 데모용 임의 새로고침 로직
-      setHives((prev) => [...prev]);
-
-      // 토스트 메시지 표시
+      await refetch();
       showToastMessage('맵이 새로고침되었습니다.', 'success', 'middle');
 
-      // 3초 후 토스트 메시지 숨기기
       setTimeout(() => {
         setShowToast(false);
       }, 3000);
-    } catch (error) {
+    } catch (refreshError) {
       let errorMessage = '맵 새로고침 중 오류가 발생했습니다.';
 
-      if (error instanceof Error) {
-        errorMessage = error.message;
+      if (refreshError instanceof Error) {
+        errorMessage = refreshError.message;
       }
 
       showToastMessage(errorMessage, 'warning', 'middle');
     }
-  }, []);
+  };
 
   // ref를 통해 외부에서 접근 가능한 메서드 노출
   useImperativeHandle(ref, () => ({
@@ -394,231 +96,68 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
     refreshMap,
   }));
 
-  // 마우스 휠 이벤트 핸들러
+  // API 응답 데이터를 컴포넌트 HiveType으로 변환
+  const convertToHives = (apiBeehives: BeehiveType[]): HiveType[] => {
+    return apiBeehives.map((beehive: BeehiveType) => ({
+      id: beehive.beehiveId,
+      nickname: beehive.nickname,
+      isInfected: beehive.isInfected,
+      diagnosisStatus: beehive.diagnosisStatus,
+      lastDiagnosisId: beehive.lastDiagnosisId,
+      x: beehive.xDirection,
+      y: beehive.yDirection,
+    }));
+  };
+
+  // API 응답 데이터가 변경될 때 hives 상태 업데이트
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    if (beehives) {
+      setHives(convertToHives(beehives));
+    }
+  }, [beehives]);
 
-    let isZooming = false;
-    let zoomTimeout: number | null = null;
+  // 초기 로딩 시 에러 처리
+  useEffect(() => {
+    if (isError && error) {
+      let errorMessage = '벌통 데이터를 불러오는 중 오류가 발생했습니다.';
 
-    const handleWheelEvent = (e: WheelEvent) => {
-      e.preventDefault();
-
-      // 여러 휠 이벤트가 빠르게 발생할 때 스로틀링
-      if (isZooming) {
-        if (zoomTimeout !== null) {
-          window.clearTimeout(zoomTimeout);
-        }
-
-        zoomTimeout = window.setTimeout(() => {
-          isZooming = false;
-          zoomTimeout = null;
-        }, 50);
-
-        return;
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
 
-      isZooming = true;
-
-      // 매우 작은 델타 값을 사용하여 부드럽게 확대/축소
-      const delta = -e.deltaY * 0.0005;
-      const newScale = scale * (1 + delta * 7);
-
-      handleZoom(newScale, e.clientX, e.clientY);
-
-      // 짧은 시간 후 다시 줌 허용
-      zoomTimeout = window.setTimeout(() => {
-        isZooming = false;
-        zoomTimeout = null;
-      }, 50);
-    };
-
-    // 이벤트 리스너 등록 (non-passive로 설정)
-    container.addEventListener('wheel', handleWheelEvent, { passive: false });
-
-    return () => {
-      if (zoomTimeout !== null) {
-        window.clearTimeout(zoomTimeout);
-      }
-      container.removeEventListener('wheel', handleWheelEvent);
-    };
-  }, [scale, handleZoom]);
+      showToastMessage(errorMessage, 'warning', 'middle');
+    }
+  }, [isError, error]);
 
   // 초기 위치 설정
   useEffect(() => {
-    // 페이지 로드 시 맵 중앙(벌통 위치)으로 스크롤
-    centerToHives();
-  }, [centerToHives]);
+    // 데이터 로드 후 맵 중앙(벌통 위치)으로 스크롤
+    if (beehives && beehives.length > 0) {
+      centerToHives();
+    }
+  }, [beehives, centerToHives]);
 
-  // 개선된 터치 이벤트 처리
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // 터치 이벤트 처리를 위한 함수들
-    const handleTouchMoveInEffect = (e: TouchEvent) => {
-      // 핀치 줌 처리 (가장 우선순위 높음)
-      if (pinchStartDist !== null && e.touches.length === 2) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        // 줌 비율 계산
-        const scaleFactor = distance / pinchStartDist;
-        const newScale = pinchStartScale * scaleFactor;
-
-        // 두 손가락의 중간점 계산
-        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-
-        handleZoom(newScale, centerX, centerY);
-        return; // 핀치 줌 중에는 다른 처리 안 함
-      }
-
-      // 롱프레스 후 벌통 드래그 처리
-      if (draggingId !== null && isLongPress && e.touches.length === 1) {
-        e.preventDefault(); // 롱프레스 벌통 드래그 중일 때 스크롤 방지
-        e.stopPropagation();
-
-        const touch = e.touches[0];
-
-        if (!containerRef.current) return;
-
-        checkAutoScroll(touch.clientX, touch.clientY);
-
-        const containerRect = containerRef.current.getBoundingClientRect();
-        const scrollLeft = containerRef.current.scrollLeft;
-        const scrollTop = containerRef.current.scrollTop;
-
-        // 직접 계산하여 경계 체크 제거
-        const newX =
-          (touch.clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
-        const newY =
-          (touch.clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
-
-        // 맵 경계 내로 제한
-        const clampedX = Math.max(HIVE_SIZE / 2, Math.min(newX, MAP_WIDTH - HIVE_SIZE / 2));
-        const clampedY = Math.max(HIVE_SIZE / 2, Math.min(newY, MAP_HEIGHT - HIVE_SIZE / 2));
-
-        setHives((prev) =>
-          prev.map((hive) =>
-            hive.id === draggingId ? { ...hive, x: clampedX, y: clampedY } : hive,
-          ),
-        );
-      }
-    };
-
-    // touchstart 이벤트 핸들러
-    const handleTouchStartInEffect = (e: TouchEvent) => {
-      // 2개 손가락으로 터치했을 때 핀치 줌 시작
-      if (e.touches.length === 2) {
-        e.preventDefault(); // 핀치 줌 시에만 스크롤 방지
-
-        // 기존 벌통 드래그 취소
-        if (draggingId !== null) {
-          setDraggingId(null);
-          setIsLongPress(false);
-          if (longPressTimeoutRef.current !== null) {
-            window.clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-          }
-        }
-
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        setPinchStartDist(distance);
-        setPinchStartScale(scale);
-      }
-    };
-
-    // touchend 이벤트 핸들러
-    const handleTouchEndInEffect = (e: TouchEvent) => {
-      // 핀치 줌 종료
-      if (e.touches.length < 2) {
-        setPinchStartDist(null);
-      }
-
-      // 드래그 종료
-      if (e.touches.length === 0) {
-        setDraggingId(null);
-        setAutoScroll({ x: 0, y: 0 });
-        setIsLongPress(false);
-
-        // 롱프레스 타이머 제거
-        if (longPressTimeoutRef.current !== null) {
-          window.clearTimeout(longPressTimeoutRef.current);
-          longPressTimeoutRef.current = null;
-        }
-      }
-    };
-
-    // passive 옵션에 따라 다르게 이벤트 리스너 등록
-    // touchmove는 preventDefault를 사용해야 하므로 non-passive로 등록
-    container.addEventListener('touchmove', handleTouchMoveInEffect, { passive: false });
-    container.addEventListener('touchstart', handleTouchStartInEffect, { passive: false });
-    container.addEventListener('touchend', handleTouchEndInEffect);
-    container.addEventListener('touchcancel', handleTouchEndInEffect);
-
-    return () => {
-      // 이벤트 리스너 제거
-      container.removeEventListener('touchmove', handleTouchMoveInEffect);
-      container.removeEventListener('touchstart', handleTouchStartInEffect);
-      container.removeEventListener('touchend', handleTouchEndInEffect);
-      container.removeEventListener('touchcancel', handleTouchEndInEffect);
-    };
-  }, [
-    draggingId,
-    pinchStartDist,
-    pinchStartScale,
-    scale,
-    handleZoom,
-    checkAutoScroll,
-    isLongPress,
-  ]);
-
-  // 자동 스크롤 효과
-  useEffect(() => {
-    if (autoScroll.x === 0 && autoScroll.y === 0) return;
-
-    const interval = setInterval(() => {
-      if (draggingId !== null) {
-        setHives((prev) =>
-          prev.map((hive) =>
-            hive.id === draggingId
-              ? { ...hive, x: hive.x + autoScroll.x / scale, y: hive.y + autoScroll.y / scale }
-              : hive,
-          ),
-        );
-      }
-
-      if (containerRef.current) {
-        containerRef.current.scrollLeft += autoScroll.x;
-        containerRef.current.scrollTop += autoScroll.y;
-      }
-    }, 16);
-
-    return () => clearInterval(interval);
-  }, [autoScroll, draggingId, scale, setHives]);
+  // 로딩 상태 표시
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <span className="text-lg font-medium">벌통 데이터를 불러오는 중...</span>
+      </div>
+    );
+  }
 
   return (
     <div
       className="relative flex h-full w-full flex-col overflow-hidden"
       style={{
-        touchAction: 'manipulation', // 모바일 텍스트 선택 방지
-        userSelect: 'none', // 텍스트 선택 방지
+        touchAction: 'manipulation',
+        userSelect: 'none',
         WebkitUserSelect: 'none',
         MozUserSelect: 'none',
         msUserSelect: 'none',
-        // 이미지 저장 방지 추가
         WebkitTouchCallout: 'none',
       }}
-      onContextMenu={(e) => e.preventDefault()} // 컨텍스트 메뉴 방지
+      onContextMenu={(e) => e.preventDefault()}
     >
       {/* Toast 컴포넌트 */}
       <Toast
@@ -629,110 +168,20 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
         onClose={() => setShowToast(false)}
       />
 
-      <div className="absolute bottom-4 right-4 z-10 flex space-x-2">
-        <button
-          onClick={() => handleZoom(Math.min(MAX_SCALE, scale * 1.2))}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-700 shadow-md hover:bg-gray-100"
-        >
-          <i className="ri-zoom-in-line text-lg"></i>
-        </button>
-        <button
-          onClick={() => handleZoom(Math.max(MIN_SCALE, scale / 1.2))}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-700 shadow-md hover:bg-gray-100"
-        >
-          <i className="ri-zoom-out-line text-lg"></i>
-        </button>
-        <button
-          onClick={() => {
-            setScale(1);
-            // 스케일 변경 후 중앙 정렬
-            setTimeout(centerToHives, 50);
-          }}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-700 shadow-md hover:bg-gray-100"
-        >
-          <i className="ri-refresh-line text-lg"></i>
-        </button>
-      </div>
+      {/* 맵 컨트롤 버튼 */}
+      <MapControls scale={scale} handleZoom={handleZoom} centerToHives={centerToHives} />
 
-      <div
+      {/* 맵 컨테이너 */}
+      <MapContainer
         ref={containerRef}
-        className="map-container relative h-full w-full overflow-auto"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-x pan-y pinch-zoom', // 한 손가락 패닝과 핀치 줌 모두 허용
-          // 스크롤바 숨기기 (Firefox, IE, Edge)
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
-        onMouseMove={handleDrag}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-      >
-        <div
-          ref={mapRef}
-          className="relative"
-          style={{
-            width: `${MAP_WIDTH * scale}px`,
-            height: `${MAP_HEIGHT * scale}px`,
-            backgroundImage:
-              'linear-gradient(#ddd 1px, transparent 1px), linear-gradient(90deg, #ddd 1px, transparent 1px)',
-            backgroundSize: `${50 * scale}px ${50 * scale}px`,
-          }}
-        >
-          {hives.map((hive) => (
-            <div
-              key={hive.id}
-              className={`absolute ${
-                draggingId === hive.id && isLongPress
-                  ? 'z-10 ring-2 ring-blue-300 ring-offset-2'
-                  : ''
-              }`}
-              style={{
-                position: 'absolute',
-                left: `${hive.x * scale}px`,
-                top: `${hive.y * scale}px`,
-                width: `${HIVE_SIZE}px`,
-                height: `${HIVE_SIZE}px`,
-                transform: `scale(${scale})`,
-                transformOrigin: 'top left',
-                cursor: draggingId === hive.id && isLongPress ? 'grabbing' : 'grab',
-                transition: 'none',
-                willChange: 'transform, left, top',
-                // iOS 특수 렌더링 처리
-                WebkitBackfaceVisibility: 'hidden',
-                WebkitPerspective: 1000,
-                backfaceVisibility: 'hidden',
-                perspective: 1000,
-                // 최소 크기 보장
-                minWidth: `${HIVE_SIZE}px`,
-                minHeight: `${HIVE_SIZE}px`,
-                // 하드웨어 가속
-                WebkitTransform: `translate3d(0, 0, 0) scale(${scale})`,
-                // 성능 최적화를 위한 스타일
-                contain: 'strict', // CSS Containment API
-              }}
-              onMouseDown={(e) => handleDragStart(hive.id, e)}
-              onTouchStart={(e) => {
-                if (e.touches.length === 1) {
-                  handleDragStart(hive.id, e);
-                }
-              }}
-              // 롱프레스 취소
-              onMouseUp={() => handleDragEnd()}
-              onTouchEnd={() => handleDragEnd()}
-              onMouseLeave={() => handleDragEnd()}
-            >
-              <BeehiveCell
-                beeHiveId={hive.id}
-                nickname={hive.nickname}
-                isInfected={hive.isInfected}
-                diagnosisStatus={hive.diagnosisStatus}
-                lastDiagnosisId={hive.lastDiagnosisId}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+        scale={scale}
+        hives={hives}
+        draggingId={draggingId}
+        isLongPress={isLongPress}
+        handleDrag={handleDrag}
+        handleDragStart={handleDragStart}
+        handleDragEnd={handleDragEnd}
+      />
     </div>
   );
 });
