@@ -19,7 +19,7 @@ public class S3EventServiceImpl implements S3EventService {
 
 	private final S3FileMetadataRepository s3FileMetadataRepository;
 
-	private String s3BucketName;
+	private final String s3BucketName;
 
 	public S3EventServiceImpl(
 		S3FileMetadataRepository s3FileMetadataRepository,
