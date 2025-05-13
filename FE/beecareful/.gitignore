@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 .token
-certs/*
+certs/*.pem
