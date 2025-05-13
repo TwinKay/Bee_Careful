@@ -1,5 +1,8 @@
 import type { AxiosError } from 'axios';
 import axios from 'axios';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/config/routes';
 
 // API URL 설정
 export const API_URL = import.meta.env.VITE_API_URL || 'https://k12a203.p.ssafy.io';
@@ -20,7 +23,7 @@ export const setAuthErrorHandler = (handler: (error: AxiosError) => void) => {
   authErrorHandler = handler;
 };
 
-// 응답 인터셉터 설정
+// 응답 인터셉터
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -34,3 +37,26 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+// 비로그인으로 감지 시 로그인 페이지 리다이렉션
+export const useAuthErrorHandling = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // 인증 에러 핸들러 설정
+    setAuthErrorHandler((_error) => {
+      const currentPath = window.location.pathname;
+
+      // 로그인 페이지로 리다이렉션
+      navigate(ROUTES.LOGIN, {
+        state: { from: currentPath },
+        replace: true,
+      });
+    });
+
+    // 컴포넌트 언마운트 시 핸들러 제거
+    return () => {
+      setAuthErrorHandler(() => {});
+    };
+  }, [navigate]);
+};
