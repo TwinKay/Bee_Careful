@@ -41,8 +41,23 @@ public interface BeehiveRepository extends JpaRepository<Beehive, Long> {
 
 
 
-    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN TRUE ELSE FALSE END FROM Beehive b WHERE b.xDirection = :xDirection AND b.yDirection = :yDirection")
-    Boolean existsByDirection(@Param("xDirection") Long xDirection, @Param("yDirection") Long yDirection);
+    @Query("""
+    SELECT CASE 
+        WHEN COUNT(b) > 0 THEN TRUE 
+        ELSE FALSE 
+    END 
+    FROM Beehive b 
+    WHERE b.apiary = :apiary 
+    AND b.xDirection = :xDirection 
+    AND b.yDirection = :yDirection
+""")
+    Boolean existsByApiaryAndDirection(@Param("apiary") Apiary apiary,
+                                       @Param("xDirection") Long xDirection,
+                                       @Param("yDirection") Long yDirection);
+
+
+
+    List<Beehive> findBeehivesByApiary(Apiary apiary);
 
 }
 

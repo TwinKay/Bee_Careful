@@ -200,7 +200,14 @@ public class BeehiveServiceImpl implements BeehiveService{
             throw new DirectionNullException();
         }
 
-        boolean isLocated = beehiveRepository.existsByDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
+        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+
+        boolean isLocated = beehiveRepository.existsByApiaryAndDirection(
+                apiary,
+                beehiveUpdateDto.xDirection(),
+                beehiveUpdateDto.yDirection()
+        );
 
         if(isLocated) {
             throw new DirectionDuplicateException();
