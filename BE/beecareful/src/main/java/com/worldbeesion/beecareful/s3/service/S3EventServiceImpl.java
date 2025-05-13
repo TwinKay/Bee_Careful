@@ -31,6 +31,10 @@ public class S3EventServiceImpl implements S3EventService {
 	}
 
 	private static final String EXPECTED_EVENT_NAME = "ObjectCreated:Put";
+	/**
+	 * S3에 업로드된 파일의 실제 크기와 예상 크기 간의 허용 가능한 최대 차이 백분율
+	 * 예상 크기와 실제 크기의 차이가 20%를 초과하면 InvalidS3EventException이 발생함
+	 */
 	private static final double MAX_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
 
 
