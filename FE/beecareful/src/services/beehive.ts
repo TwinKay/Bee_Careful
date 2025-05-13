@@ -32,43 +32,6 @@ export type UpdateBeehiveRequestType = {
   yDirection: number;
 };
 
-// 전체 벌통 조회
-export const getBeehives = async (): Promise<BeehiveType[]> => {
-  try {
-    const response = await api.get('/api/v1/beehives');
-    return response.data;
-  } catch (error) {
-    // 에러 처리
-    if (error instanceof AxiosError && error.response) {
-      throw new Error(error.response.data?.message || '벌통 목록을 불러오는데 실패했습니다.');
-    }
-
-    // 네트워크 에러 등
-    console.error('벌통 목록 조회 에러:', error);
-    throw error;
-  }
-};
-
-// 벌통 추가
-export const createBeehive = async (beehiveData: CreateBeehiveRequestType): Promise<void> => {
-  try {
-    const response = await api.post('/api/v1/beehives', beehiveData);
-    // 201: 성공
-    if (response.status === 201) {
-      return;
-    }
-  } catch (error) {
-    // 에러 처리
-    if (error instanceof AxiosError && error.response) {
-      throw new Error(error.response.data?.message || '벌통 추가에 실패했습니다.');
-    }
-
-    // 네트워크 에러 등
-    console.error('벌통 추가 에러:', error);
-    throw error;
-  }
-};
-
 const defaultRecordParams = {
   page: 1,
   size: 10,
