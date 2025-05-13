@@ -39,7 +39,7 @@ public class S3EventController {
 	 * @param receivedApiSecret API key passed in the header for security.
 	 * @return ResponseEntity indicating the outcome of the processing.
 	 */
-	@PostMapping
+	@PostMapping("/")
 	public ResponseEntity<String> receiveS3Event(
 		@RequestBody S3EventPayload eventPayload,
 		@RequestHeader(value = "X-API-Key", required = true) String receivedApiSecret
