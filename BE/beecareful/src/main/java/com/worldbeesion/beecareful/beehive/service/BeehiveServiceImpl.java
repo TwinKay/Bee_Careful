@@ -2,15 +2,10 @@ package com.worldbeesion.beecareful.beehive.service;
 
 
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
+import com.worldbeesion.beecareful.beehive.exception.BeehiveNotFoundException;
 import com.worldbeesion.beecareful.beehive.model.dto.*;
-import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
-import com.worldbeesion.beecareful.beehive.model.entity.Beehive;
-import com.worldbeesion.beecareful.beehive.model.entity.Diagnosis;
-import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
-import com.worldbeesion.beecareful.beehive.repository.ApiaryRepository;
-import com.worldbeesion.beecareful.beehive.repository.BeehiveRepository;
-import com.worldbeesion.beecareful.beehive.repository.DiagnosisRepository;
-import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
+import com.worldbeesion.beecareful.beehive.model.entity.*;
+import com.worldbeesion.beecareful.beehive.repository.*;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
 import com.worldbeesion.beecareful.member.model.Members;
@@ -20,6 +15,8 @@ import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.service.S3FileService;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +34,9 @@ public class BeehiveServiceImpl implements BeehiveService{
     private final OriginalPhotoRepository originalPhotoRepository;
     private final ApiaryRepository apiaryRepository;
     private final MembersRepository membersRepository;
+    private final AnalyzedPhotoRepository analyzedPhotoRepository;
+    private final AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository;
+    private final TurretRepository turretRepository;
 
     @Override
     @Transactional
@@ -92,6 +92,99 @@ public class BeehiveServiceImpl implements BeehiveService{
                         statusMap.get(dto.getLastDiagnosisId())
                 ))
                 .toList();
+    }
+
+    @Override
+    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable) {
+        Page<Diagnosis> diagnosisPage = diagnosisRepository.findDiagnosesByBeehiveId(beehiveId, pageable);
+
+        List<Long> diagnosisIds = new ArrayList<>();
+        for(Diagnosis diagnosis : diagnosisPage.getContent()) {
+            diagnosisIds.add(diagnosis.getId());
+        }
+
+        List<AnalyzedPhotoResultDto> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisIdIn(diagnosisIds);
+
+        List<Long> analyzedPhotoIdList = new ArrayList<>();
+        for(AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
+            analyzedPhotoIdList.add(analyzedPhotoResultDto.analyzedPhotoId());
+        }
+
+
+        List<DiagnosisResultProjection> diagnosisResultList = analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(analyzedPhotoIdList);
+
+        List<BeehiveDiagnosisInfoDto> beehiveDiagnosisInfoList = new ArrayList<>();
+
+        for(DiagnosisResultProjection diagnosisResultProjection : diagnosisResultList) {
+            TotalCountImagoLarvaProjection totalCountByDiagnosis = analyzedPhotoRepository.getTotalCountByDiagnosis(diagnosisResultProjection.getDiagnosisId());
+            Long totalLarva = totalCountByDiagnosis.getLarvaCount();
+            Long totalImago = totalCountByDiagnosis.getImagoCount();
+
+            double larvaVarroaRatio = calculateDiseaseRatio(diagnosisResultProjection.getLarvavarroaCount(), totalLarva);
+            double larvaFoulBroodRatio = calculateDiseaseRatio(diagnosisResultProjection.getLarvafoulBroodCount(), totalLarva);
+            double larvaChalkBroodRatio = calculateDiseaseRatio(diagnosisResultProjection.getLarvachalkBroodCount(), totalLarva);
+            double imagoVarroaRatio = calculateDiseaseRatio(diagnosisResultProjection.getImagovarroaCount(), totalImago);
+            double imagoDwvRatio = calculateDiseaseRatio(diagnosisResultProjection.getImagodwvCount(), totalImago);
+
+            Larva larva = new Larva(
+                    diagnosisResultProjection.getLarvavarroaCount(),
+                    larvaVarroaRatio,
+                    diagnosisResultProjection.getLarvafoulBroodCount(),
+                    larvaFoulBroodRatio,
+                    diagnosisResultProjection.getLarvachalkBroodCount(),
+                    larvaChalkBroodRatio
+            );
+
+            Imago imago = new Imago(
+                    diagnosisResultProjection.getImagovarroaCount(),
+                    imagoVarroaRatio,
+                    diagnosisResultProjection.getImagodwvCount(),
+                    imagoDwvRatio
+            );
+
+            DiagnosisResultDto diagnosisResultDto = new DiagnosisResultDto(larva, imago);
+
+            BeehiveDiagnosisInfoDto beehiveDiagnosisInfoDto = new BeehiveDiagnosisInfoDto(
+                    diagnosisResultProjection.getDiagnosisId(),
+                    diagnosisResultProjection.getCreatedAt(),
+                    totalImago,
+                    totalLarva,
+                    diagnosisResultDto
+            );
+
+            beehiveDiagnosisInfoList.add(beehiveDiagnosisInfoDto);
+        }
+
+        PageInfoDto pageInfoDto = createPageInfo(diagnosisPage);
+
+        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
+        if(beehive.isEmpty()) {
+            throw new BeehiveNotFoundException();
+        }
+
+        Turret turret = turretRepository.findByBeehive(beehive.get()).orElse(null);
+        return new BeehiveDetailResponseDto(
+                beehiveDiagnosisInfoList,
+                pageInfoDto,
+                beehive.get().getNickname(),
+                (turret != null ? turret.getId() : null)
+        );
+    }
+
+    private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
+        Long page = (long) diagnosisPage.getNumber();
+        Long size = (long) diagnosisPage.getSize();
+        Long totalElements = diagnosisPage.getTotalElements();
+        Long totalPages = (long) diagnosisPage.getTotalPages();
+        Boolean hasPreviousPage = diagnosisPage.hasPrevious();
+        Boolean hasNextPage = diagnosisPage.hasNext();
+
+        return new PageInfoDto(page, size, totalElements, totalPages, hasPreviousPage, hasNextPage);
+    }
+
+    private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {
+        if (totalCount == 0) return 0;
+        return (double) diseaseCount / totalCount * 100;
     }
 
 

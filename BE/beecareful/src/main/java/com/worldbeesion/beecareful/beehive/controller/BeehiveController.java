@@ -5,6 +5,7 @@ import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,6 +34,13 @@ public class BeehiveController {
                 .ok()
                 .body(beehiveList);
     }
+
+    @GetMapping("/{beeHiveId}")
+    public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId, Pageable pageable) {
+        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, pageable);
+        return ResponseEntity.ok().body(responseDto);
+    }
+
 
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){
