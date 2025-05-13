@@ -41,6 +41,12 @@ public class BeehiveController {
         return ResponseEntity.ok().body(responseDto);
     }
 
+    @PostMapping("/{beeHiveId}/turret")
+    public ResponseEntity<?> addTurret(@PathVariable("beeHiveId") Long beeHiveId, @RequestBody TurretRequestDto turretRequestDto) {
+        beehiveService.addTurret(beeHiveId, turretRequestDto);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
 
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){

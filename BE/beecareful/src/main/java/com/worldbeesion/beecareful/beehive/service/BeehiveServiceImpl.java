@@ -171,6 +171,21 @@ public class BeehiveServiceImpl implements BeehiveService{
         );
     }
 
+    @Override
+    public void addTurret(Long beehiveId, TurretRequestDto turretRequestDto) {
+        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
+        if(beehive.isEmpty()) {
+            throw new BeehiveNotFoundException();
+        }
+
+        Turret turret = Turret.builder()
+                .beehive(beehive.get())
+                .serial(turretRequestDto.serial())
+                .build();
+
+        turretRepository.save(turret);
+    }
+
     private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
         Long page = (long) diagnosisPage.getNumber();
         Long size = (long) diagnosisPage.getSize();
