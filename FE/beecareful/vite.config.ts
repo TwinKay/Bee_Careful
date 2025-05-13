@@ -1,8 +1,23 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import fs from 'fs';
 
 export default defineConfig({
+  server: {
+    https: {
+      key: fs.readFileSync('./certs/localhost+2-key.pem'),
+      cert: fs.readFileSync('./certs/localhost+2.pem'),
+    },
+    proxy: {
+      '/api': {
+        target: 'https://k12a203.p.ssafy.io',
+        changeOrigin: true,
+        secure: false,
+        cookieDomainRewrite: 'localhost', // <-- change cookie domain
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

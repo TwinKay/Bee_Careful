@@ -13,6 +13,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // 리다이렉션 핸들러를 위한 콜백 설정
