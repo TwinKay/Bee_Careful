@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
+// 환경 변수 생성 시 아래에 추가
 type ImportMetaEnv = {
   readonly VITE_API_URL: string;
-  // 다른 환경변수들도 여기에 추가
 };
 
 type ImportMeta = {
