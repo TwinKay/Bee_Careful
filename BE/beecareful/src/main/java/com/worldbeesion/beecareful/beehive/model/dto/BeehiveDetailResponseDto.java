@@ -7,7 +7,6 @@ import java.util.List;
 public record BeehiveDetailResponseDto(
         @JsonProperty("diagnoses")
         List<BeehiveDiagnosisInfoDto> beehiveDiagnosisInfoDto,
-        PageInfoDto pageInfoDto,
         String nickname,
         Long turretId
 ) {
