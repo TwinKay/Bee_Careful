@@ -47,6 +47,14 @@ public class BeehiveController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @PatchMapping("/{beeHiveId}")
+    public ResponseEntity<?> modifyBeehive(@PathVariable("beeHiveId") Long beeHiveId
+                                            , @RequestBody BeehiveUpdateDto beehiveUpdateDto
+                                            , @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        beehiveService.updateBeehive(beeHiveId, beehiveUpdateDto, userDetails);
+        return ResponseEntity.ok().build();
+    }
+
 
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){

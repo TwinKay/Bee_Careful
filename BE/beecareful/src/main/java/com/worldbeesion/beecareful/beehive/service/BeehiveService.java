@@ -15,4 +15,5 @@ public interface BeehiveService {
     List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails);
     BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable);
     void addTurret(Long beehiveId, TurretRequestDto turretRequestDto);
+    void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails);
 }
