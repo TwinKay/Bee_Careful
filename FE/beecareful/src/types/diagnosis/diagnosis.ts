@@ -19,7 +19,7 @@ export type DiagnosisDataType = {
   createdAt: string;
   imagoCount: number;
   larvaCount: number;
-  diagnosis: {
+  result: {
     larva: DiagnosisLarvaType;
     imago: DiagnosisImagoType;
   };
