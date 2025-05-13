@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/common/Button';
+import RemixIcon from './RemixIcon';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 
 /**
  * @component
@@ -46,6 +48,8 @@ export type BottomSheetPropsType = {
   }[];
 };
 
+const DURATION = 300;
+
 const BottomSheet: React.FC<BottomSheetPropsType> = ({
   isOpen,
   onClose,
@@ -55,8 +59,7 @@ const BottomSheet: React.FC<BottomSheetPropsType> = ({
   buttons = [],
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [startY, setStartY] = useState(0);
-  const [currentTranslate, setCurrentTranslate] = useState(0);
+  const positionY = useMotionValue(0);
   const bottomSheetRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,19 +68,21 @@ const BottomSheet: React.FC<BottomSheetPropsType> = ({
     if (isOpen) {
       document.body.style.overflow = 'hidden'; // 배경 스크롤 방지
       setIsVisible(true);
-      setCurrentTranslate(0); // 트랜스레이트 초기화
 
       // 입력 필드가 있으면 첫 번째 입력 필드에 포커스
       setTimeout(() => {
         if (inputs.length > 0 && firstInputRef.current) {
           firstInputRef.current.focus();
         }
-      }, 300);
+      }, DURATION);
     } else {
+      // 바텀시트 닫기 애니메이션
+      setIsVisible(true); // 애니메이션을 위해 일시적으로 true로 설정
+
       const timer = setTimeout(() => {
         setIsVisible(false);
         document.body.style.overflow = ''; // 배경 스크롤 허용
-      }, 300);
+      }, DURATION);
 
       return () => clearTimeout(timer);
     }
@@ -120,119 +125,94 @@ const BottomSheet: React.FC<BottomSheetPropsType> = ({
     };
   }, [isOpen, buttons]);
 
-  // 터치 시작 이벤트 핸들러
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    setStartY(e.touches[0].clientY);
-  };
-
-  // 터치 이동 이벤트 핸들러
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-
-    // 아래로 스와이프할 때만 반응 (위로 스와이프는 무시)
-    if (diff > 0) {
-      setCurrentTranslate(diff);
-    }
-  };
-
-  // 터치 종료 이벤트 핸들러
-  const handleTouchEnd = () => {
-    // 충분히 아래로 스와이프했으면 바텀시트 닫기
-    if (currentTranslate > 100) {
-      // 100px 이상 드래그하면 닫힘
-      onClose();
-    } else {
-      // 충분하지 않으면 원래 위치로 돌아감
-      setCurrentTranslate(0);
-    }
-  };
-
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300">
-      <div
-        ref={bottomSheetRef}
-        style={{ transform: `translateY(${currentTranslate}px)` }}
-        className={`w-full max-w-md rounded-t-2xl bg-white px-5 py-10 transition-transform duration-300 ${
-          isOpen ? 'translate-y-0' : 'translate-y-full'
-        }`}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black bg-opacity-50"
+        initial={{ opacity: 0.5 }}
+        animate={{ opacity: isOpen ? 1 : 0 }}
+        exit={{ opacity: 0.5 }}
+        transition={{ duration: DURATION / 1000 }}
       >
-        <div className="mb-4 flex items-start justify-between text-start">
-          <h3 className="pr-4 text-xl font-extrabold text-bc-brown-100">{title}</h3>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 text-black hover:text-gray-700"
-            aria-label="닫기"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        <motion.div
+          ref={bottomSheetRef}
+          className={`-mb-56 w-full max-w-md rounded-t-3xl bg-white p-8 pb-64`}
+          initial={{ y: '100%' }}
+          animate={{ y: isOpen ? '0%' : '100%' }}
+          exit={{ y: '100%' }}
+          transition={{ duration: DURATION / 1000, ease: 'easeOut' }}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{
+            top: 0.1,
+            bottom: 1,
+          }}
+          dragMomentum={false}
+          onDragEnd={(_, info) => {
+            if (info.offset.y > 100) onClose();
+          }}
+        >
+          <div className="mb-10 flex items-center justify-between text-start">
+            <h3 className="text-2xl font-extrabold text-bc-brown-100">{title}</h3>
+            <button
+              onClick={onClose}
+              className="flex-shrink-0 text-black hover:text-gray-700"
+              aria-label="닫기"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {content && <p className="text-medium mb-4 mt-4 text-left">{content}</p>}
-
-        {inputs.length > 0 && (
-          <div className="mb-4 space-y-3">
-            {inputs.map((input, index) => (
-              <div key={input.id} className="w-full">
-                <input
-                  ref={index === 0 ? firstInputRef : null}
-                  type={input.type || 'text'}
-                  id={input.id}
-                  name={input.id}
-                  placeholder={input.placeholder}
-                  value={input.value}
-                  onChange={input.onChange}
-                  className={`w-full rounded-xl border ${
-                    input.error ? 'border-red-500' : 'border-gray-200'
-                  } bg-gray-100 px-4 py-4 focus:outline-none focus:ring-2 ${
-                    input.error ? 'focus:ring-red-400' : 'focus:ring-yellow-400'
-                  }`}
-                  autoComplete="off"
-                />
-                {input.error && (
-                  <p className="mt-2 text-left text-sm text-red-500">{input.error}</p>
-                )}
-              </div>
-            ))}
+              <RemixIcon className="ri-2x" name="ri-close-line" />
+            </button>
           </div>
-        )}
 
-        {buttons.length > 0 && (
-          <div className="mt-8 space-y-3">
-            {buttons.map((button) => (
-              <Button
-                key={button.id}
-                variant={button.variant}
-                size="lg"
-                fullWidth
-                onClick={button.onClick}
-                disabled={button.disabled}
-              >
-                {button.label}
-              </Button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+          {content && <p className="text-medium mb-4 mt-4 text-left">{content}</p>}
+
+          {inputs.length > 0 && (
+            <div className="mb-4 space-y-4">
+              {inputs.map((input, index) => (
+                <div key={input.id} className="w-full">
+                  <input
+                    ref={index === 0 ? firstInputRef : null}
+                    type={input.type || 'text'}
+                    id={input.id}
+                    name={input.id}
+                    placeholder={input.placeholder}
+                    value={input.value}
+                    onChange={input.onChange}
+                    className={`w-full rounded-xl border ${
+                      input.error ? 'border-red-500' : 'border-gray-200'
+                    } bg-gray-100 px-4 py-4 focus:outline-none focus:ring-2 ${
+                      input.error ? 'focus:ring-red-400' : 'focus:ring-yellow-400'
+                    }`}
+                    autoComplete="off"
+                  />
+                  {input.error && (
+                    <p className="mt-2 text-left text-sm text-red-500">{input.error}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {buttons.length > 0 && (
+            <div className="mt-8 space-y-4">
+              {buttons.map((button) => (
+                <Button
+                  key={button.id}
+                  variant={button.variant}
+                  size="lg"
+                  fullWidth
+                  onClick={button.onClick}
+                  disabled={button.disabled}
+                >
+                  <p className="font-bold">{button.label}</p>
+                </Button>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
