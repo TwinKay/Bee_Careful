@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 
@@ -97,11 +98,12 @@ public class BeehiveServiceImpl implements BeehiveService{
     }
 
     @Override
-    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable) {
-        Page<Diagnosis> diagnosisPage = diagnosisRepository.findDiagnosesByBeehiveId(beehiveId, pageable);
+    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month) {
+        LocalDateTime startDate = LocalDateTime.now().minusMonths(month);
+        List<Diagnosis> diagnosisList = diagnosisRepository.findRecentDiagnosesByBeehiveId(beehiveId, startDate);
 
         List<Long> diagnosisIds = new ArrayList<>();
-        for(Diagnosis diagnosis : diagnosisPage.getContent()) {
+        for(Diagnosis diagnosis : diagnosisList) {
             diagnosisIds.add(diagnosis.getId());
         }
 
@@ -157,7 +159,6 @@ public class BeehiveServiceImpl implements BeehiveService{
             beehiveDiagnosisInfoList.add(beehiveDiagnosisInfoDto);
         }
 
-        PageInfoDto pageInfoDto = createPageInfo(diagnosisPage);
 
         Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
         if(beehive.isEmpty()) {
@@ -167,7 +168,6 @@ public class BeehiveServiceImpl implements BeehiveService{
         Turret turret = turretRepository.findByBeehive(beehive.get()).orElse(null);
         return new BeehiveDetailResponseDto(
                 beehiveDiagnosisInfoList,
-                pageInfoDto,
                 beehive.get().getNickname(),
                 (turret != null ? turret.getId() : null)
         );

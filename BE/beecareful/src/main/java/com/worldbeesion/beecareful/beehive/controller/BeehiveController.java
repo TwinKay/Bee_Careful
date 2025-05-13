@@ -4,6 +4,7 @@ package com.worldbeesion.beecareful.beehive.controller;
 import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
+import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -35,9 +36,16 @@ public class BeehiveController {
                 .body(beehiveList);
     }
 
+//    @GetMapping("/{beeHiveId}")
+//    public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId, Pageable pageable) {
+//        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, pageable);
+//        return ResponseEntity.ok().body(responseDto);
+//    }
+
     @GetMapping("/{beeHiveId}")
-    public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId, Pageable pageable) {
-        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, pageable);
+    public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId,
+                                            @RequestParam("month") int month) {
+        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, month);
         return ResponseEntity.ok().body(responseDto);
     }
 
