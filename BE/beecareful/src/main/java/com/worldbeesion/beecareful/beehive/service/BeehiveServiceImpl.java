@@ -191,10 +191,7 @@ public class BeehiveServiceImpl implements BeehiveService{
     @Override
     @Transactional
     public void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails) {
-        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
-        if(beehive.isEmpty()) {
-            throw new BeehiveNotFoundException();
-        }
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
 
         if(beehiveUpdateDto.xDirection() == null || beehiveUpdateDto.yDirection() == null) {
             throw new DirectionNullException();
@@ -213,8 +210,8 @@ public class BeehiveServiceImpl implements BeehiveService{
             throw new DirectionDuplicateException();
         }
 
-        beehive.get().updateNickname(beehiveUpdateDto.nickname());
-        beehive.get().updateDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
+        beehive.updateNickname(beehiveUpdateDto.nickname());
+        beehive.updateDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
     }
 
     private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
