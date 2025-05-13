@@ -32,11 +32,6 @@ export type UpdateBeehiveRequestType = {
   yDirection: number;
 };
 
-const defaultRecordParams = {
-  page: 1,
-  size: 10,
-};
-
 // 전체 벌통 조회
 export function useGetBeehives() {
   return useQuery({
@@ -54,21 +49,15 @@ export function useCreateBeehive() {
 }
 
 // 벌통 상세 + 진단 기록(페이지네이션, 무한 스크롤)
-export function useGetBeehiveRecords(
-  beeHiveId: number,
-  params?: Partial<typeof defaultRecordParams>,
-) {
-  const paramsWithDefault = { ...defaultRecordParams, ...params };
-  return useInfiniteQuery({
-    queryKey: ['beehiveRecords', beeHiveId, paramsWithDefault],
-    queryFn: ({ pageParam }) =>
+export function useGetBeehiveRecords(beeHiveId: number, month: number) {
+  return useQuery({
+    queryKey: ['beehiveRecords', beeHiveId, month],
+    queryFn: () =>
       api
         .get(`/api/v1/beehives/${beeHiveId}`, {
-          params: { ...paramsWithDefault, page: pageParam },
+          params: { month },
         })
         .then((res) => res.data),
-    getNextPageParam: (lastPage) => (lastPage.pageInfo.hasNext ? lastPage.pageInfo.page + 1 : null),
-    initialPageParam: paramsWithDefault.page,
   });
 }
 

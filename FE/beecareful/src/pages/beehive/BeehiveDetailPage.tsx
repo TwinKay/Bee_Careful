@@ -11,27 +11,39 @@ import BottomSheet from '@/components/common/BottomSheet';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
 import { useParams } from 'react-router-dom';
 import { useGetBeehiveRecords } from '@/services/beehive';
+import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
 
 const BeehiveDetailPage = () => {
   const param = useParams();
   const beehiveId = param.id;
 
-  const { data: beehiveData } = useGetBeehiveRecords(Number(beehiveId));
-
   const [isToggleLeft, setIsToggleLeft] = useState(true);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [isLinkTurretOpen, setIsLinkTurretOpen] = useState(false);
+  const [isEditTurretOpen, setIsEditTurretOpen] = useState(false);
   const [isDeleteBeehiveOpen, setIsDeleteBeehiveOpen] = useState(false);
+
+  const {
+    data: beehiveData,
+    isError,
+    isPending,
+  } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
 
   const recentData = useMemo(
     () =>
-      TMP_DIAGNOSIS_API_DATA.diagnoses.filter(
-        ({ createdAt }) =>
-          new Date(createdAt).getTime() >
-          new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
-      ),
-    [isToggleLeft],
+      beehiveData
+        ? beehiveData.diagnoses.filter(
+            ({ createdAt }: DiagnosisDataType) =>
+              new Date(createdAt).getTime() >
+              new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
+          )
+        : TMP_DIAGNOSIS_API_DATA.diagnoses.filter(
+            ({ createdAt }: DiagnosisDataType) =>
+              new Date(createdAt).getTime() >
+              new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
+          ),
+    [isToggleLeft, beehiveData],
   );
 
   const onIconClick = () => {
@@ -42,16 +54,39 @@ const BeehiveDetailPage = () => {
 
   useHeaderIcon(headerOption);
 
+  if (!beehiveData || isError) {
+    return <div className="flex h-full w-full items-center justify-center">Error...</div>;
+  }
+
+  if (isPending) {
+    return <div className="flex h-full w-full items-center justify-center">Loading...</div>;
+  }
+
+  const linkTurret = () => {
+    setIsEditTurretOpen(true);
+    console.log('link turret');
+  };
+
   return (
     <>
       <div className="flex w-full items-center justify-between p-4">
         <div className="flex flex-col items-start">
-          <p className="text-lg font-bold">벌통이름10자미만</p>
+          <p className="text-lg font-bold">{beehiveData.nickname}</p>
           <p className="font-semibold text-bc-yellow-100">벌통</p>
         </div>
-        <Button disabled className="py-2">
-          <p className="font-bold text-gray-600">장치 미연동</p>
-        </Button>
+        {beehiveData.turretId ? (
+          <Button onClick={linkTurret} variant="success" className="py-2">
+            <p className="text-brown-100 font-bold">장치 연동 중</p>
+          </Button>
+        ) : (
+          <Button
+            onClick={linkTurret}
+            className="bg-gray-300 py-2 hover:bg-gray-300"
+            variant="text"
+          >
+            <p className="font-bold text-gray-600">장치 미연동</p>
+          </Button>
+        )}
       </div>
       <Card className="px-0">
         <CardTitle className="px-6">질병 감염 통계</CardTitle>
@@ -154,6 +189,30 @@ const BeehiveDetailPage = () => {
             id: 'turret code',
             placeholder: '장치 코드',
             type: 'text',
+          },
+        ]}
+      />
+      <BottomSheet
+        isOpen={isEditTurretOpen}
+        onClose={() => setIsEditTurretOpen(false)}
+        title="말벌 퇴치 장치를 수정하시겠어요?"
+        content="신규 등록 시 기존 장치와의 연동이 해제됩니다."
+        buttons={[
+          {
+            id: 'edit turret',
+            label: '새로운 말벌 퇴치 장치 연동하기',
+            variant: 'success',
+            onClick: () => {
+              setIsEditTurretOpen(false);
+            },
+          },
+          {
+            id: 'delete turret',
+            label: '말벌 퇴치 장치 해제',
+            variant: 'secondary',
+            onClick: () => {
+              setIsEditTurretOpen(false);
+            },
           },
         ]}
       />
