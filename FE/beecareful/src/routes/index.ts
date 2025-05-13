@@ -6,10 +6,12 @@ import MainLayout from '@/layouts/MainLayout';
 import DiagnosisCreatePage from '@/pages/diagnosis/DiagnosisCreatePage';
 import BeehiveListPage from '@/pages/beehive/BeehiveListPage';
 import BeehiveDetailPage from '@/pages/beehive/BeehiveDetailPage';
+import AuthProtectedLayout from '@/layouts/AuthProtectedLayout';
 
 const router = createBrowserRouter([
   {
     path: '/',
+    Component: AuthProtectedLayout,
     children: [
       {
         path: ROUTES.LOGIN,

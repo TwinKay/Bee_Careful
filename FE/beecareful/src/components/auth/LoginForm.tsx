@@ -12,7 +12,6 @@ type LoginFormType = {
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const loginMutation = useLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
@@ -21,24 +20,29 @@ const LoginForm = () => {
     formState: { errors },
   } = useForm<LoginFormType>();
 
-  const onSubmit = async (data: LoginFormType) => {
-    try {
-      setLoginError(null);
+  const { mutate, isPending } = useLogin();
 
-      const requestData = {
-        memberLoginId: data.username,
-        password: data.password,
-      };
+  // 로그인 API 호출
+  const onSubmit = (data: LoginFormType) => {
+    // 에러 상태 초기화
+    setLoginError(null);
 
-      // 로그인 요청
-      await loginMutation.mutateAsync(requestData);
+    const requestData = {
+      memberLoginId: data.username,
+      password: data.password,
+    };
 
-      // 로그인 성공시 바로 이동
-      navigate(ROUTES.BEEHIVES);
-    } catch {
-      // 오류 메시지 출력
-      setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.');
-    }
+    // mutate 함수에 직접 콜백 전달
+    mutate(requestData, {
+      onSuccess: () => {
+        // 로그인 성공 시 수행할 작업
+        navigate(ROUTES.BEEHIVES);
+      },
+      onError: () => {
+        // 로그인 실패 시 수행할 작업
+        setLoginError('아이디 또는 비밀번호가 올바르지 않습니다.');
+      },
+    });
   };
 
   const handleSignUp = () => {
@@ -89,7 +93,7 @@ const LoginForm = () => {
         variant="primary"
         size="lg"
         fullWidth
-        isLoading={loginMutation.isPending}
+        isLoading={isPending}
         className="mt-14"
       >
         로그인
