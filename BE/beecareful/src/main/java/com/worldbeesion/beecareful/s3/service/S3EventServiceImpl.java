@@ -56,7 +56,7 @@ public class S3EventServiceImpl implements S3EventService {
 	}
 
 	private void validateEventPayload(S3EventPayload eventPayload) {
-		// 1-1. check bucketName, eventName
+		// TODO: add InvalidS3EventException handling logic (status to FAILED)
 		if (!s3BucketName.equals(eventPayload.getBucketName())) {
 			String errorMsg = String.format("Bucket name mismatch. Received: %s, Expected: %s",
 				eventPayload.getBucketName(), s3BucketName);
