@@ -15,6 +15,7 @@ services:
       MYSQL_USER: ${MYSQL_USERNAME}
     depends_on:
       - beecareful-db
+    restart: always
 
   beecareful-db:
     image: mysql:8.0
@@ -35,7 +36,8 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./db/master/initdb.d:/docker-entrypoint-initdb.d
-      - ./db/master/data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
+
   beecareful-redis:
     image: redis:7.2-alpine
     restart: always
@@ -45,8 +47,12 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
-      - ./redis/data:/data
-      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:
+
 #  prometheus:
 #    image: prom/prometheus:latest
 #    ports:

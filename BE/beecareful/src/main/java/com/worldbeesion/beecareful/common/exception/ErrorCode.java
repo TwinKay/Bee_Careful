@@ -21,10 +21,11 @@ public enum ErrorCode {
     // S3
     S3_CONNECT_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"내부 서버 오류입니다"),
     IMAGE_UPLOAD_FAIL(HttpStatus.BAD_REQUEST,"이미지 업로드에 실패하였습니다."),
+    S3_EVENT_PROCESSING_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"BAD EVENT."),
+    INVALID_S3_EVENT(HttpStatus.BAD_REQUEST,"INVALID S3 EVENT." ),
 
     //Beehive
     BEEHIVE_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 벌통입니다."),
-
 
     // Auth
     COOKIE_NOT_FOUND(HttpStatus.UNAUTHORIZED, "쿠키가 존재하지 않습니다"),

@@ -39,6 +39,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/members").permitAll()
+                        .requestMatchers("/api/v1/s3").permitAll()
                         .anyRequest().authenticated());
         http
                 .httpBasic(AbstractHttpConfigurer::disable);
