@@ -2,33 +2,27 @@ import React, { useRef } from 'react';
 import 'remixicon/fonts/remixicon.css';
 import beehiveNormal from '/icons/beehive-normal.png';
 import beehiveAlert from '/icons/beehive-alert.png';
+import type { BeehiveType } from '@/types/beehive';
 
 type HiveCellPropsType = {
-  beeHiveId: number;
-  nickname: string;
-  isInfected: boolean; // alert 상태 결정
-  diagnosisStatus?: number | null; // 진단 상태 (0: loading, 1: success, 2: warning)
-  lastDiagnosisId?: number | null; // 진단이 있는지 확인용
+  hive: BeehiveType;
+  onOpenStatusPopup?: (hive: BeehiveType) => void; // 팝업 열기 함수 추가
 };
 
-const BeehiveCell: React.FC<HiveCellPropsType> = ({
-  beeHiveId,
-  nickname,
-  isInfected,
-  diagnosisStatus,
-  lastDiagnosisId,
-}) => {
+const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) => {
   // 배경 이미지는 isInfected에 따라 결정
-  const svgSrc = isInfected ? beehiveAlert : beehiveNormal;
+  const svgSrc = hive.isInfected ? beehiveAlert : beehiveNormal;
 
   // 진단 상태가 있고 lastDiagnosisId가 있을 때만 아이콘 표시
-  const showDiagnosisIcon = lastDiagnosisId !== null && diagnosisStatus !== null;
+  const showDiagnosisIcon = hive.lastDiagnosisId !== null && hive.diagnosisStatus !== null;
 
   // 진단 아이콘이 있을 때 SVG를 흐리게 처리
   const needsDimmedSvg = showDiagnosisIcon;
 
   // 롱프레스 타이머 ref
   const longPressTimerRef = useRef<number | null>(null);
+  // 롱프레스 여부 추적
+  const isLongPress = useRef<boolean>(false);
 
   const svgStyle: React.CSSProperties = {
     // iOS Safari 최적화
@@ -52,6 +46,8 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
 
   // 롱프레스 시작 핸들러
   const handleLongPressStart = (_e: React.TouchEvent | React.MouseEvent) => {
+    isLongPress.current = false;
+
     // 기존 타이머가 있으면 제거
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -60,6 +56,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     // 1초 후 진동 발생
     longPressTimerRef.current = window.setTimeout(() => {
       triggerVibration();
+      isLongPress.current = true;
       longPressTimerRef.current = null;
     }, 1000);
   };
@@ -70,12 +67,20 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+
+      // 롱프레스가 아니라면 클릭으로 처리 (짧은 클릭 시 팝업 열기)
+      if (!isLongPress.current && onOpenStatusPopup) {
+        onOpenStatusPopup(hive);
+      }
+    } else if (!isLongPress.current && onOpenStatusPopup) {
+      // 타이머가 실행 완료된 후 핸들러가 호출될 때도 팝업 열기 처리
+      onOpenStatusPopup(hive);
     }
   };
 
   // 진단 상태에 따른 아이콘 결정
   let statusIcon = null;
-  if (showDiagnosisIcon && diagnosisStatus === 0) {
+  if (showDiagnosisIcon && hive.diagnosisStatus === 0) {
     // loading
     statusIcon = (
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
@@ -84,7 +89,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
         </div>
       </div>
     );
-  } else if (showDiagnosisIcon && diagnosisStatus === 1) {
+  } else if (showDiagnosisIcon && hive.diagnosisStatus === 1) {
     // success
     statusIcon = (
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
@@ -93,7 +98,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
         </div>
       </div>
     );
-  } else if (showDiagnosisIcon && diagnosisStatus === 2) {
+  } else if (showDiagnosisIcon && hive.diagnosisStatus === 2) {
     // warning
     statusIcon = (
       <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
@@ -136,7 +141,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
         <div className="relative flex w-full items-center justify-center">
           <img
             src={svgSrc}
-            alt={`beehive ${beeHiveId}`}
+            alt={`beehive ${hive.beehiveId}`}
             className="h-full w-full"
             style={svgStyle}
             // 이미지 저장 및 드래그 방지
@@ -164,7 +169,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
                 textRendering: 'optimizeLegibility',
               }}
             >
-              {nickname}
+              {hive.nickname}
             </span>
           </div>
         </div>

@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import type { HiveType } from '@/components/beehive/BeehiveMap';
+import type { BeehiveType } from '@/types/beehive';
 
 type UseMapInteractionsPropsType = {
   containerRef: React.RefObject<HTMLDivElement | null>; // null을 허용하도록 변경
-  hives: HiveType[];
-  setHives: React.Dispatch<React.SetStateAction<HiveType[]>>;
+  hives: BeehiveType[];
+  setHives: React.Dispatch<React.SetStateAction<BeehiveType[]>>;
   mapWidth: number;
   mapHeight: number;
   hiveSize: number;
@@ -83,7 +83,7 @@ const useMapInteractions = ({
       // 롱프레스 상태 초기화
       setIsLongPress(false);
 
-      const hive = hives.find((h) => h.id === id);
+      const hive = hives.find((h) => h.beehiveId === id);
       if (!hive || !containerRef.current) return;
 
       const containerRect = containerRef.current.getBoundingClientRect();
@@ -101,8 +101,9 @@ const useMapInteractions = ({
 
         // 롱프레스가 확인되면 드래그 오프셋 계산
         if ('clientX' in e) {
-          const hiveScreenX = hive.x * scale - scrollLeft;
-          const hiveScreenY = hive.y * scale - scrollTop;
+          // xDirection, yDirection을 사용하도록 변경
+          const hiveScreenX = hive.xDirection * scale - scrollLeft;
+          const hiveScreenY = hive.yDirection * scale - scrollTop;
 
           dragOffsetRef.current = {
             x: e.clientX - hiveScreenX - containerRect.left,
@@ -110,8 +111,9 @@ const useMapInteractions = ({
           };
         } else if (e.touches && e.touches.length > 0) {
           const touch = e.touches[0];
-          const hiveScreenX = hive.x * scale - scrollLeft;
-          const hiveScreenY = hive.y * scale - scrollTop;
+          // xDirection, yDirection을 사용하도록 변경
+          const hiveScreenX = hive.xDirection * scale - scrollLeft;
+          const hiveScreenY = hive.yDirection * scale - scrollTop;
 
           dragOffsetRef.current = {
             x: touch.clientX - hiveScreenX - containerRect.left,
@@ -164,8 +166,20 @@ const useMapInteractions = ({
       const clampedX = Math.max(hiveSize / 2, Math.min(newX, mapWidth - hiveSize / 2));
       const clampedY = Math.max(hiveSize / 2, Math.min(newY, mapHeight - hiveSize / 2));
 
+      // xDirection, yDirection을 업데이트하도록 변경
       setHives((prev) =>
-        prev.map((hive) => (hive.id === draggingId ? { ...hive, x: clampedX, y: clampedY } : hive)),
+        prev.map((hive) =>
+          hive.beehiveId === draggingId || hive.beehiveId === draggingId
+            ? {
+                ...hive,
+                xDirection: clampedX,
+                yDirection: clampedY,
+                // 호환성을 위해 x, y도 동일하게 업데이트
+                x: clampedX,
+                y: clampedY,
+              }
+            : hive,
+        ),
       );
     },
     [
@@ -362,9 +376,19 @@ const useMapInteractions = ({
         const clampedX = Math.max(hiveSize / 2, Math.min(newX, mapWidth - hiveSize / 2));
         const clampedY = Math.max(hiveSize / 2, Math.min(newY, mapHeight - hiveSize / 2));
 
+        // xDirection, yDirection을 업데이트하도록 변경
         setHives((prev) =>
           prev.map((hive) =>
-            hive.id === draggingId ? { ...hive, x: clampedX, y: clampedY } : hive,
+            hive.beehiveId === draggingId || hive.beehiveId === draggingId
+              ? {
+                  ...hive,
+                  xDirection: clampedX,
+                  yDirection: clampedY,
+                  // 호환성을 위해 x, y도 업데이트
+                  x: clampedX,
+                  y: clampedY,
+                }
+              : hive,
           ),
         );
       }
@@ -453,8 +477,15 @@ const useMapInteractions = ({
       if (draggingId !== null) {
         setHives((prev) =>
           prev.map((hive) =>
-            hive.id === draggingId
-              ? { ...hive, x: hive.x + autoScroll.x / scale, y: hive.y + autoScroll.y / scale }
+            hive.beehiveId === draggingId || hive.beehiveId === draggingId
+              ? {
+                  ...hive,
+                  xDirection: hive.xDirection + autoScroll.x / scale,
+                  yDirection: hive.yDirection + autoScroll.y / scale,
+                  // 호환성을 위해 x, y도 업데이트
+                  x: hive.xDirection + autoScroll.x / scale,
+                  y: hive.yDirection + autoScroll.y / scale,
+                }
               : hive,
           ),
         );

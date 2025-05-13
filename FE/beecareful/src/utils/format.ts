@@ -33,3 +33,26 @@ export const formatPhoneNumber = (phone: string): string => {
 export const removeHyphenFromPhone = (phone: string): string => {
   return phone.replace(/-/g, '');
 };
+
+/**
+ * 시간 형식을 변환하는 함수 (ISO 문자열을 "5분 전" 형식으로)
+ * @param dateString ISO 문자열
+ * @returns 분, 시, 일 단위의 문자열
+ */
+export const formatTimeAgo = (dateString?: string | null): string => {
+  if (!dateString) return '-';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) return '방금 전';
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}시간 전`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}일 전`;
+};
