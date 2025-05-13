@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
 import com.worldbeesion.beecareful.s3.service.S3EventService; // Import the service interface
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
@@ -22,31 +21,30 @@ import lombok.extern.slf4j.Slf4j;
 public class S3EventController {
 
 	private final S3EventService s3EventService; // Inject the service
-	private final String expectedApiKey; // Renamed for clarity
+	private final String s3ApiSecret; // Renamed for clarity
 
 	public S3EventController(
 		S3EventService s3EventService,
-		@Value("${aws.s3.apiKey}") String expectedApiKey
+		@Value("${aws.s3.apiSecret}") String s3ApiSecret
 	) {
-		Assert.hasText(expectedApiKey, "Configuration property 'aws.s3.apiKey' must not be null or empty");
+		Assert.hasText(s3ApiSecret, "Configuration property 'aws.s3.apiSecret' must not be null or empty");
 		this.s3EventService = s3EventService;
-		this.expectedApiKey = expectedApiKey;
+		this.s3ApiSecret = s3ApiSecret;
 	}
 
 	/**
 	 * Endpoint to receive S3 event notifications from the AWS Lambda function.
 	 *
 	 * @param eventPayload The S3EventPayload deserialized from the JSON request body.
-	 * @param receivedApiKey API key passed in the header for security.
+	 * @param receivedApiSecret API key passed in the header for security.
 	 * @return ResponseEntity indicating the outcome of the processing.
 	 */
 	@PostMapping
 	public ResponseEntity<String> receiveS3Event(
 		@RequestBody S3EventPayload eventPayload,
-		@RequestHeader(value = "X-API-Key", required = true) String receivedApiKey
+		@RequestHeader(value = "X-API-Key", required = true) String receivedApiSecret
 	) {
-		// 1. Security Check (Remains in Controller)
-		if (expectedApiKey.equals(receivedApiKey)) {
+		if (s3ApiSecret.equals(receivedApiSecret)) {
 			log.warn("Received request with missing or invalid API key. Check configuration and request header.");
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing API Key");
 		}
@@ -57,10 +55,8 @@ public class S3EventController {
 			eventPayload.getObjectKey(),
 			eventPayload.getEventName());
 
-		// 2. Delegate processing to the service layer
 		s3EventService.processS3Event(eventPayload);
 
-		// 3. Return success response
 		return ResponseEntity.ok("Event processed successfully for: " + eventPayload.getObjectKey());
 	}
 }
