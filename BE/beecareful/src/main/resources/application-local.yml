@@ -29,7 +29,7 @@ jwt:
 aws:
   s3:
     bucketName: ${S3_BUCKET_NAME}
-    apiSecret: ${S3_API_KEY}
+    apiSecret: ${S3_API_SECRET}
 
 logging:
   level:

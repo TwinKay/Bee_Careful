@@ -186,6 +186,18 @@ public class BeehiveServiceImpl implements BeehiveService{
         turretRepository.save(turret);
     }
 
+    @Override
+    @Transactional
+    public void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto) {
+        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
+        if(beehive.isEmpty()) {
+            throw new BeehiveNotFoundException();
+        }
+        beehive.get().updateNickname(beehiveUpdateDto.nickname());
+        beehive.get().updateXDirection(beehiveUpdateDto.xDirection());
+        beehive.get().updateYDirection(beehiveUpdateDto.yDirection());
+    }
+
     private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
         Long page = (long) diagnosisPage.getNumber();
         Long size = (long) diagnosisPage.getSize();
