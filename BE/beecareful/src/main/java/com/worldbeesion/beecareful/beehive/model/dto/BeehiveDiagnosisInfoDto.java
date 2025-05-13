@@ -1,5 +1,7 @@
 package com.worldbeesion.beecareful.beehive.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.LocalDateTime;
 
 public record BeehiveDiagnosisInfoDto(
@@ -7,6 +9,8 @@ public record BeehiveDiagnosisInfoDto(
         LocalDateTime createdAt,
         Long imagoCount,
         Long larvaCount,
+
+        @JsonProperty("result")
         DiagnosisResultDto diagnosisResultDto
 ) {
 }
