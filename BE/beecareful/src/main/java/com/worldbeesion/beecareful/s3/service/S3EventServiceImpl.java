@@ -3,6 +3,7 @@ package com.worldbeesion.beecareful.s3.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Import Transactional
+import org.springframework.util.Assert;
 
 import com.worldbeesion.beecareful.s3.constant.FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
@@ -10,18 +11,24 @@ import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service // Mark this as a Spring service bean
-@RequiredArgsConstructor
 @Slf4j
 public class S3EventServiceImpl implements S3EventService {
 
 	private final S3FileMetadataRepository s3FileMetadataRepository;
 
-	@Value("${aws.s3.bucketName}") // Inject bucket name here
-	private String expectedBucketName;
+	private String s3BucketName;
+
+	public S3EventServiceImpl(
+		S3FileMetadataRepository s3FileMetadataRepository,
+		@Value("${aws.s3.bucketName}") String s3BucketName
+	) {
+		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
+		this.s3FileMetadataRepository = s3FileMetadataRepository;
+		this.s3BucketName = s3BucketName;
+	}
 
 	private static final String EXPECTED_EVENT_NAME = "ObjectCreated:Put";
 	private static final double MAX_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
@@ -46,9 +53,9 @@ public class S3EventServiceImpl implements S3EventService {
 
 	private void validateEventPayload(S3EventPayload eventPayload) {
 		// 1-1. check bucketName, eventName
-		if (!expectedBucketName.equals(eventPayload.getBucketName())) {
+		if (!s3BucketName.equals(eventPayload.getBucketName())) {
 			String errorMsg = String.format("Bucket name mismatch. Received: %s, Expected: %s",
-				eventPayload.getBucketName(), expectedBucketName);
+				eventPayload.getBucketName(), s3BucketName);
 			log.warn(errorMsg);
 			throw new InvalidS3EventException(); // Throw specific exception
 		}
