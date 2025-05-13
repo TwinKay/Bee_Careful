@@ -29,7 +29,7 @@ const router = createBrowserRouter([
     Component: AuthGuardLayout,
     children: [
       {
-        path: ROUTES.BEEHIVES,
+        index: true,
         Component: BeehiveListPage,
       },
       {
