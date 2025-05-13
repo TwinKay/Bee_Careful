@@ -3,6 +3,8 @@ package com.worldbeesion.beecareful.beehive.service;
 
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
 import com.worldbeesion.beecareful.beehive.exception.BeehiveNotFoundException;
+import com.worldbeesion.beecareful.beehive.exception.DirectionDuplicateException;
+import com.worldbeesion.beecareful.beehive.exception.DirectionNullException;
 import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.model.entity.*;
 import com.worldbeesion.beecareful.beehive.repository.*;
@@ -188,14 +190,24 @@ public class BeehiveServiceImpl implements BeehiveService{
 
     @Override
     @Transactional
-    public void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto) {
+    public void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails) {
         Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
         if(beehive.isEmpty()) {
             throw new BeehiveNotFoundException();
         }
+
+        if(beehiveUpdateDto.xDirection() == null || beehiveUpdateDto.yDirection() == null) {
+            throw new DirectionNullException();
+        }
+
+        boolean isLocated = beehiveRepository.existsByDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
+
+        if(isLocated) {
+            throw new DirectionDuplicateException();
+        }
+
         beehive.get().updateNickname(beehiveUpdateDto.nickname());
-        beehive.get().updateXDirection(beehiveUpdateDto.xDirection());
-        beehive.get().updateYDirection(beehiveUpdateDto.yDirection());
+        beehive.get().updateDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
     }
 
     private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {

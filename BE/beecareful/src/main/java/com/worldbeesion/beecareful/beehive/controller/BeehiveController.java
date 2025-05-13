@@ -48,8 +48,10 @@ public class BeehiveController {
     }
 
     @PatchMapping("/{beeHiveId}")
-    public ResponseEntity<?> modifyBeehive(@PathVariable("beeHiveId") Long beeHiveId, @RequestBody BeehiveUpdateDto beehiveUpdateDto) {
-        beehiveService.updateBeehive(beeHiveId, beehiveUpdateDto);
+    public ResponseEntity<?> modifyBeehive(@PathVariable("beeHiveId") Long beeHiveId
+                                            , @RequestBody BeehiveUpdateDto beehiveUpdateDto
+                                            , @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        beehiveService.updateBeehive(beeHiveId, beehiveUpdateDto, userDetails);
         return ResponseEntity.ok().build();
     }
 

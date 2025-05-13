@@ -63,16 +63,12 @@ public class Beehive {
         }
     }
 
-    public void updateXDirection(Long newXDirection) {
-        if (newXDirection != null) {
+    public void updateDirection(Long newXDirection, Long newYDirection) {
+        if (newXDirection != null && newYDirection != null) {
             this.xDirection = newXDirection;
-        }
-    }
-
-    public void updateYDirection(Long newYDirection) {
-        if (newYDirection != null) {
             this.yDirection = newYDirection;
         }
+
     }
 
 }
