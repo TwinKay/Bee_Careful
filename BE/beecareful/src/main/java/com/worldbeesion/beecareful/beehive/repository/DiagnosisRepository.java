@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 public interface DiagnosisRepository extends JpaRepository<Diagnosis,Long> {
 
     @Query("SELECT d FROM Diagnosis d WHERE d.beehive.id = :beehiveId")
-    Page<Diagnosis> findByBeehiveId(Long beehiveId, Pageable pageable);
+    Page<Diagnosis> findDiagnosesByBeehiveId(Long beehiveId, Pageable pageable);
 
 
 

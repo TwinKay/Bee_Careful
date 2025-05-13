@@ -20,7 +20,7 @@ public interface AnalyzedPhotoRepository extends JpaRepository<AnalyzedPhoto, Lo
         FROM AnalyzedPhoto ap
         WHERE ap.diagnosis.id IN :diagnosisIds
         """)
-    List<AnalyzedPhotoResultDto> getAnalyzedPhotosByDiagnosisIds(@Param("diagnosisIds") List<Long> diagnosisIds);
+    List<AnalyzedPhotoResultDto> getAnalyzedPhotosByDiagnosisIdIn(@Param("diagnosisIds") List<Long> diagnosisIds);
 
 
     @Query("""

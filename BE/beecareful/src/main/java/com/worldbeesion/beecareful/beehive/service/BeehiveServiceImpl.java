@@ -96,14 +96,14 @@ public class BeehiveServiceImpl implements BeehiveService{
 
     @Override
     public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable) {
-        Page<Diagnosis> diagnosisPage = diagnosisRepository.findByBeehiveId(beehiveId, pageable);
+        Page<Diagnosis> diagnosisPage = diagnosisRepository.findDiagnosesByBeehiveId(beehiveId, pageable);
 
         List<Long> diagnosisIds = new ArrayList<>();
         for(Diagnosis diagnosis : diagnosisPage.getContent()) {
             diagnosisIds.add(diagnosis.getId());
         }
 
-        List<AnalyzedPhotoResultDto> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisIds(diagnosisIds);
+        List<AnalyzedPhotoResultDto> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisIdIn(diagnosisIds);
 
         List<Long> analyzedPhotoIdList = new ArrayList<>();
         for(AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
