@@ -9,8 +9,15 @@ import DiagnosisList from '@/components/diagnosis/DiagnosisList';
 import { useHeaderIcon } from '@/hooks/useHeaderIcon';
 import BottomSheet from '@/components/common/BottomSheet';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
+import { useParams } from 'react-router-dom';
+import { useGetBeehiveRecords } from '@/services/beehive';
 
 const BeehiveDetailPage = () => {
+  const param = useParams();
+  const beehiveId = param.id;
+
+  const { data: beehiveData } = useGetBeehiveRecords(Number(beehiveId));
+
   const [isToggleLeft, setIsToggleLeft] = useState(true);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
