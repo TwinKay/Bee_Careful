@@ -32,4 +32,8 @@ public class Turret {
 
     @Column(name = "serial", length = 100, nullable = false)
     private String serial;
+
+    public void updateTurret(String serial) {
+        this.serial = serial;
+    }
 }
