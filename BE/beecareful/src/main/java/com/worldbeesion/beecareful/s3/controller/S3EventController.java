@@ -44,7 +44,7 @@ public class S3EventController {
 		@RequestBody S3EventPayload eventPayload,
 		@RequestHeader(value = "X-API-Key", required = true) String receivedApiSecret
 	) {
-		if (s3ApiSecret.equals(receivedApiSecret)) {
+		if (!s3ApiSecret.equals(receivedApiSecret)) {
 			log.warn("Received request with missing or invalid API key. Check configuration and request header.");
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or missing API Key");
 		}
