@@ -21,4 +21,5 @@ public interface OriginalPhotoRepository extends JpaRepository<OriginalPhoto,Lon
 """)
     List<OriginalPhotoStatusDto> findStatusesByDiagnosisIds(@Param("diagnosisIds") List<Long> diagnosisIds);
 
+    List<OriginalPhoto> findAllByDiagnosisId(Long diagnosisId);
 }

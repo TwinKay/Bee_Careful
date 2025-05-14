@@ -35,4 +35,8 @@ public class OriginalPhoto {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private DiagnosisStatus status;
+
+    public void updateStatus(DiagnosisStatus status) {
+        this.status = status;
+    }
 }
