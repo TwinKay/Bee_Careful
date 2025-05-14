@@ -22,8 +22,8 @@ const BeehiveListPage = () => {
     nickname: '',
     deviceCode: '',
     // 기본적으로 맵의 중앙 좌표로 설정 (실제 맵 크기에 따라 조정 필요)
-    xDirection: 10,
-    yDirection: 10,
+    xDirection: 1000,
+    yDirection: 1000,
   });
 
   // 입력 필드 에러 상태
@@ -47,7 +47,6 @@ const BeehiveListPage = () => {
     setShowToast(true);
   };
 
-  // TanStack Query 사용하여 벌통 생성 뮤테이션 설정
   const createBeehiveMutation = useCreateBeehive();
 
   // 닉네임 바텀시트 열기

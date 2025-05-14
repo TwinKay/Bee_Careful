@@ -1,15 +1,16 @@
 import React from 'react';
 import BeehiveCell from '@/components/beehive/BeehiveCell';
-import type { HiveType } from './BeehiveMap';
+import type { BeehiveType } from '@/types/beehive';
 
 type DraggableHivePropsType = {
-  hive: HiveType;
+  hive: BeehiveType;
   scale: number;
   isDragging: boolean;
   isLongPress: boolean;
   hiveSize: number;
   onDragStart: (id: number, e: React.MouseEvent | React.TouchEvent) => void;
   onDragEnd: () => void;
+  onOpenStatusPopup: (hive: BeehiveType) => void; // 팝업 열기 함수 추가
 };
 
 const DraggableHive: React.FC<DraggableHivePropsType> = ({
@@ -20,6 +21,7 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
   hiveSize,
   onDragStart,
   onDragEnd,
+  onOpenStatusPopup,
 }) => {
   return (
     <div
@@ -28,8 +30,8 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
       }`}
       style={{
         position: 'absolute',
-        left: `${hive.x * scale}px`,
-        top: `${hive.y * scale}px`,
+        left: `${hive.xDirection * scale}px`,
+        top: `${hive.yDirection * scale}px`,
         width: `${hiveSize}px`,
         height: `${hiveSize}px`,
         transform: `scale(${scale})`,
@@ -46,10 +48,10 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
         WebkitTransform: `translate3d(0, 0, 0) scale(${scale})`,
         contain: 'strict',
       }}
-      onMouseDown={(e) => onDragStart(hive.id, e)}
+      onMouseDown={(e) => onDragStart(hive.beehiveId, e)}
       onTouchStart={(e) => {
         if (e.touches.length === 1) {
-          onDragStart(hive.id, e);
+          onDragStart(hive.beehiveId, e);
         }
       }}
       onMouseUp={onDragEnd}
@@ -57,11 +59,8 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
       onMouseLeave={onDragEnd}
     >
       <BeehiveCell
-        beeHiveId={hive.id}
-        nickname={hive.nickname}
-        isInfected={hive.isInfected}
-        diagnosisStatus={hive.diagnosisStatus}
-        lastDiagnosisId={hive.lastDiagnosisId}
+        hive={hive}
+        onOpenStatusPopup={onOpenStatusPopup} // 팝업 열기 함수를 BeehiveCell에 전달
       />
     </div>
   );

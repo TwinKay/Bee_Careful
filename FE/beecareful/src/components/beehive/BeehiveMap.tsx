@@ -3,19 +3,10 @@ import Toast from '@/components/common/Toast';
 import type { ToastType, ToastPositionType } from '@/components/common/Toast';
 import MapControls from './MapControls';
 import MapContainer from './MapContainer';
+import BeehiveStatusPopup from '@/components/beehive/BeehiveStatusPopup';
 import useMapInteractions from '@/hooks/useMapInteractions';
 import { useGetBeehives } from '@/apis/beehive';
 import type { BeehiveType } from '@/types/beehive';
-
-export type HiveType = {
-  id: number;
-  nickname: string;
-  isInfected: boolean;
-  diagnosisStatus: number | null;
-  lastDiagnosisId: number | null;
-  x: number;
-  y: number;
-};
 
 type BeehiveMapPropsType = {
   _unused?: never;
@@ -27,7 +18,11 @@ export type BeehiveMapRefType = {
 };
 
 const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, ref) => {
-  const [hives, setHives] = useState<HiveType[]>([]);
+  const [hives, setHives] = useState<BeehiveType[]>([]);
+
+  // 벌통 상태 팝업 관련 상태
+  const [selectedHive, setSelectedHive] = useState<BeehiveType | null>(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   // Toast 상태
   const [toastMessage, setToastMessage] = useState('');
@@ -58,6 +53,17 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
     hiveSize: 100,
   });
 
+  // 팝업 열기 함수
+  const handleOpenStatusPopup = (hive: BeehiveType) => {
+    setSelectedHive(hive);
+    setIsPopupOpen(true);
+  };
+
+  // 팝업 닫기 함수
+  const handleCloseStatusPopup = () => {
+    setIsPopupOpen(false);
+  };
+
   // Toast 표시 함수
   const showToastMessage = (
     message: string,
@@ -74,11 +80,6 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
   const refreshMap = async () => {
     try {
       await refetch();
-      showToastMessage('맵이 새로고침되었습니다.', 'success', 'middle');
-
-      setTimeout(() => {
-        setShowToast(false);
-      }, 3000);
     } catch (refreshError) {
       let errorMessage = '맵 새로고침 중 오류가 발생했습니다.';
 
@@ -96,23 +97,11 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
     refreshMap,
   }));
 
-  // API 응답 데이터를 컴포넌트 HiveType으로 변환
-  const convertToHives = (apiBeehives: BeehiveType[]): HiveType[] => {
-    return apiBeehives.map((beehive: BeehiveType) => ({
-      id: beehive.beehiveId,
-      nickname: beehive.nickname,
-      isInfected: beehive.isInfected,
-      diagnosisStatus: beehive.diagnosisStatus,
-      lastDiagnosisId: beehive.lastDiagnosisId,
-      x: beehive.xDirection,
-      y: beehive.yDirection,
-    }));
-  };
-
   // API 응답 데이터가 변경될 때 hives 상태 업데이트
   useEffect(() => {
     if (beehives) {
-      setHives(convertToHives(beehives));
+      // 변환 과정 없이 바로 사용
+      setHives(beehives);
     }
   }, [beehives]);
 
@@ -181,9 +170,21 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
         handleDrag={handleDrag}
         handleDragStart={handleDragStart}
         handleDragEnd={handleDragEnd}
+        onOpenStatusPopup={handleOpenStatusPopup}
       />
+
+      {/* 벌통 상태 팝업 */}
+      {selectedHive && isPopupOpen && (
+        <BeehiveStatusPopup
+          isOpen={isPopupOpen}
+          onClose={handleCloseStatusPopup}
+          hive={selectedHive}
+        />
+      )}
     </div>
   );
 });
+
+BeehiveMap.displayName = 'BeehiveMap';
 
 export default BeehiveMap;
