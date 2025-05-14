@@ -174,6 +174,7 @@ public class S3EventServiceImpl implements S3EventService {
 			}
 		}
 
+		// TODO: prevent duplicate call with lock or whatever
 		if (allPhotosUploaded) {
 			log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosisId);
 			beehiveService.runDiagnosis(diagnosisId);
