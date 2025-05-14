@@ -146,10 +146,6 @@ public class S3EventServiceImpl implements S3EventService {
 	}
 
 	private void updateFileStatus(S3FileMetadata metadata) {
-		metadata.setStatus(FileStatus.STORED);
-		s3FileMetadataRepository.save(metadata); // Save the updated entity
-		log.info("Updated status to STORED for Key: {}", metadata.getS3Key());
-
 		// Find the OriginalPhoto associated with this S3FileMetadata
 		OriginalPhoto originalPhoto = originalPhotoRepository.findByS3FileMetadata_Id(metadata.getId());
 		if (originalPhoto == null) {
@@ -164,6 +160,10 @@ public class S3EventServiceImpl implements S3EventService {
 		// Get all original photos for this diagnosis
 		List<OriginalPhoto> allPhotosForDiagnosis = originalPhotoRepository.findAllByDiagnosisId(diagnosisId);
 		log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosisId);
+
+		metadata.setStatus(FileStatus.STORED);
+		s3FileMetadataRepository.save(metadata); // Save the updated entity
+		log.info("Updated status to STORED for Key: {}", metadata.getS3Key());
 
 		// Check if all photos have been uploaded (their S3FileMetadata status is STORED)
 		boolean allPhotosUploaded = true;
