@@ -2,9 +2,12 @@ package com.worldbeesion.beecareful.s3.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Import Transactional
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
+import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
+import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
+import com.worldbeesion.beecareful.beehive.service.BeehiveService;
 import com.worldbeesion.beecareful.s3.constant.FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
@@ -13,20 +16,28 @@ import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+
 @Service // Mark this as a Spring service bean
 @Slf4j
 public class S3EventServiceImpl implements S3EventService {
 
 	private final S3FileMetadataRepository s3FileMetadataRepository;
+	private final OriginalPhotoRepository originalPhotoRepository;
+	private final BeehiveService beehiveService;
 
 	private final String s3BucketName;
 
 	public S3EventServiceImpl(
 		S3FileMetadataRepository s3FileMetadataRepository,
+		OriginalPhotoRepository originalPhotoRepository,
+		BeehiveService beehiveService,
 		@Value("${aws.s3.bucketName}") String s3BucketName
 	) {
 		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
 		this.s3FileMetadataRepository = s3FileMetadataRepository;
+		this.originalPhotoRepository = originalPhotoRepository;
+		this.beehiveService = beehiveService;
 		this.s3BucketName = s3BucketName;
 	}
 
@@ -137,6 +148,37 @@ public class S3EventServiceImpl implements S3EventService {
 	private void updateFileStatus(S3FileMetadata metadata) {
 		metadata.setStatus(FileStatus.STORED);
 		s3FileMetadataRepository.save(metadata); // Save the updated entity
-		log.info("Updated status to STORED for Key: {}", metadata.getS3Key()); // Assuming getS3Key() exists
+		log.info("Updated status to STORED for Key: {}", metadata.getS3Key());
+
+		// Find the OriginalPhoto associated with this S3FileMetadata
+		OriginalPhoto originalPhoto = originalPhotoRepository.findByS3FileMetadata_Id(metadata.getId());
+		if (originalPhoto == null) {
+			log.warn("No OriginalPhoto found for S3FileMetadata with key: {}", metadata.getS3Key());
+			return;
+		}
+
+		// Get the diagnosis ID
+		Long diagnosisId = originalPhoto.getDiagnosis().getId();
+		log.info("Found diagnosis ID: {} for S3FileMetadata with key: {}", diagnosisId, metadata.getS3Key());
+
+		// Get all original photos for this diagnosis
+		List<OriginalPhoto> allPhotosForDiagnosis = originalPhotoRepository.findAllByDiagnosisId(diagnosisId);
+		log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosisId);
+
+		// Check if all photos have been uploaded (their S3FileMetadata status is STORED)
+		boolean allPhotosUploaded = true;
+		for (OriginalPhoto photo : allPhotosForDiagnosis) {
+			if (photo.getS3FileMetadata().getStatus() != FileStatus.STORED) {
+				allPhotosUploaded = false;
+				break;
+			}
+		}
+
+		if (allPhotosUploaded) {
+			log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosisId);
+			beehiveService.runDiagnosis(diagnosisId);
+		} else {
+			log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosisId);
+		}
 	}
 }
