@@ -7,10 +7,10 @@ export type BeehiveType = {
   yDirection: number;
   hornetAppearedAt: string | null;
   isInfected: boolean;
-  recordCreatedAt: string;
-  lastDiagnosedAt: string;
-  lastDiagnosisId: number;
-  diagnosisStatus: number;
+  recordCreatedAt: string | null;
+  lastDiagnosedAt: string | null;
+  lastDiagnosisId: number | null;
+  diagnosisStatus: number | null;
 };
 
 // 벌통 생성 요청 타입
