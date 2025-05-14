@@ -1,5 +1,7 @@
 package com.worldbeesion.beecareful.beehive.service;
 
+import static com.worldbeesion.beecareful.common.util.S3Util.*;
+
 import com.worldbeesion.beecareful.beehive.constant.BeeStage;
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
 import com.worldbeesion.beecareful.beehive.constant.DiseaseName;
@@ -260,14 +262,6 @@ public class BeehiveServiceImpl implements BeehiveService {
         return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }
 
-    private String extractFilenameFromS3Key(String s3Key) {
-        if (s3Key == null || s3Key.isEmpty()) {
-            return "unknown_file_" + UUID.randomUUID();
-        }
-        int lastSlash = s3Key.lastIndexOf('/');
-        return (lastSlash >= 0) ? s3Key.substring(lastSlash + 1) : s3Key;
-    }
-
     private AnalyzedPhoto createAnalyzedPhotoEntity(
         OriginalPhoto originalPhoto,
         Diagnosis diagnosis,
@@ -343,27 +337,27 @@ public class BeehiveServiceImpl implements BeehiveService {
         List<BeehiveDiagnosisProjection> beehiveList = beehiveRepository.findAllBeehiveDto(apiary.getId());
 
         List<Long> diagnosisIds = beehiveList.stream()
-                .map(BeehiveDiagnosisProjection::getLastDiagnosisId)
-                .filter(Objects::nonNull)
-                .toList();
+            .map(BeehiveDiagnosisProjection::getLastDiagnosisId)
+            .filter(Objects::nonNull)
+            .toList();
 
         Map<Long, Long> statusMap = getStatusEachBeehive(diagnosisIds);
 
         return beehiveList.stream()
-                .map(dto -> new AllBeehiveResponseDto(
-                        dto.getBeehiveId(),
-                        dto.getNickname(),
-                        dto.getCreatedAt(),
-                        dto.getXDirection(),
-                        dto.getYDirection(),
-                        dto.getHornetAppearedAt(),
-                        dto.getIsInfected(),
-                        dto.getRecordCreatedAt(),
-                        dto.getLastDiagnosedAt(),
-                        dto.getLastDiagnosisId(),
-                        statusMap.get(dto.getLastDiagnosisId())
-                ))
-                .toList();
+            .map(dto -> new AllBeehiveResponseDto(
+                dto.getBeehiveId(),
+                dto.getNickname(),
+                dto.getCreatedAt(),
+                dto.getXDirection(),
+                dto.getYDirection(),
+                dto.getHornetAppearedAt(),
+                dto.getIsInfected(),
+                dto.getRecordCreatedAt(),
+                dto.getLastDiagnosedAt(),
+                dto.getLastDiagnosisId(),
+                statusMap.get(dto.getLastDiagnosisId())
+            ))
+            .toList();
     }
 
     @Override
@@ -371,24 +365,25 @@ public class BeehiveServiceImpl implements BeehiveService {
         Page<Diagnosis> diagnosisPage = diagnosisRepository.findDiagnosesByBeehiveId(beehiveId, pageable);
 
         List<Long> diagnosisIds = new ArrayList<>();
-        for(Diagnosis diagnosis : diagnosisPage.getContent()) {
+        for (Diagnosis diagnosis : diagnosisPage.getContent()) {
             diagnosisIds.add(diagnosis.getId());
         }
 
         List<AnalyzedPhotoResultDto> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisIdIn(diagnosisIds);
 
         List<Long> analyzedPhotoIdList = new ArrayList<>();
-        for(AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
+        for (AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
             analyzedPhotoIdList.add(analyzedPhotoResultDto.analyzedPhotoId());
         }
 
-
-        List<DiagnosisResultProjection> diagnosisResultList = analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(analyzedPhotoIdList);
+        List<DiagnosisResultProjection> diagnosisResultList = analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(
+            analyzedPhotoIdList);
 
         List<BeehiveDiagnosisInfoDto> beehiveDiagnosisInfoList = new ArrayList<>();
 
-        for(DiagnosisResultProjection diagnosisResultProjection : diagnosisResultList) {
-            TotalCountImagoLarvaProjection totalCountByDiagnosis = analyzedPhotoRepository.getTotalCountByDiagnosis(diagnosisResultProjection.getDiagnosisId());
+        for (DiagnosisResultProjection diagnosisResultProjection : diagnosisResultList) {
+            TotalCountImagoLarvaProjection totalCountByDiagnosis = analyzedPhotoRepository.getTotalCountByDiagnosis(
+                diagnosisResultProjection.getDiagnosisId());
             Long totalLarva = totalCountByDiagnosis.getLarvaCount();
             Long totalImago = totalCountByDiagnosis.getImagoCount();
 
@@ -399,12 +394,12 @@ public class BeehiveServiceImpl implements BeehiveService {
             double imagoDwvRatio = calculateDiseaseRatio(diagnosisResultProjection.getImagodwvCount(), totalImago);
 
             Larva larva = new Larva(
-                    diagnosisResultProjection.getLarvavarroaCount(),
-                    larvaVarroaRatio,
-                    diagnosisResultProjection.getLarvafoulBroodCount(),
-                    larvaFoulBroodRatio,
-                    diagnosisResultProjection.getLarvachalkBroodCount(),
-                    larvaChalkBroodRatio
+                diagnosisResultProjection.getLarvavarroaCount(),
+                larvaVarroaRatio,
+                diagnosisResultProjection.getLarvafoulBroodCount(),
+                larvaFoulBroodRatio,
+                diagnosisResultProjection.getLarvachalkBroodCount(),
+                larvaChalkBroodRatio
             );
 
             Imago imago = new Imago(
@@ -417,11 +412,11 @@ public class BeehiveServiceImpl implements BeehiveService {
             DiagnosisResultDto diagnosisResultDto = new DiagnosisResultDto(larva, imago);
 
             BeehiveDiagnosisInfoDto beehiveDiagnosisInfoDto = new BeehiveDiagnosisInfoDto(
-                    diagnosisResultProjection.getDiagnosisId(),
-                    diagnosisResultProjection.getCreatedAt(),
-                    totalImago,
-                    totalLarva,
-                    diagnosisResultDto
+                diagnosisResultProjection.getDiagnosisId(),
+                diagnosisResultProjection.getCreatedAt(),
+                totalImago,
+                totalLarva,
+                diagnosisResultDto
             );
 
             beehiveDiagnosisInfoList.add(beehiveDiagnosisInfoDto);
@@ -430,24 +425,24 @@ public class BeehiveServiceImpl implements BeehiveService {
         PageInfoDto pageInfoDto = createPageInfo(diagnosisPage);
 
         Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
-        if(beehive.isEmpty()) {
+        if (beehive.isEmpty()) {
             throw new BeehiveNotFoundException();
         }
 
         Turret turret = turretRepository.findByBeehive(beehive.get()).orElse(null);
         return new BeehiveDetailResponseDto(
-                beehiveDiagnosisInfoList,
-                pageInfoDto,
-                beehive.get().getNickname(),
-                (turret != null ? turret.getId() : null)
+            beehiveDiagnosisInfoList,
+            pageInfoDto,
+            beehive.get().getNickname(),
+            (turret != null ? turret.getId() : null)
         );
     }
 
     private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
-        Long page = (long) diagnosisPage.getNumber();
-        Long size = (long) diagnosisPage.getSize();
+        Long page = (long)diagnosisPage.getNumber();
+        Long size = (long)diagnosisPage.getSize();
         Long totalElements = diagnosisPage.getTotalElements();
-        Long totalPages = (long) diagnosisPage.getTotalPages();
+        Long totalPages = (long)diagnosisPage.getTotalPages();
         Boolean hasPreviousPage = diagnosisPage.hasPrevious();
         Boolean hasNextPage = diagnosisPage.hasNext();
 
@@ -455,32 +450,33 @@ public class BeehiveServiceImpl implements BeehiveService {
     }
 
     private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {
-        if (totalCount == 0) return 0;
-        return (double) diseaseCount / totalCount * 100;
+        if (totalCount == 0)
+            return 0;
+        return (double)diseaseCount / totalCount * 100;
     }
-
 
     private Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds) {
         List<OriginalPhotoStatusDto> statusList = originalPhotoRepository.findStatusesByDiagnosisIds(diagnosisIds);
         Map<Long, List<DiagnosisStatus>> group = new HashMap<>();
 
-        for(OriginalPhotoStatusDto originalPhotoStatusDto : statusList) {
+        for (OriginalPhotoStatusDto originalPhotoStatusDto : statusList) {
             group.computeIfAbsent(originalPhotoStatusDto.diagnosisId(), k -> new ArrayList<>()).add(originalPhotoStatusDto.status());
         }
 
         return calculateStatus(group);
     }
 
-
     private Map<Long, Long> calculateStatus(Map<Long, List<DiagnosisStatus>> group) {
         Map<Long, Long> result = new HashMap<>();
-        for(Map.Entry<Long, List<DiagnosisStatus>> entry : group.entrySet()) {
+        for (Map.Entry<Long, List<DiagnosisStatus>> entry : group.entrySet()) {
             List<DiagnosisStatus> diagnosisStatuses = entry.getValue();
-            if(diagnosisStatuses.contains(DiagnosisStatus.FAIL) || diagnosisStatuses.contains(DiagnosisStatus.UNRECIEVED)) {
+            if (diagnosisStatuses.contains(DiagnosisStatus.FAIL) || diagnosisStatuses.contains(DiagnosisStatus.UNRECIEVED)) {
                 result.put(entry.getKey(), 2L);
-            } else if (diagnosisStatuses.contains(DiagnosisStatus.WAITING) || diagnosisStatuses.contains(DiagnosisStatus.ANALYZING)) {
+            }
+            else if (diagnosisStatuses.contains(DiagnosisStatus.WAITING) || diagnosisStatuses.contains(DiagnosisStatus.ANALYZING)) {
                 result.put(entry.getKey(), 0L);
-            } else {
+            }
+            else {
                 result.put(entry.getKey(), 1L);
             }
         }
@@ -489,7 +485,7 @@ public class BeehiveServiceImpl implements BeehiveService {
 
     @Override
     @Transactional
-    public List<DiagnosisResponseDto> generateDiagnosisPresignedUrl(DiagnosisDto dto){
+    public List<DiagnosisResponseDto> generateDiagnosisPresignedUrl(DiagnosisDto dto) {
         //TODO 파일 메타데이터 처리, s3Presigned 제약조건
 
         Long beeHiveId = dto.beeHiveId();
@@ -499,42 +495,41 @@ public class BeehiveServiceImpl implements BeehiveService {
         // 2. 벌통 소유자 확인
 
         Diagnosis diagnosis = Diagnosis.builder()
-                .beehive(findBeeHive)
-                .build();
+            .beehive(findBeeHive)
+            .build();
 
         diagnosisRepository.save(diagnosis);
 
         List<Photo> photos = dto.photos();
-        List<DiagnosisResponseDto> response= new ArrayList<>();
+        List<DiagnosisResponseDto> response = new ArrayList<>();
 
-        for(Photo photo : photos){
-            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutUrl(photo.filename(),photo.contentType());
+        for (Photo photo : photos) {
+            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutUrl(photo.filename(), photo.contentType());
             S3FileMetadata s3FileMetadata = putUrlDto.s3FileMetadata();
             String putUrl = putUrlDto.preSignedUrl();
 
             OriginalPhoto originalPhoto = OriginalPhoto.builder()
-                    .diagnosis(diagnosis)
-                    .s3FileMetadata(s3FileMetadata)
-                    .status(DiagnosisStatus.WAITING)
-                    .build();
+                .diagnosis(diagnosis)
+                .s3FileMetadata(s3FileMetadata)
+                .status(DiagnosisStatus.WAITING)
+                .build();
 
             originalPhotoRepository.save(originalPhoto);
 
             int status = 0;
-            if(null == putUrl || putUrl.isEmpty()){
+            if (null == putUrl || putUrl.isEmpty()) {
                 status = 1;
             }
 
             DiagnosisResponseDto build = DiagnosisResponseDto.builder()
-                    .filename(photo.filename())
-                    .status(status)
-                    .preSignedUrl(putUrl)
-                    .build();
+                .filename(photo.filename())
+                .status(status)
+                .preSignedUrl(putUrl)
+                .build();
             response.add(build);
         }
 
         return response;
     }
-
 
 }
