@@ -44,8 +44,9 @@ public class BeehiveController {
 
     @GetMapping("/{beeHiveId}")
     public ResponseEntity<?> getBeehiveById(@PathVariable("beeHiveId") Long beeHiveId,
-                                            @RequestParam("month") int month) {
-        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, month);
+                                            @RequestParam("month") int month,
+                                            @AuthenticationPrincipal UserDetailsImpl userDetails){
+        BeehiveDetailResponseDto responseDto = beehiveService.getBeehiveDetails(beeHiveId, month, userDetails);
         return ResponseEntity.ok().body(responseDto);
     }
 
@@ -74,5 +75,12 @@ public class BeehiveController {
         return ResponseEntity
                 .ok()
                 .body(response);
+    }
+
+    @DeleteMapping("/{beeHiveId}")
+    public ResponseEntity<?> deleteBeehive(@PathVariable(name = "beeHiveId") Long beeHiveId,
+                                           @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        beehiveService.deleteBeehive(beeHiveId, userDetails);
+        return ResponseEntity.ok().build();
     }
 }

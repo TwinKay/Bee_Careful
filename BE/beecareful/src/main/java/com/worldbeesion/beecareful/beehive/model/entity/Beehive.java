@@ -71,4 +71,8 @@ public class Beehive {
 
     }
 
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }

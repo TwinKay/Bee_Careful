@@ -56,8 +56,7 @@ public interface BeehiveRepository extends JpaRepository<Beehive, Long> {
                                        @Param("yDirection") Long yDirection);
 
 
-
-    List<Beehive> findBeehivesByApiary(Apiary apiary);
+    boolean existsByIdAndApiary(Long id, Apiary apiary);
 
 }
 

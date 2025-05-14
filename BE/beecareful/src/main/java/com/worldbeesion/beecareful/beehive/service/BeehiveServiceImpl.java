@@ -98,7 +98,21 @@ public class BeehiveServiceImpl implements BeehiveService{
     }
 
     @Override
-    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month) {
+    @Transactional(readOnly = true)
+    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month, UserDetailsImpl userDetails) {
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
+        if(beehive == null || beehive.getDeletedAt() != null) {
+            throw new BeehiveNotFoundException();
+        }
+
+        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
+
+        if(!isExist){
+            throw new BeehiveNotFoundException();
+        }
+
         LocalDateTime startDate = LocalDateTime.now().minusMonths(month);
         List<Diagnosis> diagnosisList = diagnosisRepository.findRecentDiagnosesByBeehiveId(beehiveId, startDate);
 
@@ -160,16 +174,11 @@ public class BeehiveServiceImpl implements BeehiveService{
         }
 
 
-        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
-        if(beehive.isEmpty()) {
-            throw new BeehiveNotFoundException();
-        }
-
-        Turret turret = turretRepository.findByBeehive(beehive.get()).orElse(null);
+        Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
         return new BeehiveDetailResponseDto(
                 beehiveDiagnosisInfoList,
-                beehive.get().getNickname(),
-                (turret != null ? turret.getId() : null)
+                beehive.getNickname(),
+                turret.getId()
         );
     }
 
@@ -212,6 +221,26 @@ public class BeehiveServiceImpl implements BeehiveService{
 
         beehive.updateNickname(beehiveUpdateDto.nickname());
         beehive.updateDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
+    }
+
+    @Override
+    @Transactional
+    public void deleteBeehive(Long beehiveId, UserDetailsImpl userDetails) {
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
+        if(beehive == null || beehive.getDeletedAt() != null) {
+            throw new BeehiveNotFoundException();
+        }
+
+        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
+
+        if(!isExist) {
+            throw new BeehiveNotFoundException();
+        }
+
+        beehive.delete();
+
     }
 
     private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
