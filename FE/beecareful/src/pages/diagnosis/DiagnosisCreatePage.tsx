@@ -2,13 +2,19 @@ import Button from '@/components/common/Button';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import RemixIcon from '@/components/common/RemixIcon';
 import { MAX_UPLOAD_IMAGE_COUNT } from '@/config/constants';
+import { useRequestDiagnosis } from '@/apis/beehive';
+import type { ImageMetadataType } from '@/types/diagnosis';
 import { removeMetadata } from '@/utils/removeMetadata';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { uploadImages } from '@/services/s3';
 
 const DiagnosisCreatePage = () => {
   const [images, setImages] = useState<File[]>([]);
+  const [metadata, setMetadata] = useState<ImageMetadataType[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+
+  const { mutate: requestDiagnosis } = useRequestDiagnosis();
 
   const captureImage = () => {
     const fileInput = document.getElementById('capture-input') as HTMLInputElement;
@@ -49,6 +55,61 @@ const DiagnosisCreatePage = () => {
       });
     }
   };
+
+  const diagnose = () => {
+    if (images.length === 0) {
+      alert('사진을 업로드 해주세요.');
+      return;
+    }
+
+    // send metadata to server
+    requestDiagnosis(
+      {
+        beeHiveId: 1,
+        count: images.length,
+        photos: metadata,
+      },
+      {
+        onSuccess: (urls) => {
+          console.log('Diagnosis request successful:', urls);
+          uploadImages(
+            {
+              images,
+              urls,
+            },
+            {
+              onSuccess: () => {
+                console.log('Images uploaded successfully');
+              },
+              onError: (error) => {
+                console.error('Image upload failed:', error);
+                alert('사진 업로드에 실패했습니다.');
+              },
+            },
+          );
+          alert('진단 요청이 완료되었습니다.');
+        },
+        onError: (error) => {
+          console.error('Diagnosis request failed:', error);
+          alert('진단 요청에 실패했습니다.');
+        },
+      },
+    );
+  };
+
+  useEffect(() => {
+    const newMetadata: ImageMetadataType[] = images.map((image) => ({
+      filename: image.name,
+      expectedSize: image.size,
+      contentType: image.type,
+      lastModified: image.lastModified,
+    }));
+    setMetadata(newMetadata);
+  }, [images]);
+
+  useEffect(() => {
+    console.log('metadata', metadata);
+  }, [metadata]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center">
@@ -108,13 +169,7 @@ const DiagnosisCreatePage = () => {
         <Button variant={`${images.length === 0 ? 'success' : 'neutral'}`} onClick={getImages}>
           <p className="text-lg font-bold">사진 업로드</p>
         </Button>
-        <Button
-          variant="success"
-          disabled={images.length === 0}
-          onClick={() => {
-            alert('검사 시작');
-          }}
-        >
+        <Button variant="success" disabled={images.length === 0} onClick={diagnose}>
           <p className={`text-lg font-bold ${images.length === 0 ? 'text-gray-500' : ''}`}>
             검사 시작
           </p>

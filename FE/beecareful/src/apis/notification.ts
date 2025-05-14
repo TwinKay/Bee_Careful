@@ -1,18 +1,8 @@
 import type { MessagePayload } from 'firebase/messaging';
 import { getToken, onMessage } from 'firebase/messaging';
-import { messaging } from './firebase';
+import { messaging } from '@/services/firebase';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { api } from '@/services/api';
-
-// 알림 타입
-export type NotificationType = {
-  id: string;
-  title: string;
-  body: string;
-  data?: Record<string, string>;
-  read: boolean;
-  createdAt: Date;
-};
+import { api } from '@/apis/api';
 
 // FCM 토큰 가져오기
 export function useGetFCMToken() {

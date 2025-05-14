@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { MessagePayload } from 'firebase/messaging';
-import { useGetFCMToken, useSaveFCMToken, setupMessageListener } from '../../services/notification';
+import { useGetFCMToken, useSaveFCMToken, setupMessageListener } from '@/apis/notification';
 
 const NotificationManager: React.FC = () => {
   const { data: fcmToken } = useGetFCMToken();

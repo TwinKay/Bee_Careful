@@ -4,8 +4,8 @@ import type { ToastType, ToastPositionType } from '@/components/common/Toast';
 import MapControls from './MapControls';
 import MapContainer from './MapContainer';
 import useMapInteractions from '@/hooks/useMapInteractions';
-import { useGetBeehives } from '@/services/beehive';
-import type { BeehiveType } from '@/types/beehive.type';
+import { useGetBeehives } from '@/apis/beehive';
+import type { BeehiveType } from '@/types/beehive';
 
 export type HiveType = {
   id: number;

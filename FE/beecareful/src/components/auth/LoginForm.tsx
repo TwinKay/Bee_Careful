@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Button } from '@/components/common/Button';
-import { useLogin } from '@/services/auth';
+import { useLogin } from '@/apis/auth';
 
 type LoginFormType = {
   username: string;

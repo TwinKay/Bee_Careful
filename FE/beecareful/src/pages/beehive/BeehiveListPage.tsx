@@ -4,7 +4,7 @@ import Button from '@/components/common/Button';
 import { ROUTES } from '@/config/routes';
 import { Link } from 'react-router-dom';
 import BottomSheet from '@/components/common/BottomSheet';
-import { useCreateBeehive } from '@/services/beehive';
+import { useCreateBeehive } from '@/apis/beehive';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
 import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';

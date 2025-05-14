@@ -10,8 +10,8 @@ import { useHeaderIcon } from '@/hooks/useHeaderIcon';
 import BottomSheet from '@/components/common/BottomSheet';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
 import { useParams } from 'react-router-dom';
-import { useGetBeehiveRecords } from '@/services/beehive';
-import type { DiagnosisDataType } from '@/types/diagnosis.type';
+import { useGetBeehiveRecords } from '@/apis/beehive';
+import type { DiagnosisDataType } from '@/types/diagnosis';
 
 const BeehiveDetailPage = () => {
   const param = useParams();

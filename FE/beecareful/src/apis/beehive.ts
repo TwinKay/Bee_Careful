@@ -1,32 +1,7 @@
 import { api } from './api';
 import { useQuery, useMutation } from '@tanstack/react-query';
-
-export type DiagnosisRequestType = {
-  beeHiveId: number;
-  count: number;
-  photos: ImageMetadataType[];
-};
-
-// 벌통 생성 요청 타입
-export type CreateBeehiveRequestType = {
-  nickname: string;
-  xDirection: number;
-  yDirection: number;
-};
-
-// 벌통 수정 요청 타입
-export type UpdateBeehiveRequestType = {
-  beeHiveId: number;
-  nickname: string;
-  xDirection: number;
-  yDirection: number;
-};
-
-export type ImageMetadataType = {
-  filename: string;
-  contentType: string;
-  expectedSize: number;
-};
+import type { CreateBeehiveRequestType, UpdateBeehiveRequestType } from '@/types/beehive';
+import type { DiagnosisRequestType } from '@/types/diagnosis';
 
 // 전체 벌통 조회
 export function useGetBeehives() {
@@ -99,13 +74,5 @@ export function useGetDiagnosisImages(beeHiveId: number, recordId: number) {
     queryKey: ['diagnosisImages', beeHiveId, recordId],
     queryFn: () =>
       api.get(`/api/v1/beehives/${beeHiveId}/records/${recordId}`).then((res) => res.data),
-  });
-}
-
-// S3 업로드 완료 보고
-export function useCompleteS3Upload() {
-  return useMutation({
-    mutationFn: (s3Key: string) =>
-      api.put('/api/v1/s3', null, { params: { s3Key } }).then((res) => res.data),
   });
 }
