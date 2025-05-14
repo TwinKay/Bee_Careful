@@ -174,18 +174,23 @@ public class BeehiveServiceImpl implements BeehiveService{
     }
 
     @Override
+    @Transactional
     public void addTurret(Long beehiveId, TurretRequestDto turretRequestDto) {
-        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
-        if(beehive.isEmpty()) {
-            throw new BeehiveNotFoundException();
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
+
+        Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
+
+        if(turret != null) {
+            turret.updateTurret(turretRequestDto.serial());
+            return;
         }
 
-        Turret turret = Turret.builder()
-                .beehive(beehive.get())
+        Turret newTurret = Turret.builder()
+                .beehive(beehive)
                 .serial(turretRequestDto.serial())
                 .build();
 
-        turretRepository.save(turret);
+        turretRepository.save(newTurret);
     }
 
     @Override
