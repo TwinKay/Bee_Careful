@@ -1,20 +1,10 @@
 import { api } from './api';
-import { AxiosError } from 'axios';
-import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 
-// 벌통 타입
-export type BeehiveType = {
-  beehiveId: number;
-  nickname: string;
-  createdAt: string;
-  xDirection: number;
-  yDirection: number;
-  hornetAppearedAt: string | null;
-  isInfected: boolean;
-  recordCreatedAt: string;
-  lastDiagnosedAt: string;
-  lastDiagnosisId: number;
-  diagnosisStatus: number;
+export type DiagnosisRequestType = {
+  beeHiveId: number;
+  count: number;
+  photos: ImageMetadataType[];
 };
 
 // 벌통 생성 요청 타입
@@ -30,6 +20,12 @@ export type UpdateBeehiveRequestType = {
   nickname: string;
   xDirection: number;
   yDirection: number;
+};
+
+export type ImageMetadataType = {
+  filename: string;
+  contentType: string;
+  expectedSize: number;
 };
 
 // 전체 벌통 조회
@@ -90,15 +86,7 @@ export function useLinkTurret() {
 // 벌통 진단 요청 (pre-signed URL 요청)
 export function useRequestDiagnosis() {
   return useMutation({
-    mutationFn: ({
-      beeHiveId,
-      count,
-      photos,
-    }: {
-      beeHiveId: number;
-      count: number;
-      photos: any[];
-    }) =>
+    mutationFn: ({ beeHiveId, count, photos }: DiagnosisRequestType) =>
       api
         .post(`/api/v1/beehives/${beeHiveId}/diagnosis`, { count, photos })
         .then((res) => res.data),

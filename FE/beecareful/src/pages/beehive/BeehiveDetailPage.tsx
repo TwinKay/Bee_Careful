@@ -11,7 +11,7 @@ import BottomSheet from '@/components/common/BottomSheet';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
 import { useParams } from 'react-router-dom';
 import { useGetBeehiveRecords } from '@/services/beehive';
-import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import type { DiagnosisDataType } from '@/types/diagnosis.type';
 
 const BeehiveDetailPage = () => {
   const param = useParams();

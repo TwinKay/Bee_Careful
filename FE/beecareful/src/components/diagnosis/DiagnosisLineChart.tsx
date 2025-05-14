@@ -1,4 +1,4 @@
-import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import type { DiagnosisDataType } from '@/types/diagnosis.type';
 import { useMemo } from 'react';
 import {
   LineChart,

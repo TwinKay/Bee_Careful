@@ -5,7 +5,7 @@ import MapControls from './MapControls';
 import MapContainer from './MapContainer';
 import useMapInteractions from '@/hooks/useMapInteractions';
 import { useGetBeehives } from '@/services/beehive';
-import type { BeehiveType } from '@/services/beehive';
+import type { BeehiveType } from '@/types/beehive.type';
 
 export type HiveType = {
   id: number;

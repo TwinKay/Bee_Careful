@@ -4,7 +4,7 @@ import Button from '../common/Button';
 import Card from '../common/Card';
 import DiagnosisDetailPage from '@/pages/diagnosis/DiagnosisDetailPage';
 import RemixIcon from '../common/RemixIcon';
-import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import type { DiagnosisDataType } from '@/types/diagnosis.type';
 import { getLocaleDateString } from '@/utils/getLocaleDateString';
 
 const DiagnosisListItem: React.FC<DiagnosisDataType> = (props) => {
