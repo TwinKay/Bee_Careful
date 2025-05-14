@@ -1,5 +1,6 @@
 package com.worldbeesion.beecareful.beehive.service;
 
+import static com.worldbeesion.beecareful.common.util.HttpUtil.*;
 import static com.worldbeesion.beecareful.common.util.S3Util.*;
 
 import com.worldbeesion.beecareful.beehive.constant.BeeStage;
@@ -41,7 +42,6 @@ import reactor.core.publisher.Mono;
 import java.time.Duration; // For timeout on block()
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisApiResponse;
 
@@ -162,7 +162,7 @@ public class BeehiveServiceImpl implements BeehiveService {
                 }
                 log.debug("[DiagnosisId: {}, PhotoId: {}] Parsed diagnosis JSON.", diagnosis.getId(), photoId);
 
-                String imageContentType = getContentType(analyzedImagePart);
+                String imageContentType = getPartContentType(analyzedImagePart);
                 String analyzedFilename = "analyzed_" + extractFilenameFromS3Key(originalS3Key);
 
                 byte[] analyzedImageData = DataBufferUtils.join(analyzedImagePart.content())
@@ -252,14 +252,6 @@ public class BeehiveServiceImpl implements BeehiveService {
                     return Mono.error(new RuntimeException("Failed to decode JSON diagnosis part", e));
                 }
             });
-    }
-
-    private String getContentType(Part part) {
-        if (part != null && part.headers().getContentType() != null) {
-            return Objects.requireNonNull(part.headers().getContentType()).toString();
-        }
-        log.warn("Content type missing in image Part header. Defaulting to application/octet-stream.");
-        return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }
 
     private AnalyzedPhoto createAnalyzedPhotoEntity(
