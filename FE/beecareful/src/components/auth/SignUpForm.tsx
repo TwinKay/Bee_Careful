@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Button } from '@/components/common/Button';
-import { useSignup } from '@/services/auth';
+import { useSignup } from '@/apis/auth';
 import { AxiosError } from 'axios';
 import { formatPhoneNumber, removeHyphenFromPhone } from '@/utils/format';
 

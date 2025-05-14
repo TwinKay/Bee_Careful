@@ -1,5 +1,5 @@
 import DiagnosisListItem from './DiagnosisListItem';
-import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import type { DiagnosisDataType } from '@/types/diagnosis';
 
 export type DiagnosisListPropsType = {
   data: DiagnosisDataType[];

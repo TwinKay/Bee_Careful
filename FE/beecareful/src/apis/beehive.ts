@@ -1,36 +1,7 @@
 import { api } from './api';
-import { AxiosError } from 'axios';
-import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
-
-// 벌통 타입
-export type BeehiveType = {
-  beehiveId: number;
-  nickname: string;
-  createdAt: string;
-  xDirection: number;
-  yDirection: number;
-  hornetAppearedAt: string | null;
-  isInfected: boolean;
-  recordCreatedAt: string;
-  lastDiagnosedAt: string;
-  lastDiagnosisId: number;
-  diagnosisStatus: number;
-};
-
-// 벌통 생성 요청 타입
-export type CreateBeehiveRequestType = {
-  nickname: string;
-  xDirection: number;
-  yDirection: number;
-};
-
-// 벌통 수정 요청 타입
-export type UpdateBeehiveRequestType = {
-  beeHiveId: number;
-  nickname: string;
-  xDirection: number;
-  yDirection: number;
-};
+import { useQuery, useMutation } from '@tanstack/react-query';
+import type { CreateBeehiveRequestType, UpdateBeehiveRequestType } from '@/types/beehive';
+import type { DiagnosisRequestType } from '@/types/diagnosis';
 
 // 전체 벌통 조회
 export function useGetBeehives() {
@@ -90,15 +61,7 @@ export function useLinkTurret() {
 // 벌통 진단 요청 (pre-signed URL 요청)
 export function useRequestDiagnosis() {
   return useMutation({
-    mutationFn: ({
-      beeHiveId,
-      count,
-      photos,
-    }: {
-      beeHiveId: number;
-      count: number;
-      photos: any[];
-    }) =>
+    mutationFn: ({ beeHiveId, count, photos }: DiagnosisRequestType) =>
       api
         .post(`/api/v1/beehives/${beeHiveId}/diagnosis`, { count, photos })
         .then((res) => res.data),
@@ -111,13 +74,5 @@ export function useGetDiagnosisImages(beeHiveId: number, recordId: number) {
     queryKey: ['diagnosisImages', beeHiveId, recordId],
     queryFn: () =>
       api.get(`/api/v1/beehives/${beeHiveId}/records/${recordId}`).then((res) => res.data),
-  });
-}
-
-// S3 업로드 완료 보고
-export function useCompleteS3Upload() {
-  return useMutation({
-    mutationFn: (s3Key: string) =>
-      api.put('/api/v1/s3', null, { params: { s3Key } }).then((res) => res.data),
   });
 }

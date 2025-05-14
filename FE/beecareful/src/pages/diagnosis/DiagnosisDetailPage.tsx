@@ -3,7 +3,7 @@ import Card from '@/components/common/Card';
 import CardTitle from '@/components/common/CardTitle';
 import RemixIcon from '@/components/common/RemixIcon';
 import DiagnosisPieChart from '@/components/diagnosis/DiagnosisPieChart';
-import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import type { DiagnosisDataType } from '@/types/diagnosis';
 import { getLocaleDateString } from '@/utils/getLocaleDateString';
 import { useMemo } from 'react';
 
