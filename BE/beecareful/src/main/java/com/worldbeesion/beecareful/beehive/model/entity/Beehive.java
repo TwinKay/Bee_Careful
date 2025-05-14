@@ -71,10 +71,8 @@ public class Beehive {
 
     }
 
-    public void updateDeletedAt(LocalDateTime newDeletedAt) {
-        if (newDeletedAt != null) {
-            this.deletedAt = newDeletedAt;
-        }
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
     }
 
 }

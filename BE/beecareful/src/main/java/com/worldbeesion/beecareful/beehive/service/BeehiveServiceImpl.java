@@ -98,6 +98,7 @@ public class BeehiveServiceImpl implements BeehiveService{
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month, UserDetailsImpl userDetails) {
         Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
         if(beehive == null || beehive.getDeletedAt() != null) {
@@ -106,7 +107,7 @@ public class BeehiveServiceImpl implements BeehiveService{
 
         Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
         Apiary apiary = apiaryRepository.findByMembers(members);
-        boolean isExist = beehiveRepository.existsByApiaryAndId(apiary, beehiveId);
+        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
         if(!isExist){
             throw new BeehiveNotFoundException();
@@ -177,7 +178,7 @@ public class BeehiveServiceImpl implements BeehiveService{
         return new BeehiveDetailResponseDto(
                 beehiveDiagnosisInfoList,
                 beehive.getNickname(),
-                (turret != null ? turret.getId() : null)
+                turret.getId()
         );
     }
 
@@ -232,13 +233,13 @@ public class BeehiveServiceImpl implements BeehiveService{
 
         Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
         Apiary apiary = apiaryRepository.findByMembers(members);
-        boolean isExist = beehiveRepository.existsByApiaryAndId(apiary, beehiveId);
+        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
         if(!isExist) {
             throw new BeehiveNotFoundException();
         }
 
-        beehive.updateDeletedAt(LocalDateTime.now());
+        beehive.delete();
 
     }
 
