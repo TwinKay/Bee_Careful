@@ -13,7 +13,8 @@ public interface BeehiveService {
     List<DiagnosisResponseDto> generateDiagnosisPresignedUrl(DiagnosisDto dto);
     void addBeehive(BeehiveRequestDto beehiveRequestDto,UserDetailsImpl userDetails);
     List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails);
-    BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month);
+    BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month, UserDetailsImpl userDetails);
     void addTurret(Long beehiveId, TurretRequestDto turretRequestDto);
     void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails);
+    void deleteBeehive(Long beehiveId, UserDetailsImpl userDetails);
 }
