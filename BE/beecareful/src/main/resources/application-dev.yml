@@ -21,13 +21,20 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
+
 jwt:
   secretKey: ${JWT_SECRET}
+
 aws:
   s3:
     bucketName: ${S3_BUCKET_NAME}
     apiSecret: ${S3_API_KEY}
+
+ai:
+  api:
+    endpoint: ${AI_ENDPOINT}
+
 logging:
   level:
-    org.springframework.security : DEBUG
-    org.springframework.web : DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

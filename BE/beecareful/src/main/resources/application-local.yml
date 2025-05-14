@@ -31,8 +31,12 @@ aws:
     bucketName: ${S3_BUCKET_NAME}
     apiSecret: ${S3_API_KEY}
 
+ai:
+  api:
+    endpoint: ${AI_ENDPOINT}
+
 logging:
   level:
-    org.springframework.security : DEBUG
-    org.springframework.web : DEBUG
-    com.worldbeesion.beecareful : debug
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    com.worldbeesion.beecareful: debug

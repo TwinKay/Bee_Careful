@@ -26,18 +26,12 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
-import org.springframework.http.codec.multipart.Part;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-
-import reactor.core.publisher.Mono;
 
 import java.time.Duration; // For timeout on block()
 import java.util.*;
@@ -46,12 +40,13 @@ import java.util.concurrent.CompletableFuture;
 import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisApiResponse;
 
 @Service
-@RequiredArgsConstructor // Lombok constructor injection
+@RequiredArgsConstructor
 @Slf4j
 public class BeehiveServiceImpl implements BeehiveService {
 
     private final S3PresignService s3PresignService;
     private final S3FileService s3FileService;
+    private final AiDiagnosisService aiDiagnosisService;
 
     private final BeehiveRepository beehiveRepository;
     private final DiagnosisRepository diagnosisRepository;
@@ -92,16 +87,19 @@ public class BeehiveServiceImpl implements BeehiveService {
     }
 
     @Override
-    @Transactional
+    @Transactional // This transaction primarily covers the initial Diagnosis fetch.
+    // Async operations run in their own transactions by default.
     public void runDiagnosis(Long diagnosisId) {
         log.info("Starting diagnosis process for diagnosisId: {}", diagnosisId);
 
+        // 1. Retrieve Diagnosis entity
         Diagnosis diagnosis = diagnosisRepository.findById(diagnosisId)
             .orElseThrow(() -> {
                 log.error("Diagnosis not found for ID: {}", diagnosisId);
-                return new BadRequestException(); // TODO: add specific exception or message
+                return new BadRequestException();
             });
 
+        // 2. Retrieve all OriginalPhoto entities associated with this Diagnosis
         List<OriginalPhoto> originalPhotos = originalPhotoRepository.findAllByDiagnosisId(diagnosisId);
 
         if (originalPhotos.isEmpty()) {
@@ -110,148 +108,114 @@ public class BeehiveServiceImpl implements BeehiveService {
         }
         log.info("Found {} original photos for diagnosisId: {}", originalPhotos.size(), diagnosisId);
 
+        // 3. Process each photo asynchronously
         List<CompletableFuture<Void>> futures = originalPhotos.stream()
             .map(originalPhoto -> processSinglePhotoAnalysis(originalPhoto, diagnosis))
             .toList();
 
+        // 4. Wait for all asynchronous tasks to complete
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             log.info("All photo processing tasks completed for diagnosisId: {}", diagnosisId);
         } catch (Exception e) {
-            log.error("Error occurred while waiting for photo processing tasks for diagnosisId: {}", diagnosisId, e);
+            // This catch block might capture CompletionException if any future failed unexpectedly *during join*
+            log.error("Error occurred while waiting for all photo processing tasks for diagnosisId: {}", diagnosisId, e);
         }
 
         log.info("Finished diagnosis process for diagnosisId: {}", diagnosisId);
     }
 
+    /**
+     * Asynchronously processes a single original photo:
+     * - Updates its status to ANALYZING.
+     * - Calls the AiDiagnosisService to get analysis data from the external AI API.
+     * - Uploads the analyzed image (from AI data) to S3.
+     * - Saves the analysis results (AnalyzedPhoto, AnalyzedPhotoDisease) to the database.
+     * - Updates the original photo's status to SUCCESS or FAIL.
+     */
     private CompletableFuture<Void> processSinglePhotoAnalysis(OriginalPhoto originalPhoto, Diagnosis diagnosis) {
+        // supplyAsync runs the lambda in a separate thread from the common ForkJoinPool (or a custom executor if provided)
         return CompletableFuture.supplyAsync(() -> {
             String originalPhotoS3Url = originalPhoto.getS3FileMetadata().getUrl();
-            String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key();
+            String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key(); // Used for naming the analyzed image
             Long photoId = originalPhoto.getId();
             log.info("[DiagnosisId: {}, PhotoId: {}] Starting processing.", diagnosis.getId(), photoId);
 
             try {
+                // Note: This database update runs within this async task's transaction (if any).
                 originalPhoto.updateStatus(DiagnosisStatus.ANALYZING);
+                originalPhotoRepository.save(originalPhoto); // Explicitly save status update
                 log.debug("[DiagnosisId: {}, PhotoId: {}] Status set to ANALYZING.", diagnosis.getId(), photoId);
 
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Sending URL {} to AI API.", diagnosis.getId(), photoId, originalPhotoS3Url);
-                Mono<Map<String, Part>> multipartResponseMono = webClient.post()
-                    .uri("http://your-ai-api-endpoint") // *** Replace with actual AI API endpoint ***
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(Map.of("s3Url", originalPhotoS3Url))
-                    .accept(MediaType.MULTIPART_FORM_DATA)
-                    .exchangeToMono(this::handleAiApiResponse);
+                // Timeout is important to prevent indefinite blocking.
+                AnalyzedPhotoImageDto analyzedPhotoImageDto = aiDiagnosisService.analyzePhoto(originalPhotoS3Url)
+                    .block(Duration.ofSeconds(120)); // Increased timeout for AI call + parsing
 
-                Map<String, Part> responseParts = multipartResponseMono.block(Duration.ofSeconds(120));
-
-                if (responseParts == null || !responseParts.containsKey("diagnosis") || !responseParts.containsKey("image")) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] Incomplete multipart response. Parts: {}",
-                        diagnosis.getId(), photoId, responseParts != null ? responseParts.keySet() : "null");
-                    throw new IllegalStateException("Incomplete response from AI API");
+                if (analyzedPhotoImageDto == null) {
+                    log.error("[DiagnosisId: {}, PhotoId: {}] AI analysis returned no data.", diagnosis.getId(), photoId);
+                    throw new IllegalStateException("AI analysis returned null data.");
                 }
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Received multipart response.", diagnosis.getId(), photoId);
 
-                Part diagnosisJsonPart = responseParts.get("diagnosis");
-                Part analyzedImagePart = responseParts.get("image");
+                DiagnosisApiResponse.DiagnosisResult diagResult = analyzedPhotoImageDto.diagnosisResult();
+                byte[] analyzedImageData = analyzedPhotoImageDto.analyzedImageData();
+                String imageContentType = analyzedPhotoImageDto.imageContentType();
 
-                DiagnosisApiResponse.DiagnosisResult diagResult = parseDiagnosisResult(diagnosisJsonPart)
-                    .block(Duration.ofSeconds(10));
                 if (diagResult == null) {
-                    throw new IllegalStateException("Failed to parse diagnosis JSON part");
+                    log.error("[DiagnosisId: {}, PhotoId: {}] DiagnosisResult from AI analysis is null.", diagnosis.getId(), photoId);
+                    throw new IllegalStateException("AI analysis returned null DiagnosisResult.");
                 }
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Parsed diagnosis JSON.", diagnosis.getId(), photoId);
+                if (analyzedImageData == null || analyzedImageData.length == 0) {
+                    log.error("[DiagnosisId: {}, PhotoId: {}] Analyzed image data from AI analysis is null or empty.", diagnosis.getId(), photoId);
+                    throw new IllegalStateException("AI analysis returned null or empty image data.");
+                }
+                log.debug("[DiagnosisId: {}, PhotoId: {}] Received AI analysis data. Image size: {} bytes.",
+                    diagnosis.getId(), photoId, analyzedImageData.length);
 
-                String imageContentType = getPartContentType(analyzedImagePart);
+                // Generate a filename for the analyzed image
                 String analyzedFilename = "analyzed_" + extractFilenameFromS3Key(originalS3Key);
 
-                byte[] analyzedImageData = DataBufferUtils.join(analyzedImagePart.content())
-                    .map(dataBuffer -> {
-                        byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                        dataBuffer.read(bytes);
-                        DataBufferUtils.release(dataBuffer);
-                        return bytes;
-                    })
-                    .block(Duration.ofSeconds(60));
-
-                if (analyzedImageData == null || analyzedImageData.length == 0) {
-                    throw new IllegalStateException("Extracted image data is null or empty");
-                }
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Extracted image bytes ({} bytes).", diagnosis.getId(), photoId,
-                    analyzedImageData.length);
-
+                // Upload the analyzed image (received as byte[]) to S3
                 S3FileMetadata analyzedImageMetadata = s3FileService.putObject(
                     analyzedImageData,
                     analyzedFilename,
                     imageContentType,
-                    FilePathPrefix.BEEHIVE_DIAGNOSIS
+                    FilePathPrefix.BEEHIVE_DIAGNOSIS // Ensure this prefix is correct
                 );
-                log.info("[DiagnosisId: {}, PhotoId: {}] Uploaded analyzed image. Key: {}",
+                log.info("[DiagnosisId: {}, PhotoId: {}] Uploaded analyzed image to S3. New Key: {}",
                     diagnosis.getId(), photoId, analyzedImageMetadata.getS3Key());
 
+                // Create and save AnalyzedPhoto entity
                 AnalyzedPhoto analyzedPhoto = createAnalyzedPhotoEntity(originalPhoto, diagnosis, analyzedImageMetadata, diagResult);
                 analyzedPhotoRepository.save(analyzedPhoto);
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhoto ID: {}",
+                log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhoto entity with ID: {}",
                     diagnosis.getId(), photoId, analyzedPhoto.getId());
 
+                // Save associated disease details
                 saveAnalyzedDiseases(analyzedPhoto, diagResult);
                 log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhotoDisease entities.", diagnosis.getId(), photoId);
 
+                // Update original photo status to SUCCESS
                 originalPhoto.updateStatus(DiagnosisStatus.SUCCESS);
+                originalPhotoRepository.save(originalPhoto); // Explicitly save status update
                 log.info("[DiagnosisId: {}, PhotoId: {}] Successfully processed.", diagnosis.getId(), photoId);
 
-                return null;
+                return null; // Indicate success for this CompletableFuture
 
             } catch (Exception e) {
                 log.error("[DiagnosisId: {}, PhotoId: {}] FAILED to process diagnosis.", diagnosis.getId(), photoId, e);
+                // Attempt to update status to FAIL
                 try {
                     originalPhoto.updateStatus(DiagnosisStatus.FAIL);
+                    originalPhotoRepository.save(originalPhoto); // Explicitly save status update
                 } catch (Exception dbEx) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] CRITICAL: Failed to update status to FAIL.",
+                    log.error("[DiagnosisId: {}, PhotoId: {}] CRITICAL: Failed to update originalPhoto status to FAIL after processing error.",
                         diagnosis.getId(), photoId, dbEx);
                 }
-                throw new RuntimeException("Failed processing photoId " + photoId, e);
+                // Allow the CompletableFuture to complete exceptionally.
+                // This exception will be caught by the .join() in the main runDiagnosis method if it's a direct cause of failure.
+                throw new RuntimeException("Failed processing photoId " + photoId + " for diagnosisId " + diagnosis.getId(), e);
             }
         });
-    }
-
-    private Mono<Map<String, Part>> handleAiApiResponse(ClientResponse response) {
-        if (response.statusCode().isError()) {
-            log.error("AI API returned error status: {}", response.statusCode());
-            return response.bodyToMono(String.class)
-                .flatMap(errorBody -> Mono.error(new RuntimeException("AI API Error: " + response.statusCode() + " - " + errorBody)));
-        }
-        MediaType contentTypeHeader = response.headers().contentType().orElse(MediaType.APPLICATION_OCTET_STREAM);
-        if (!contentTypeHeader.isCompatibleWith(MediaType.MULTIPART_FORM_DATA)) {
-            log.error("Unexpected Content-Type from AI API: {}", contentTypeHeader);
-            return Mono.error(new RuntimeException("Expected multipart/form-data response, but received: " + contentTypeHeader));
-        }
-        return response.bodyToFlux(Part.class)
-            .collectMap(Part::name);
-    }
-
-    private Mono<DiagnosisApiResponse.DiagnosisResult> parseDiagnosisResult(Part jsonPart) {
-        return DataBufferUtils.join(jsonPart.content())
-            .map(dataBuffer -> {
-                byte[] bytes = new byte[dataBuffer.readableByteCount()];
-                dataBuffer.read(bytes);
-                DataBufferUtils.release(dataBuffer);
-                return bytes;
-            })
-            .flatMap(jsonBytes -> {
-                try {
-                    com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    DiagnosisApiResponse tempResponse = objectMapper.readValue(jsonBytes, DiagnosisApiResponse.class);
-                    if (tempResponse == null || tempResponse.getDiagnosis() == null) {
-                        log.error("Parsed DiagnosisApiResponse or its DiagnosisResult is null. JSON: {}", new String(jsonBytes));
-                        return Mono.error(new IllegalStateException("Parsed diagnosis result is null"));
-                    }
-                    return Mono.just(tempResponse.getDiagnosis());
-                } catch (Exception e) {
-                    log.error("Failed to decode JSON diagnosis part. JSON: {}", new String(jsonBytes), e);
-                    return Mono.error(new RuntimeException("Failed to decode JSON diagnosis part", e));
-                }
-            });
     }
 
     private AnalyzedPhoto createAnalyzedPhotoEntity(
@@ -278,11 +242,16 @@ public class BeehiveServiceImpl implements BeehiveService {
             .build();
     }
 
+    /**
+     * Saves all detected diseases for a given analyzed photo.
+     */
     private void saveAnalyzedDiseases(AnalyzedPhoto analyzedPhoto, DiagnosisApiResponse.DiagnosisResult result) {
+        // Larva diseases
         saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", true, result.getLarva().getVarroaCount());
         saveAnalyzedPhotoDisease(analyzedPhoto, "FOULBROOD", true, result.getLarva().getFoulBroodCount());
         saveAnalyzedPhotoDisease(analyzedPhoto, "CHALKBROOD", true, result.getLarva().getChalkBroodCount());
 
+        // Imago diseases
         saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", false, result.getImago().getVarroaCount());
         saveAnalyzedPhotoDisease(analyzedPhoto, "DWV", false, result.getImago().getDwvCount());
     }
