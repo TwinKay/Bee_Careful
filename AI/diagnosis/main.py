@@ -1,113 +1,154 @@
+# main.py
+# FastAPI application for beehive diagnosis.
+# Downloads original image from S3, analyzes, uploads annotated image to S3,
+# and returns diagnosis with S3 Key of the annotated image.
+
 import uvicorn
-import json, uuid, ssl
-from typing import Dict
+import uuid
+import os
 
-import cv2, numpy as np, httpx
+import cv2
+import numpy as np
 from fastapi import FastAPI, Body, HTTPException
-from pydantic import BaseModel, HttpUrl
-from starlette.responses import Response
-from ultralytics import YOLO
+from pydantic import BaseModel
 
+# Import from the bee_analyzer module
+from bee_analyzer import load_model, analyze_bee_image
+from s3_handler import (
+    get_s3_object_bytes,
+    put_s3_object_bytes,
+    extract_filename_from_s3_key
+)
 
-MODEL_PATH = "https://huggingface.co/Twinkay/BEE_DISEASE/resolve/main/bee_disease.pt"
-model = YOLO(MODEL_PATH)
+# --- Application Setup ---
+app = FastAPI(title="Beehive-Diagnosis API with S3 In/Out")
 
-CLASS_NAMES = [
-    "유충_정상", "유충_응애", "유충_석고병", "유충_부저병",
-    "성충_정상", "성충_응애", "성충_날개불구바이러스감염증",
-]
+# Load the model when the application starts
+try:
+    MODEL = load_model()
+except Exception as e:
+    print(f"FATAL: Could not load YOLO model: {e}")
+    MODEL = None
 
-COLOR_MAP = {
-    "성충_응애": (229, 115, 115),
-    "성충_날개불구바이러스감염증": (255, 183, 77),
-    "유충_응애": (199, 165, 255),
-    "유충_석고병": (129, 199, 132),
-    "유충_부저병": (100, 181, 246),
-}
-
-SKIP_DRAW = {"유충_정상", "성충_정상"}
-
-def empty_diagnosis() -> Dict[str, Dict[str, int]]:
-    return {
-        "larva": {"normalCount": 0, "varroaCount": 0,
-                  "foulBroodCount": 0, "chalkBroodCount": 0},
-        "imago": {"normalCount": 0, "varroaCount": 0, "dwvCount": 0},
-    }
-
+# --- Request & Response Models ---
 class DiagnosisRequest(BaseModel):
-    url: HttpUrl
+    s3Key: str # S3 key for the original image
 
-app = FastAPI(title="Beehive-Diagnosis API")
+class DiagnosisResponse(BaseModel):
+    diagnosis: dict
+    annotatedImageS3Key: str # S3 key for the annotated image
 
-@app.post("/beehives/diagnosis")
+# --- Configuration for Annotated Images ---
+ANNOTATED_IMAGE_S3_PREFIX = "BEEHIVE/ANNOTATED/" # Define a prefix for annotated images
+
+# --- API Endpoints ---
+@app.post("/beehives/diagnosis", response_model=DiagnosisResponse)
 async def diagnose_beehive(body: DiagnosisRequest = Body(...)):
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            r = await client.get(str(body.url))
-            r.raise_for_status()
-            img_bytes = r.content
-    except (httpx.RequestError, httpx.HTTPStatusError, ssl.SSLError) as e:
-        raise HTTPException(400, f"이미지 다운로드 실패: {e}")
+    """
+    Receives an S3 key for an original image, downloads it, performs bee disease diagnosis,
+    uploads the annotated image to S3, and returns the diagnosis results along with
+    the S3 key of the annotated image.
+    """
+    if MODEL is None:
+        # This check is still important as model loading is a direct responsibility of main.py
+        raise HTTPException(status_code=503, detail="Model not loaded. Service unavailable.")
 
-    img_np = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
-    if img_np is None:
-        raise HTTPException(415, "지원하지 않는 이미지 형식")
+    original_s3_key = body.s3Key
 
+    # 1. Download the original image from S3
     try:
-        pred = model(img_np, verbose=False)[0]
+        print(f"Received request to diagnose image with S3 key: {original_s3_key}")
+        img_bytes = get_s3_object_bytes(original_s3_key)
+    except FileNotFoundError:
+        print(f"FileNotFoundError for key '{original_s3_key}'.")
+        raise HTTPException(status_code=404, detail=f"Original image not found in S3 with key: {original_s3_key}")
+    except PermissionError:
+        print(f"PermissionError for key '{original_s3_key}'.")
+        raise HTTPException(status_code=403, detail=f"Access denied for original S3 object with key: {original_s3_key}")
+    except RuntimeError as e:
+        print(f"RuntimeError from s3_handler (key: {original_s3_key}): {e}")
+        raise HTTPException(status_code=503, detail=f"S3 service error: {e}")
+    except Exception as e: 
+        print(f"An unexpected error occurred during S3 download for key '{original_s3_key}': {e}")
+        raise HTTPException(status_code=500, detail="Failed to download original image from S3: An unexpected error occurred.")
+
+    # 2. Decode the image
+    try:
+        img_np = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_COLOR)
+        if img_np is None:
+            print(f"Failed to decode image from S3 (key: {original_s3_key}). File might be corrupted or not a supported image format.")
+            raise HTTPException(status_code=415, detail="Unsupported image format or corrupt image downloaded from S3.")
     except Exception as e:
-        raise HTTPException(500, f"모델 추론 오류: {e}")
+        print(f"Error decoding image (key: {original_s3_key}): {e}")
+        raise HTTPException(status_code=415, detail=f"Could not decode image from S3: {e}")
 
-    diagnosis = empty_diagnosis()
+    # 3. Perform analysis using the bee_analyzer module
+    try:
+        diagnosis_result, annotated_img_np = analyze_bee_image(MODEL, img_np)
+    except RuntimeError as e: 
+        print(f"Model inference error for image (key: {original_s3_key}): {e}")
+        raise HTTPException(status_code=500, detail=f"Model inference error: {e}")
+    except ValueError as e: 
+        print(f"Image processing error for image (key: {original_s3_key}): {e}")
+        raise HTTPException(status_code=400, detail=f"Image processing error: {e}")
+    except Exception as e:
+        print(f"Unexpected error during image analysis (key: {original_s3_key}): {e}")
+        raise HTTPException(status_code=500, detail="An internal error occurred during image analysis.")
 
-    for xyxy, cls_id in zip(
-        pred.boxes.xyxy.cpu().numpy().astype(int),
-        pred.boxes.cls.cpu().numpy().astype(int)
-    ):
-        cls_name = CLASS_NAMES[cls_id]
-
-        if cls_name.startswith("유충"):
-            if cls_name == "유충_정상":
-                diagnosis["larva"]["normalCount"] += 1
-            elif cls_name == "유충_응애":
-                diagnosis["larva"]["varroaCount"] += 1
-            elif cls_name == "유충_부저병":
-                diagnosis["larva"]["foulBroodCount"] += 1
-            elif cls_name == "유충_석고병":
-                diagnosis["larva"]["chalkBroodCount"] += 1
-        else:
-            if cls_name == "성충_정상":
-                diagnosis["imago"]["normalCount"] += 1
-            elif cls_name == "성충_응애":
-                diagnosis["imago"]["varroaCount"] += 1
-            elif cls_name == "성충_날개불구바이러스감염증":
-                diagnosis["imago"]["dwvCount"] += 1
-
-        if cls_name in SKIP_DRAW:
-            continue
-
-        x1, y1, x2, y2 = xyxy
-        color = COLOR_MAP.get(cls_name, (255, 255, 255))
-        cv2.rectangle(img_np, (x1, y1), (x2, y2), color, 2)
-        # cv2.putText(img_np, cls_name, (x1, y1 - 8),
-        #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
-
-    ok, buf = cv2.imencode(".jpg", img_np, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    # 4. Encode the annotated image to JPEG bytes
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
+    ok, annotated_img_buf = cv2.imencode(".jpg", annotated_img_np, encode_param)
     if not ok:
-        raise HTTPException(500, "OpenCV JPEG 인코딩 실패")
+        print(f"Failed to encode annotated image to JPEG (original key: {original_s3_key}).")
+        raise HTTPException(status_code=500, detail="Failed to encode annotated image to JPEG.")
+    annotated_img_bytes = annotated_img_buf.tobytes()
 
-    boundary = uuid.uuid4().hex
-    multipart = (
-        f"--{boundary}\r\n"
-        'Content-Disposition: form-data; name="diagnosis"\r\n'
-        'Content-Type: application/json\r\n\r\n'
-        f"{json.dumps(diagnosis, ensure_ascii=False)}\r\n"
-        f"--{boundary}\r\n"
-        'Content-Disposition: form-data; name="image"; filename="annotated.jpg"\r\n'
-        'Content-Type: image/jpeg\r\n\r\n'
-    ).encode() + buf.tobytes() + f"\r\n--{boundary}--\r\n".encode()
+    # 5. Construct S3 key for the annotated image and upload it
+    original_filename = extract_filename_from_s3_key(original_s3_key)
+    if not original_filename: # Fallback if original key was strange (e.g. just "folder/")
+        original_filename = f"image_{uuid.uuid4().hex}" # Ensure a base for the name
+    
+    base, ext = os.path.splitext(original_filename)
+    # Ensure there's an extension, default to .jpg if original had none or was a folder
+    if not ext and not original_filename.endswith('/'): 
+        ext = '.jpg'
+    elif original_filename.endswith('/'): # If original key was a "folder"
+        base = base.rstrip('/') + f"_image_{uuid.uuid4().hex}" # Create a unique name
+        ext = '.jpg'
 
-    return Response(multipart, media_type=f"multipart/form-data; boundary={boundary}")
+    annotated_filename = f"{base}_annotated{ext}"
+    annotated_s3_key = f"{ANNOTATED_IMAGE_S3_PREFIX.strip('/')}/{annotated_filename}"
 
+    try:
+        print(f"Uploading annotated image to S3 key: {annotated_s3_key}")
+        uploaded_s3_full_path = put_s3_object_bytes(
+            s3_key=annotated_s3_key,
+            object_bytes=annotated_img_bytes,
+            content_type='image/jpeg'
+        )
+        print(f"Annotated image uploaded to: {uploaded_s3_full_path}")
+    except PermissionError:
+        print(f"PermissionError uploading annotated image to S3 key '{annotated_s3_key}'.")
+        raise HTTPException(status_code=403, detail=f"Access denied for uploading annotated image to S3.")
+    except RuntimeError as e:
+        print(f"RuntimeError from s3_handler during upload (key: {annotated_s3_key}): {e}")
+        raise HTTPException(status_code=503, detail=f"S3 service error during upload: {e}")
+    except Exception as e:
+        print(f"Unexpected error during S3 upload for annotated image (key: {annotated_s3_key}): {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload annotated image to S3: An unexpected error occurred.")
+
+    # 6. Return diagnosis and S3 key of the annotated image
+    return DiagnosisResponse(
+        diagnosis=diagnosis_result,
+        annotatedImageS3Key=annotated_s3_key # Return the key, not the s3:// path
+    )
+
+# --- Main Execution ---
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # The primary check is whether the MODEL loaded, as s3_handler will handle its own critical startup errors.
+    if MODEL is None:
+        print("CRITICAL: Application cannot start because the YOLO model failed to load. Please check logs.")
+    else:
+        print(f"Starting Beehive-Diagnosis API on http://0.0.0.0:8001")
+        uvicorn.run(app, host="0.0.0.0", port=8001, reload=False)
+
