@@ -14,13 +14,10 @@ from pydantic import BaseModel
 
 # Import from the bee_analyzer module
 from bee_analyzer import load_model, analyze_bee_image
-# Import from the s3_handler module
 from s3_handler import (
     get_s3_object_bytes,
     put_s3_object_bytes,
-    extract_filename_from_s3_key,
-    S3_BUCKET_NAME, # For constructing S3 URL and checks
-    s3_client as s3_handler_client # For startup checks
+    extract_filename_from_s3_key
 )
 
 # --- Application Setup ---
@@ -39,7 +36,7 @@ class DiagnosisRequest(BaseModel):
 
 class DiagnosisResponse(BaseModel):
     diagnosis: dict
-    annotatedImageS3Key: str
+    annotatedImageS3Key: str # S3 key for the annotated image
 
 # --- Configuration for Annotated Images ---
 ANNOTATED_IMAGE_S3_PREFIX = "BEEHIVE/ANNOTATED/" # Define a prefix for annotated images
@@ -50,31 +47,25 @@ async def diagnose_beehive(body: DiagnosisRequest = Body(...)):
     """
     Receives an S3 key for an original image, downloads it, performs bee disease diagnosis,
     uploads the annotated image to S3, and returns the diagnosis results along with
-    the S3 URL of the annotated image.
+    the S3 key of the annotated image.
     """
     if MODEL is None:
+        # This check is still important as model loading is a direct responsibility of main.py
         raise HTTPException(status_code=503, detail="Model not loaded. Service unavailable.")
-
-    # Check S3 configuration (from s3_handler)
-    if s3_handler_client is None:
-        raise HTTPException(status_code=503, detail="S3 client not initialized. Check server logs for AWS configuration issues.")
-    if not S3_BUCKET_NAME: # Check if S3_BUCKET_NAME is None or empty
-        print("Error: S3_BUCKET_NAME environment variable is not set or is empty in s3_handler.py.")
-        raise HTTPException(status_code=500, detail="S3 bucket not configured on server. Check server logs.")
 
     original_s3_key = body.s3Key
 
     # 1. Download the original image from S3
     try:
-        print(f"Received request to diagnose image with S3 key: {original_s3_key} (from bucket: {S3_BUCKET_NAME})")
+        print(f"Received request to diagnose image with S3 key: {original_s3_key}")
         img_bytes = get_s3_object_bytes(original_s3_key)
     except FileNotFoundError:
-        print(f"FileNotFoundError for key '{original_s3_key}' in bucket '{S3_BUCKET_NAME}'.")
+        print(f"FileNotFoundError for key '{original_s3_key}'.")
         raise HTTPException(status_code=404, detail=f"Original image not found in S3 with key: {original_s3_key}")
     except PermissionError:
-        print(f"PermissionError for key '{original_s3_key}' in bucket '{S3_BUCKET_NAME}'.")
+        print(f"PermissionError for key '{original_s3_key}'.")
         raise HTTPException(status_code=403, detail=f"Access denied for original S3 object with key: {original_s3_key}")
-    except RuntimeError as e: 
+    except RuntimeError as e:
         print(f"RuntimeError from s3_handler (key: {original_s3_key}): {e}")
         raise HTTPException(status_code=503, detail=f"S3 service error: {e}")
     except Exception as e: 
@@ -93,7 +84,6 @@ async def diagnose_beehive(body: DiagnosisRequest = Body(...)):
 
     # 3. Perform analysis using the bee_analyzer module
     try:
-        # Note: analyze_bee_image now returns diagnosis_result, annotated_img_np
         diagnosis_result, annotated_img_np = analyze_bee_image(MODEL, img_np)
     except RuntimeError as e: 
         print(f"Model inference error for image (key: {original_s3_key}): {e}")
@@ -115,23 +105,28 @@ async def diagnose_beehive(body: DiagnosisRequest = Body(...)):
 
     # 5. Construct S3 key for the annotated image and upload it
     original_filename = extract_filename_from_s3_key(original_s3_key)
-    # Sanitize filename or create a unique one if original_filename is empty or problematic
-    if not original_filename:
-        original_filename = f"annotated_{uuid.uuid4().hex}.jpg" # Fallback filename
+    if not original_filename: # Fallback if original key was strange (e.g. just "folder/")
+        original_filename = f"image_{uuid.uuid4().hex}" # Ensure a base for the name
     
-    # Append a suffix to distinguish from original, or use a different prefix
     base, ext = os.path.splitext(original_filename)
-    annotated_filename = f"{base}_annotated{ext if ext else '.jpg'}" # Ensure extension
+    # Ensure there's an extension, default to .jpg if original had none or was a folder
+    if not ext and not original_filename.endswith('/'): 
+        ext = '.jpg'
+    elif original_filename.endswith('/'): # If original key was a "folder"
+        base = base.rstrip('/') + f"_image_{uuid.uuid4().hex}" # Create a unique name
+        ext = '.jpg'
 
+    annotated_filename = f"{base}_annotated{ext}"
     annotated_s3_key = f"{ANNOTATED_IMAGE_S3_PREFIX.strip('/')}/{annotated_filename}"
 
     try:
         print(f"Uploading annotated image to S3 key: {annotated_s3_key}")
-        uploaded_s3_url_str = put_s3_object_bytes(
+        uploaded_s3_full_path = put_s3_object_bytes(
             s3_key=annotated_s3_key,
             object_bytes=annotated_img_bytes,
             content_type='image/jpeg'
         )
+        print(f"Annotated image uploaded to: {uploaded_s3_full_path}")
     except PermissionError:
         print(f"PermissionError uploading annotated image to S3 key '{annotated_s3_key}'.")
         raise HTTPException(status_code=403, detail=f"Access denied for uploading annotated image to S3.")
@@ -142,33 +137,18 @@ async def diagnose_beehive(body: DiagnosisRequest = Body(...)):
         print(f"Unexpected error during S3 upload for annotated image (key: {annotated_s3_key}): {e}")
         raise HTTPException(status_code=500, detail="Failed to upload annotated image to S3: An unexpected error occurred.")
 
-    # 6. Return diagnosis and S3 URL of the annotated image
+    # 6. Return diagnosis and S3 key of the annotated image
     return DiagnosisResponse(
         diagnosis=diagnosis_result,
-        annotatedImageS3Key=annotated_s3_key
+        annotatedImageS3Key=annotated_s3_key # Return the key, not the s3:// path
     )
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    can_start = True
+    # The primary check is whether the MODEL loaded, as s3_handler will handle its own critical startup errors.
     if MODEL is None:
         print("CRITICAL: Application cannot start because the YOLO model failed to load. Please check logs.")
-        can_start = False
-    
-    if s3_handler_client is None:
-        print("CRITICAL: Application cannot start because the S3 client failed to initialize. Check AWS credentials/configuration and server logs.")
-        can_start = False
-    elif not S3_BUCKET_NAME: # Check if S3_BUCKET_NAME is None or empty
-        print("CRITICAL: Application cannot start because S3_BUCKET_NAME environment variable is not set or is empty.")
-        print("Please set the S3_BUCKET_NAME environment variable.")
-        can_start = False
-
-    if can_start:
-        print(f"Starting Beehive-Diagnosis API on http://0.0.0.0:8001")
-        print(f"YOLO Model loaded successfully.")
-        print(f"S3 Client initialized. Configured to use S3 bucket: '{S3_BUCKET_NAME}' (via s3_handler.py).")
-        print(f"Annotated images will be uploaded to S3 prefix: '{ANNOTATED_IMAGE_S3_PREFIX}'")
-        uvicorn.run(app, host="0.0.0.0", port=8001, reload=False) # reload=False for production
     else:
-        print("Application startup failed due to critical errors listed above.")
+        print(f"Starting Beehive-Diagnosis API on http://0.0.0.0:8001")
+        uvicorn.run(app, host="0.0.0.0", port=8001, reload=False)
 

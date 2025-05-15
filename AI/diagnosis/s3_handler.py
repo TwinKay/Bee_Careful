@@ -6,16 +6,16 @@ import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 
-# --- S3 Configuration ---
-# The S3 bucket name is configured here, MUST be set via an environment variable.
-S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
-
-# AWS region can also be configured via environment variable or AWS config files.
-AWS_REGION = os.environ.get("AWS_REGION")
 
 # Initialize S3 client
 # Credentials should be configured in your environment (e.g., via AWS CLI, IAM roles, or env vars)
-s3_client = None # Initialize to None
+s3_client = None
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
+if not S3_BUCKET_NAME:
+    print(f"S3 client initialized. CRITICAL WARNING: S3_BUCKET_NAME environment variable is not set or is empty. Operations will fail.")
+    raise Exception("ERROR: No S3_BUCKET_NAME is given.")
+AWS_REGION = os.environ.get("AWS_REGION")
+
 try:
     client_args = {}
     if AWS_REGION:
@@ -25,10 +25,7 @@ try:
 
     if s3_client:
         region_message = f" (Region: {AWS_REGION})" if AWS_REGION else " (Region: default from AWS config/env)"
-        if not S3_BUCKET_NAME: # Check if S3_BUCKET_NAME is None or empty
-            print(f"S3 client initialized{region_message}. CRITICAL WARNING: S3_BUCKET_NAME environment variable is not set or is empty. Operations will fail.")
-        else:
-            print(f"S3 client initialized. Configured to use bucket: '{S3_BUCKET_NAME}'{region_message}.")
+        print(f"S3 client initialized. Configured to use bucket: '{S3_BUCKET_NAME}'{region_message}.")
     # No else needed here, as boto3.client() would raise an exception if it truly failed to create a client object.
 
 except NoCredentialsError:
