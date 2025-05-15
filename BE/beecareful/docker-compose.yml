@@ -36,7 +36,8 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     volumes:
       - ./db/master/initdb.d:/docker-entrypoint-initdb.d
-      - mysql_data:/var/lib/mysql
+      - ./db/master/data:/var/lib/mysql
+#      - mysql_data:/var/lib/mysql
 
   beecareful-redis:
     image: redis:7.2-alpine
@@ -47,11 +48,12 @@ services:
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
-      - redis_data:/data
+      - ./redis/data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
 
-volumes:
-  mysql_data:
-  redis_data:
+#volumes:
+#  mysql_data:
+#  redis_data:
 
 #  prometheus:
 #    image: prom/prometheus:latest
