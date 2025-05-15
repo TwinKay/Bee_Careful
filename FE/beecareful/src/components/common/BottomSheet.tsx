@@ -67,13 +67,6 @@ const BottomSheet: React.FC<BottomSheetPropsType> = ({
     if (isOpen) {
       document.body.style.overflow = 'hidden'; // 배경 스크롤 방지
       setIsVisible(true);
-
-      // 입력 필드가 있으면 첫 번째 입력 필드에 포커스
-      setTimeout(() => {
-        if (inputs.length > 0 && firstInputRef.current) {
-          firstInputRef.current.focus();
-        }
-      }, DURATION);
     } else {
       // 바텀시트 닫기 애니메이션
       setIsVisible(true); // 애니메이션을 위해 일시적으로 true로 설정
