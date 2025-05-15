@@ -9,13 +9,17 @@ import DiagnosisList from '@/components/diagnosis/DiagnosisList';
 import { useHeaderIcon } from '@/hooks/useHeaderIcon';
 import BottomSheet from '@/components/common/BottomSheet';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
-import { useParams } from 'react-router-dom';
-import { useGetBeehiveRecords } from '@/apis/beehive';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useDeleteBeehive, useGetBeehiveRecords, useUpdateBeehive } from '@/apis/beehive';
 import type { DiagnosisDataType } from '@/types/diagnosis';
+import type { ToastPositionType, ToastType } from '@/components/common/Toast';
+import { ROUTES } from '@/config/routes';
+import Toast from '@/components/common/Toast';
 
 const BeehiveDetailPage = () => {
   const param = useParams();
   const beehiveId = param.id;
+  const navigate = useNavigate();
 
   const [isToggleLeft, setIsToggleLeft] = useState(true);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
@@ -23,12 +27,99 @@ const BeehiveDetailPage = () => {
   const [isLinkTurretOpen, setIsLinkTurretOpen] = useState(false);
   const [isEditTurretOpen, setIsEditTurretOpen] = useState(false);
   const [isDeleteBeehiveOpen, setIsDeleteBeehiveOpen] = useState(false);
+  const [newNickname, setNewNickname] = useState('');
+  const [isNicknameChanged, setIsNicknameChanged] = useState(false);
+
+  // Toast 상태
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('info');
+  const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
+  const [showToast, setShowToast] = useState(false);
+
+  // Toast 표시 함수
+  const showToastMessage = (
+    message: string,
+    type: ToastType = 'info',
+    position: ToastPositionType = 'top',
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastPosition(position);
+    setShowToast(true);
+  };
 
   const {
     data: beehiveData,
     isError,
     isPending,
   } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
+
+  // 삭제 mutate 함수
+  const { mutate: deleteBeehive } = useDeleteBeehive();
+
+  // 수정 mutate 함수
+  const { mutate: updateBeehive } = useUpdateBeehive();
+
+  // 벌통 삭제 핸들러
+  const handleDeleteHive = () => {
+    deleteBeehive(Number(beehiveId), {
+      onSuccess: () => {
+        navigate(ROUTES.BEEHIVES, {
+          state: {
+            showToast: true,
+            toastMessage: '벌통이 삭제되었습니다.',
+            toastType: 'success',
+          },
+        });
+      },
+      onError: (error) => {
+        console.log(error);
+        showToastMessage('벌통 삭제에 실패하였습니다.', 'warning', 'middle');
+      },
+    });
+  };
+
+  // 별명 수정 핸들러
+  const handleUpdateNickname = () => {
+    if (!newNickname.trim()) {
+      showToastMessage('벌통 별명을 입력해주세요.', 'warning', 'middle');
+      return;
+    }
+    // 현재 위치 정보 유지
+    const xDirection = beehiveData?.xDirection || 0;
+    const yDirection = beehiveData?.yDirection || 0;
+    updateBeehive(
+      {
+        beeHiveId: Number(beehiveId),
+        nickname: newNickname,
+        xDirection,
+        yDirection,
+      },
+      {
+        onSuccess: () => {
+          showToastMessage('벌통 별명이 수정되었습니다.', 'success', 'middle');
+          setIsEditNameOpen(false);
+          // 변경 감지 상태 리셋
+          setIsNicknameChanged(false);
+        },
+        onError: (error) => {
+          console.log(error);
+          showToastMessage('벌통 별명 수정에 실패하였습니다.', 'warning', 'middle');
+        },
+      },
+    );
+  };
+
+  // 입력 핸들러 추가
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+
+    if (id === 'nickname') {
+      setNewNickname(value);
+      // 원래 별명과 새 별명이 다른지 확인
+      setIsNicknameChanged(value.trim() !== beehiveData?.nickname);
+    }
+  };
 
   const recentData = useMemo(
     () =>
@@ -54,6 +145,15 @@ const BeehiveDetailPage = () => {
 
   useHeaderIcon(headerOption);
 
+  // 별명 수정 바텀시트를 열 때 현재 별명으로 초기화
+  const openEditNameBottomSheet = () => {
+    if (beehiveData) {
+      setNewNickname(beehiveData.nickname || '');
+      setIsNicknameChanged(false);
+    }
+    setIsEditNameOpen(true);
+  };
+
   if (!beehiveData || isError) {
     return <div className="flex h-full w-full items-center justify-center">Error...</div>;
   }
@@ -69,6 +169,14 @@ const BeehiveDetailPage = () => {
 
   return (
     <>
+      {/* Toast 컴포넌트 */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        position={toastPosition}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
       <div className="flex w-full items-center justify-between p-4">
         <div className="flex flex-col items-start">
           <p className="text-lg font-bold">{beehiveData.nickname}</p>
@@ -115,7 +223,7 @@ const BeehiveDetailPage = () => {
             variant: 'neutral',
             onClick: () => {
               setIsBottomSheetOpen(false);
-              setIsEditNameOpen(true);
+              openEditNameBottomSheet();
             },
           },
           {
@@ -148,16 +256,20 @@ const BeehiveDetailPage = () => {
             id: 'nickname',
             placeholder: '벌통 별명',
             type: 'text',
+            value: newNickname,
+            onChange: handleInputChange,
           },
         ]}
         buttons={[
           {
             id: 'edit name',
             label: '수정하기',
-            variant: 'neutral',
+            variant: 'success',
             onClick: () => {
-              setIsEditNameOpen(false);
+              handleUpdateNickname();
             },
+            // 별명이 변경되지 않았거나 빈 값일 경우 버튼 비활성화
+            disabled: !isNicknameChanged || !newNickname.trim(),
           },
         ]}
       />
@@ -227,6 +339,7 @@ const BeehiveDetailPage = () => {
             label: '삭제하기',
             variant: 'success',
             onClick: () => {
+              handleDeleteHive();
               setIsDeleteBeehiveOpen(false);
             },
           },
