@@ -159,7 +159,7 @@ const BeehiveListPage = () => {
   };
 
   return (
-    <div className="flex h-screen w-full flex-col bg-gray-50">
+    <>
       <Toast
         message={toastMessage}
         type={toastType}
@@ -167,22 +167,9 @@ const BeehiveListPage = () => {
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />
-      {/* 메인 컨텐츠 영역 */}
-      <main className="flex flex-1 flex-col overflow-hidden px-4 lg:flex-row">
-        <section>
-          {/* 임시버튼 */}
-          <Link to={ROUTES.BEEHIVE_DETAIL('1')}>
-            <Button size="sm" className="mt-2 flex-1" fullWidth>
-              Go to Beehive Detail (id:1)
-            </Button>
-          </Link>
-        </section>
-        {/* 벌통 맵 영역 */}
-        <section className="h-[80vh] pt-4 lg:h-auto lg:w-2/3">
-          <div className="h-full w-full overflow-hidden rounded-lg bg-white">
-            <BeehiveMap ref={mapRef} />
-          </div>
-        </section>
+      <div className="flex h-screen w-full flex-col bg-gray-50">
+        <BeehiveMap ref={mapRef} />
+
         <section className="absolute bottom-6 left-4 right-4 flex justify-between gap-2">
           <Link to={ROUTES.DIAGNOSIS_CREATE}>
             <Button variant="success" size="xxl">
@@ -195,70 +182,70 @@ const BeehiveListPage = () => {
             size="lg"
             className="flex items-center justify-center"
           >
-            <img src="/icons/hive-add.png" alt="보관함" className="h-7 w-8 object-contain" />
+            <img src="/icons/hive-add.png" alt="벌통 추가" className="h-7 w-8 object-contain" />
           </Button>
-
-          {/* 벌통 별명 입력 바텀시트 */}
-          <BottomSheet
-            isOpen={isNicknameBottomSheetOpen}
-            onClose={closeNicknameBottomSheet}
-            title="새로운 벌통을 추가하시겠어요?"
-            content="별명을 입력해주세요."
-            inputs={[
-              {
-                id: 'nickname',
-                placeholder: '별명',
-                type: 'text',
-                value: beehiveData.nickname,
-                onChange: handleInputChange,
-                error: nicknameError,
-              },
-            ]}
-            buttons={[
-              {
-                id: 'submit',
-                label: '추가',
-                variant: 'success',
-                onClick: handleNicknameSubmit,
-              },
-            ]}
-          />
-
-          {/* 말벌퇴치 연동장치 등록 바텀시트 */}
-          <BottomSheet
-            isOpen={isDeviceBottomSheetOpen}
-            onClose={closeDeviceBottomSheet}
-            title="말벌 퇴치 장치를 연동하시겠어요?"
-            content="장치 코드를 입력해주세요."
-            inputs={[
-              {
-                id: 'deviceCode',
-                placeholder: '장치 코드',
-                type: 'text',
-                value: beehiveData.deviceCode,
-                onChange: handleInputChange,
-              },
-            ]}
-            buttons={[
-              {
-                id: 'register',
-                label: createBeehiveMutation.isPending ? '등록 중...' : '등록하기',
-                variant: 'success',
-                onClick: () => handleRegisterBeehive(true),
-                disabled: createBeehiveMutation.isPending,
-              },
-              {
-                id: 'registerLater',
-                label: '다음에 등록하기',
-                variant: 'secondary',
-                onClick: () => handleRegisterBeehive(false),
-                disabled: createBeehiveMutation.isPending,
-              },
-            ]}
-          />
         </section>
-      </main>
-    </div>
+
+        {/* 벌통 별명 입력 바텀시트 */}
+        <BottomSheet
+          isOpen={isNicknameBottomSheetOpen}
+          onClose={closeNicknameBottomSheet}
+          title="새로운 벌통을 추가하시겠어요?"
+          content="별명을 입력해주세요."
+          inputs={[
+            {
+              id: 'nickname',
+              placeholder: '별명',
+              type: 'text',
+              value: beehiveData.nickname,
+              onChange: handleInputChange,
+              error: nicknameError,
+            },
+          ]}
+          buttons={[
+            {
+              id: 'submit',
+              label: '추가',
+              variant: 'success',
+              onClick: handleNicknameSubmit,
+            },
+          ]}
+        />
+
+        {/* 말벌퇴치 연동장치 등록 바텀시트 */}
+        <BottomSheet
+          isOpen={isDeviceBottomSheetOpen}
+          onClose={closeDeviceBottomSheet}
+          title="말벌 퇴치 장치를 연동하시겠어요?"
+          content="장치 코드를 입력해주세요."
+          inputs={[
+            {
+              id: 'deviceCode',
+              placeholder: '장치 코드',
+              type: 'text',
+              value: beehiveData.deviceCode,
+              onChange: handleInputChange,
+            },
+          ]}
+          buttons={[
+            {
+              id: 'register',
+              label: createBeehiveMutation.isPending ? '등록 중...' : '등록하기',
+              variant: 'success',
+              onClick: () => handleRegisterBeehive(true),
+              disabled: createBeehiveMutation.isPending,
+            },
+            {
+              id: 'registerLater',
+              label: '다음에 등록하기',
+              variant: 'secondary',
+              onClick: () => handleRegisterBeehive(false),
+              disabled: createBeehiveMutation.isPending,
+            },
+          ]}
+        />
+      </div>
+    </>
   );
 };
 
