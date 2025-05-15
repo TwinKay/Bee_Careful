@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import BeehiveMap from '@/components/beehive/BeehiveMap';
 import { ROUTES } from '@/config/routes';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
 import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
@@ -9,6 +9,13 @@ import RemixIcon from '@/components/common/RemixIcon';
 import useBeehiveStore from '@/store/beehiveStore';
 import BottomArea from '@/components/beehive/BottomArea';
 import { useCreateBeehive } from '@/apis/beehive';
+
+// 로케이션 스테이트 타입
+type LocationStateType = {
+  showToast?: boolean;
+  toastMessage?: string;
+  toastType?: ToastType;
+};
 
 const BeehiveListPage = () => {
   const mapRef = useRef<BeehiveMapRefType>(null);
@@ -171,6 +178,14 @@ const BeehiveListPage = () => {
       // 바텀시트 닫기
       closeDeviceBottomSheet();
 
+      // 폼 데이터 초기화
+      setBeehiveData({
+        nickname: '',
+        deviceCode: '',
+        xDirection: 1000,
+        yDirection: 1000,
+      });
+
       // 맵 새로고침 로직
       if (mapRef.current && typeof mapRef.current.refreshMap === 'function') {
         mapRef.current.refreshMap();
@@ -184,6 +199,19 @@ const BeehiveListPage = () => {
       showToastMessage(errorMessage, 'warning', 'middle');
     }
   };
+
+  const location = useLocation();
+
+  // 페이지 로드 시 location.state에서 토스트 정보 확인
+  useEffect(() => {
+    const state = location.state as LocationStateType;
+    if (state?.showToast && state.toastMessage) {
+      showToastMessage(state.toastMessage, state.toastType, 'middle');
+
+      // 상태 초기화 (새로고침 시 토스트가 다시 나타나지 않도록)
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   return (
     <>

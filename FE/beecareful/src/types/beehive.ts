@@ -23,7 +23,7 @@ export type CreateBeehiveRequestType = {
 // 벌통 수정 요청 타입
 export type UpdateBeehiveRequestType = {
   beeHiveId: number;
-  nickname: string;
-  xDirection: number;
-  yDirection: number;
+  nickname?: string;
+  xDirection?: number;
+  yDirection?: number;
 };

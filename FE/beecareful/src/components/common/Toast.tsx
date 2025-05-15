@@ -55,7 +55,7 @@ const Toast: React.FC<ToastPropsType> = ({
   return (
     <div
       className={`
-        fixed left-1/2 z-50 w-[90%] max-w-md -translate-x-1/2 transform rounded-lg px-3
+        fixed left-1/2 z-50 w-[80%] max-w-md -translate-x-1/2 transform rounded-lg px-3
         py-3 shadow-lg transition-all duration-300 ease-in-out
         ${typeStyles[type]}
         ${positionStyles[position]}

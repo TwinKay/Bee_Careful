@@ -147,7 +147,7 @@ const BottomSheet: React.FC<BottomSheetPropsType> = ({
           }}
         >
           <div className="mb-10 flex items-center justify-between text-start">
-            <h3 className="text-2xl font-extrabold text-bc-brown-100">{title}</h3>
+            <h3 className="text-xl font-extrabold text-bc-brown-100">{title}</h3>
             <button
               onClick={onClose}
               className="flex-shrink-0 text-black hover:text-gray-700"
