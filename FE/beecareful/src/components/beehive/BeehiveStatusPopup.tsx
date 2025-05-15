@@ -2,6 +2,8 @@ import React from 'react';
 import type { BeehiveType } from '@/types/beehive';
 import Button from '@/components/common/Button';
 import { formatTimeAgo } from '@/utils/format';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '@/config/routes';
 
 type BeehiveStatusPopupPropsType = {
   isOpen: boolean;
@@ -127,9 +129,11 @@ const BeehiveStatusPopup: React.FC<BeehiveStatusPopupPropsType> = ({ isOpen, onC
 
         {/* 팝업 푸터 - 버튼 */}
         <div className="p-4 pb-6">
-          <Button variant="success" size="lg" fullWidth>
-            벌통 정보 상세보기
-          </Button>
+          <Link to={ROUTES.BEEHIVE_DETAIL(hive.beehiveId)}>
+            <Button variant="success" size="lg" className="w-full">
+              벌통 정보 상세보기
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

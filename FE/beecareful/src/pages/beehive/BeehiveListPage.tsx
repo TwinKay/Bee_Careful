@@ -8,6 +8,7 @@ import { useCreateBeehive } from '@/apis/beehive';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
 import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
+import RemixIcon from '@/components/common/RemixIcon';
 
 const BeehiveListPage = () => {
   // useRef에 타입 명시
@@ -159,7 +160,7 @@ const BeehiveListPage = () => {
   };
 
   return (
-    <div className="flex h-screen w-full flex-col bg-gray-50">
+    <>
       <Toast
         message={toastMessage}
         type={toastType}
@@ -167,98 +168,96 @@ const BeehiveListPage = () => {
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />
-      {/* 메인 컨텐츠 영역 */}
-      <main className="flex flex-1 flex-col overflow-hidden px-4 lg:flex-row">
-        <section>
-          {/* 임시버튼 */}
-          <Link to={ROUTES.BEEHIVE_DETAIL('1')}>
-            <Button size="sm" className="mt-2 flex-1" fullWidth>
-              Go to Beehive Detail (id:1)
-            </Button>
-          </Link>
-        </section>
-        {/* 벌통 맵 영역 */}
-        <section className="h-[80vh] pt-4 lg:h-auto lg:w-2/3">
-          <div className="h-full w-full overflow-hidden rounded-lg bg-white">
-            <BeehiveMap ref={mapRef} />
+      <div className="flex h-screen w-full flex-col justify-around overflow-hidden bg-gray-50">
+        <header className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-3">
+            <RemixIcon name="ri-alert-fill" className="text-bc-yellow-90" />
+            <p className="font-bold text-gray-600">1번 벌통 말벌 출몰</p>
+            <span className="text-sm text-gray-400">17:53</span>
           </div>
-        </section>
-        <section className="absolute bottom-6 left-4 right-4 flex justify-between gap-2">
-          <Link to={ROUTES.DIAGNOSIS_CREATE}>
-            <Button variant="success" size="xxl">
-              질병 검사
+          <Link to={ROUTES.NOTIFICATIONS}>
+            <RemixIcon name="ri-notification-2-fill" className="text-2xl text-gray-500" />
+          </Link>
+        </header>
+
+        <BeehiveMap ref={mapRef} />
+
+        <section className="flex justify-between gap-4 p-4">
+          <Link to={ROUTES.DIAGNOSIS_CREATE} className="w-full">
+            <Button variant="success" size="xxl" fullWidth>
+              <p className="font-bold">질병 검사</p>
             </Button>
           </Link>
           <Button
             onClick={openNicknameBottomSheet}
             variant="neutral"
-            size="lg"
+            size="md"
             className="flex items-center justify-center"
           >
-            <img src="/icons/hive-add.png" alt="보관함" className="h-7 w-8 object-contain" />
+            <img src="/icons/hive-add.png" alt="벌통 추가" className="h-full w-12 object-contain" />
           </Button>
-
-          {/* 벌통 별명 입력 바텀시트 */}
-          <BottomSheet
-            isOpen={isNicknameBottomSheetOpen}
-            onClose={closeNicknameBottomSheet}
-            title="새로운 벌통을 추가하시겠어요?"
-            content="별명을 입력해주세요."
-            inputs={[
-              {
-                id: 'nickname',
-                placeholder: '별명',
-                type: 'text',
-                value: beehiveData.nickname,
-                onChange: handleInputChange,
-                error: nicknameError,
-              },
-            ]}
-            buttons={[
-              {
-                id: 'submit',
-                label: '추가',
-                variant: 'success',
-                onClick: handleNicknameSubmit,
-              },
-            ]}
-          />
-
-          {/* 말벌퇴치 연동장치 등록 바텀시트 */}
-          <BottomSheet
-            isOpen={isDeviceBottomSheetOpen}
-            onClose={closeDeviceBottomSheet}
-            title="말벌 퇴치 장치를 연동하시겠어요?"
-            content="장치 코드를 입력해주세요."
-            inputs={[
-              {
-                id: 'deviceCode',
-                placeholder: '장치 코드',
-                type: 'text',
-                value: beehiveData.deviceCode,
-                onChange: handleInputChange,
-              },
-            ]}
-            buttons={[
-              {
-                id: 'register',
-                label: createBeehiveMutation.isPending ? '등록 중...' : '등록하기',
-                variant: 'success',
-                onClick: () => handleRegisterBeehive(true),
-                disabled: createBeehiveMutation.isPending,
-              },
-              {
-                id: 'registerLater',
-                label: '다음에 등록하기',
-                variant: 'secondary',
-                onClick: () => handleRegisterBeehive(false),
-                disabled: createBeehiveMutation.isPending,
-              },
-            ]}
-          />
         </section>
-      </main>
-    </div>
+
+        {/* 벌통 별명 입력 바텀시트 */}
+        <BottomSheet
+          isOpen={isNicknameBottomSheetOpen}
+          onClose={closeNicknameBottomSheet}
+          title="새로운 벌통을 추가하시겠어요?"
+          content="별명을 입력해주세요."
+          inputs={[
+            {
+              id: 'nickname',
+              placeholder: '별명',
+              type: 'text',
+              value: beehiveData.nickname,
+              onChange: handleInputChange,
+              error: nicknameError,
+            },
+          ]}
+          buttons={[
+            {
+              id: 'submit',
+              label: '추가',
+              variant: 'success',
+              onClick: handleNicknameSubmit,
+            },
+          ]}
+        />
+
+        {/* 말벌퇴치 연동장치 등록 바텀시트 */}
+        <BottomSheet
+          isOpen={isDeviceBottomSheetOpen}
+          onClose={closeDeviceBottomSheet}
+          title="말벌 퇴치 장치를 연동하시겠어요?"
+          content="장치 코드를 입력해주세요."
+          inputs={[
+            {
+              id: 'deviceCode',
+              placeholder: '장치 코드',
+              type: 'text',
+              value: beehiveData.deviceCode,
+              onChange: handleInputChange,
+            },
+          ]}
+          buttons={[
+            {
+              id: 'register',
+              label: createBeehiveMutation.isPending ? '등록 중...' : '등록하기',
+              variant: 'success',
+              onClick: () => handleRegisterBeehive(true),
+              disabled: createBeehiveMutation.isPending,
+            },
+            {
+              id: 'registerLater',
+              label: '다음에 등록하기',
+              variant: 'secondary',
+              onClick: () => handleRegisterBeehive(false),
+              disabled: createBeehiveMutation.isPending,
+            },
+          ]}
+        />
+      </div>
+    </>
   );
 };
 

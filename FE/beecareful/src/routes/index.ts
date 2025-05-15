@@ -7,6 +7,7 @@ import DiagnosisCreatePage from '@/pages/diagnosis/DiagnosisCreatePage';
 import BeehiveListPage from '@/pages/beehive/BeehiveListPage';
 import BeehiveDetailPage from '@/pages/beehive/BeehiveDetailPage';
 import AuthGuardLayout from '@/layouts/AuthGuardLayout';
+import NotificationPage from '@/pages/notification/NotificationPage';
 
 const router = createBrowserRouter([
   {
@@ -49,6 +50,16 @@ const router = createBrowserRouter([
           {
             index: true,
             Component: DiagnosisCreatePage,
+          },
+        ],
+      },
+      {
+        path: ROUTES.NOTIFICATIONS,
+        Component: () => MainLayout(),
+        children: [
+          {
+            index: true,
+            Component: NotificationPage,
           },
         ],
       },

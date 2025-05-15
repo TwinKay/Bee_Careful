@@ -136,52 +136,56 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
   }
 
   return (
-    <div
-      className="relative flex h-full w-full flex-col overflow-hidden"
-      style={{
-        touchAction: 'manipulation',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none',
-        WebkitTouchCallout: 'none',
-      }}
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {/* Toast 컴포넌트 */}
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        position={toastPosition}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
+    <section className="h-[80vh] px-4">
+      <div className="h-full w-full overflow-hidden rounded-lg bg-white">
+        <div
+          className="relative flex h-full w-full flex-col overflow-hidden"
+          style={{
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            WebkitTouchCallout: 'none',
+          }}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {/* Toast 컴포넌트 */}
+          <Toast
+            message={toastMessage}
+            type={toastType}
+            position={toastPosition}
+            isVisible={showToast}
+            onClose={() => setShowToast(false)}
+          />
 
-      {/* 맵 컨트롤 버튼 */}
-      <MapControls scale={scale} handleZoom={handleZoom} centerToHives={centerToHives} />
+          {/* 맵 컨트롤 버튼 */}
+          <MapControls scale={scale} handleZoom={handleZoom} centerToHives={centerToHives} />
 
-      {/* 맵 컨테이너 */}
-      <MapContainer
-        ref={containerRef}
-        scale={scale}
-        hives={hives}
-        draggingId={draggingId}
-        isLongPress={isLongPress}
-        handleDrag={handleDrag}
-        handleDragStart={handleDragStart}
-        handleDragEnd={handleDragEnd}
-        onOpenStatusPopup={handleOpenStatusPopup}
-      />
+          {/* 맵 컨테이너 */}
+          <MapContainer
+            ref={containerRef}
+            scale={scale}
+            hives={hives}
+            draggingId={draggingId}
+            isLongPress={isLongPress}
+            handleDrag={handleDrag}
+            handleDragStart={handleDragStart}
+            handleDragEnd={handleDragEnd}
+            onOpenStatusPopup={handleOpenStatusPopup}
+          />
 
-      {/* 벌통 상태 팝업 */}
-      {selectedHive && isPopupOpen && (
-        <BeehiveStatusPopup
-          isOpen={isPopupOpen}
-          onClose={handleCloseStatusPopup}
-          hive={selectedHive}
-        />
-      )}
-    </div>
+          {/* 벌통 상태 팝업 */}
+          {selectedHive && isPopupOpen && (
+            <BeehiveStatusPopup
+              isOpen={isPopupOpen}
+              onClose={handleCloseStatusPopup}
+              hive={selectedHive}
+            />
+          )}
+        </div>
+      </div>
+    </section>
   );
 });
 
