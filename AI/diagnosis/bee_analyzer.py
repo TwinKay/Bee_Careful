@@ -3,7 +3,8 @@
 import cv2
 import numpy as np
 from ultralytics import YOLO
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple
+import json
 
 # --- Constants ---
 MODEL_PATH = "https://huggingface.co/Twinkay/BEE_DISEASE/resolve/main/bee_disease.pt"
