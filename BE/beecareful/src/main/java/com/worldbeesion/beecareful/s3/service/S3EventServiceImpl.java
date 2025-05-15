@@ -8,7 +8,7 @@ import org.springframework.util.Assert;
 import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
 import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
-import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
@@ -134,7 +134,7 @@ public class S3EventServiceImpl implements S3EventService {
 
 
 		// Check if the file is already processed
-		if (metadata.getStatus() == FileStatus.STORED) {
+		if (metadata.getStatus() == S3FileStatus.STORED) {
 			log.warn("Received duplicate S3 event for already stored file: {}", eventPayload.getObjectKey());
 			// Decide how to handle duplicates. Maybe throw a specific exception or just log and ignore.
 			// For now, let's throw an exception to indicate it's already processed.
@@ -161,14 +161,14 @@ public class S3EventServiceImpl implements S3EventService {
 		List<OriginalPhoto> allPhotosForDiagnosis = originalPhotoRepository.findAllByDiagnosisId(diagnosisId);
 		log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosisId);
 
-		metadata.setStatus(FileStatus.STORED);
+		metadata.setStatus(S3FileStatus.STORED);
 		s3FileMetadataRepository.save(metadata); // Save the updated entity
 		log.info("Updated status to STORED for Key: {}", metadata.getS3Key());
 
 		// Check if all photos have been uploaded (their S3FileMetadata status is STORED)
 		boolean allPhotosUploaded = true;
 		for (OriginalPhoto photo : allPhotosForDiagnosis) {
-			if (photo.getS3FileMetadata().getStatus() != FileStatus.STORED) {
+			if (photo.getS3FileMetadata().getStatus() != S3FileStatus.STORED) {
 				allPhotosUploaded = false;
 				break;
 			}

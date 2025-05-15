@@ -2,7 +2,7 @@ package com.worldbeesion.beecareful.s3.service;
 
 import com.worldbeesion.beecareful.common.exception.BadRequestException; // Assuming this exists
 import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
-import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.exception.FileUploadFailException;
 import com.worldbeesion.beecareful.s3.exception.S3ConnectionException;
@@ -74,7 +74,7 @@ public class S3FileServiceImpl implements S3FileService {
             .size(file.getSize())
             .url(fileUrl)
             .contentType(file.getContentType()) // Use content type from MultipartFile
-            .status(FileStatus.PENDING)
+            .status(S3FileStatus.PENDING)
             .build();
         s3FileMetadataRepository.save(entity); // Save pending record
 
@@ -92,21 +92,21 @@ public class S3FileServiceImpl implements S3FileService {
 
             // Check response and update status
             if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
-                entity.setStatus(FileStatus.STORED);
+                entity.setStatus(S3FileStatus.STORED);
                 log.info("Successfully uploaded file to S3. Key: {}", s3Key);
             } else {
-                entity.setStatus(FileStatus.FAILED);
+                entity.setStatus(S3FileStatus.FAILED);
                 log.error("S3 upload failed for key: {}. Response status: {}", s3Key,
                     response.sdkHttpResponse() != null ? response.sdkHttpResponse().statusCode() : "N/A");
                 throw new FileUploadFailException();
             }
         } catch (S3Exception e) {
-            entity.setStatus(FileStatus.FAILED); // Ensure status is FAILED on S3 exception
+            entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on S3 exception
             log.error("S3Exception during upload for key {}: {}", s3Key, e.getMessage(), e);
             // Rethrow or wrap in a custom exception if needed, consistent with noRollbackFor
             throw e; // Rethrowing S3Exception as per noRollbackFor
         } catch (IOException e) {
-            entity.setStatus(FileStatus.FAILED); // Ensure status is FAILED on IO exception
+            entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on IO exception
             log.error("IOException reading MultipartFile bytes for key {}: {}", s3Key, e.getMessage(), e);
             // TODO: Define a more specific custom exception (e.g., FileReadException)
             // Rethrow or wrap, consistent with noRollbackFor
@@ -156,7 +156,7 @@ public class S3FileServiceImpl implements S3FileService {
             .size(fileSize)
             .url(fileUrl)
             .contentType(contentType) // Use the provided content type
-            .status(FileStatus.PENDING)
+            .status(S3FileStatus.PENDING)
             .build();
         s3FileMetadataRepository.save(entity); // Save pending record
 
@@ -174,16 +174,16 @@ public class S3FileServiceImpl implements S3FileService {
 
             // Check response and update status
             if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
-                entity.setStatus(FileStatus.STORED);
+                entity.setStatus(S3FileStatus.STORED);
                 log.info("Successfully uploaded byte data to S3. Key: {}", s3Key);
             } else {
-                entity.setStatus(FileStatus.FAILED);
+                entity.setStatus(S3FileStatus.FAILED);
                 log.error("S3 upload failed for key: {}. Response status: {}", s3Key,
                     response.sdkHttpResponse() != null ? response.sdkHttpResponse().statusCode() : "N/A");
                 throw new FileUploadFailException();
             }
         } catch (S3Exception e) {
-            entity.setStatus(FileStatus.FAILED); // Ensure status is FAILED on S3 exception
+            entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on S3 exception
             log.error("S3Exception during upload for key {}: {}", s3Key, e.getMessage(), e);
             // Rethrow or wrap, consistent with noRollbackFor
             throw e; // Rethrowing S3Exception as per noRollbackFor
@@ -208,7 +208,7 @@ public class S3FileServiceImpl implements S3FileService {
             .orElseThrow(BadRequestException::new); // More specific message
 
         // Check if already removed (optional, prevents trying to delete again)
-        if (s3FileMetadata.getStatus() == FileStatus.DELETED) {
+        if (s3FileMetadata.getStatus() == S3FileStatus.DELETED) {
             log.warn("Attempted to delete already removed S3 object with key: {}", s3FileMetadata.getS3Key());
             return 0; // Indicate no action needed or taken
         }

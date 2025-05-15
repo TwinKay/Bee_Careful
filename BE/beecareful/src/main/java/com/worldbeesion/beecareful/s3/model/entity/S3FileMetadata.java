@@ -1,7 +1,7 @@
 package com.worldbeesion.beecareful.s3.model.entity;
 
 
-import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -52,7 +52,7 @@ public class S3FileMetadata {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private FileStatus status;
+    private S3FileStatus status;
 
     @Column(nullable = false)
     @CreatedDate
@@ -62,12 +62,12 @@ public class S3FileMetadata {
     @Column
     private LocalDateTime deletedAt;
 
-    public void setStatus(FileStatus status){
+    public void setStatus(S3FileStatus status){
         this.status = status;
     }
 
     public void remove(){
-        this.status = FileStatus.DELETED;
+        this.status = S3FileStatus.DELETED;
         this.deletedAt = LocalDateTime.now();
     }
 

@@ -1,6 +1,5 @@
 package com.worldbeesion.beecareful.beehive.service;
 
-import static com.worldbeesion.beecareful.common.util.HttpUtil.*;
 import static com.worldbeesion.beecareful.common.util.S3Util.*;
 
 import com.worldbeesion.beecareful.beehive.constant.BeeStage;
@@ -15,8 +14,8 @@ import com.worldbeesion.beecareful.member.exception.BadRequestException;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
 import com.worldbeesion.beecareful.member.model.Members;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
-import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
 
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
@@ -183,7 +182,7 @@ public class BeehiveServiceImpl implements BeehiveService {
                         .s3Key(analyzedImageS3Key)
                         .url(null) // URL will be generated when needed
                         .contentType("image/jpeg") // Set content type to image/jpeg as required
-                        .status(com.worldbeesion.beecareful.s3.constant.FileStatus.STORED) // Mark as STORED (completed)
+                        .status(S3FileStatus.STORED) // Mark as STORED (completed)
                         .build();
 
                     analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
@@ -191,7 +190,7 @@ public class BeehiveServiceImpl implements BeehiveService {
                         diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
                 } else {
                     // Update existing metadata if needed
-                    analyzedImageMetadata.setStatus(com.worldbeesion.beecareful.s3.constant.FileStatus.STORED);
+                    analyzedImageMetadata.setStatus(S3FileStatus.STORED);
                     analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
                     log.info("[DiagnosisId: {}, PhotoId: {}] Updated existing S3FileMetadata with ID: {} for S3 key: {}",
                         diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
