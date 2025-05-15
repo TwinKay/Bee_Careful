@@ -170,12 +170,14 @@ const BeehiveListPage = () => {
       />
       <div className="flex h-screen w-full flex-col justify-around overflow-hidden bg-gray-50">
         <header className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2 rounded-full bg-gray-100 p-2 px-4">
+          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-3">
             <RemixIcon name="ri-alert-fill" className="text-bc-yellow-90" />
             <p className="font-bold text-gray-600">1번 벌통 말벌 출몰</p>
             <span className="text-sm text-gray-400">17:53</span>
           </div>
-          <RemixIcon name="ri-notification-2-fill" className="text-2xl text-gray-500" />
+          <Link to={ROUTES.NOTIFICATIONS}>
+            <RemixIcon name="ri-notification-2-fill" className="text-2xl text-gray-500" />
+          </Link>
         </header>
 
         <BeehiveMap ref={mapRef} />
