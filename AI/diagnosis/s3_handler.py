@@ -1,39 +1,82 @@
 # s3_handler.py
-# This module handles interactions with a single, pre-configured AWS S3 bucket,
-# including downloading and uploading objects. Assumes S3_BUCKET_NAME is correctly set if not None/empty.
+# This module handles interactions with a single, pre-configured AWS S3 bucket.
+# It conditionally loads .env files for local development using python-dotenv.
+# It can use custom environment variables for AWS credentials:
+# S3_ACCESS_KEY (for AWS Access Key ID)
+# S3_SECRET_KEY (for AWS Secret Access Key)
+# S3_BUCKET_NAME (for the S3 bucket name)
+# AWS_REGION (optional, for the AWS region)
+# APP_ENV (optional, set to 'docker' or 'production' to skip .env loading)
 
 import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 
+# --- Conditional .env loading ---
+# Load .env file only if APP_ENV is 'local' or not set.
+# In a Docker/production environment, APP_ENV should be set to something else (e.g., 'docker', 'production').
+APP_ENV = os.environ.get("APP_ENV", "local").lower() # Default to 'local' if not set
 
-# Initialize S3 client
-# Credentials should be configured in your environment (e.g., via AWS CLI, IAM roles, or env vars)
-s3_client = None
+if APP_ENV == "local":
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        print("Running in 'local' environment, loaded variables from .env file.")
+    except ImportError:
+        print("python-dotenv library not found. Skipping .env file loading. Please install it for local development.")
+    except Exception as e:
+        print(f"Error loading .env file: {e}")
+else:
+    print(f"APP_ENV is '{APP_ENV}'. Skipping .env file loading (expected in Docker/production).")
+
+
+# --- S3 Configuration ---
+# Read custom environment variables for AWS credentials and bucket name
+# These will be read from the actual environment, which includes .env variables if loaded.
+S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY")
+S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_KEY")
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
-if not S3_BUCKET_NAME:
-    print(f"S3 client initialized. CRITICAL WARNING: S3_BUCKET_NAME environment variable is not set or is empty. Operations will fail.")
-    raise Exception("ERROR: No S3_BUCKET_NAME is given.")
 AWS_REGION = os.environ.get("AWS_REGION")
 
+# Initialize S3 client
+s3_client = None
 try:
     client_args = {}
     if AWS_REGION:
         client_args['region_name'] = AWS_REGION
-    
+
+    # If custom access key and secret key are provided, use them
+    if S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY:
+        client_args['aws_access_key_id'] = S3_ACCESS_KEY_ID
+        client_args['aws_secret_access_key'] = S3_SECRET_ACCESS_KEY
+        print("Attempting to initialize S3 client using S3_ACCESS_KEY and S3_SECRET_KEY environment variables.")
+    else:
+        print("S3_ACCESS_KEY and/or S3_SECRET_KEY not set. S3 client will use default credential chain (e.g., IAM role, ~/.aws/credentials).")
+
     s3_client = boto3.client("s3", **client_args)
 
+    # Post-initialization messages
     if s3_client:
-        region_message = f" (Region: {AWS_REGION})" if AWS_REGION else " (Region: default from AWS config/env)"
-        print(f"S3 client initialized. Configured to use bucket: '{S3_BUCKET_NAME}'{region_message}.")
-    # No else needed here, as boto3.client() would raise an exception if it truly failed to create a client object.
+        region_message = f" (Region: {AWS_REGION})" if AWS_REGION else " (Region: default from AWS config/env or client args)"
+        if not S3_BUCKET_NAME:
+            print(f"S3 client initialized{region_message}. CRITICAL WARNING: S3_BUCKET_NAME environment variable is not set or is empty. S3 operations will fail.")
+        else:
+            print(f"S3 client initialized. Configured to use bucket: '{S3_BUCKET_NAME}'{region_message}.")
+    # No explicit else for s3_client not being created, as boto3.client() would raise an exception.
 
 except NoCredentialsError:
-    print("ERROR: AWS credentials not found. Please configure your AWS credentials (e.g., AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY). s3_client remains None.")
+    # This error is typically raised if default credential chain fails AND no explicit keys were provided that also failed.
+    print("ERROR: AWS credentials not found or invalid. Please configure your AWS credentials. s3_client remains None.")
 except PartialCredentialsError:
     print("ERROR: Incomplete AWS credentials found. Please check your AWS configuration. s3_client remains None.")
-except Exception as e: # Catch other boto3 client initialization errors, e.g., invalid region
+except Exception as e: # Catch other boto3 client initialization errors (e.g., invalid region, invalid keys if provided)
     print(f"ERROR: Could not initialize S3 client: {e}. s3_client remains None.")
+
+# --- Critical Configuration Check ---
+# Fail fast if S3_BUCKET_NAME is not provided.
+if not S3_BUCKET_NAME:
+    # This exception will stop the module from being imported successfully if S3_BUCKET_NAME is missing.
+    raise Exception("CRITICAL ERROR: S3_BUCKET_NAME environment variable is not set. This is required for the application.")
 
 
 def extract_filename_from_s3_key(s3_key: str) -> str:
@@ -63,19 +106,14 @@ def get_s3_object_bytes(s3_key: str) -> bytes:
         bytes: The content of the S3 object.
 
     Raises:
-        RuntimeError: If the S3 client is not initialized or S3_BUCKET_NAME is not configured.
+        RuntimeError: If the S3 client is not initialized. (S3_BUCKET_NAME check is done at module load)
         FileNotFoundError: If the object is not found in S3.
         PermissionError: If access to the S3 object is denied.
         Exception: For other S3 related errors.
     """
     if s3_client is None:
-        raise RuntimeError("S3 client is not initialized. Check AWS credentials and configuration.")
-
-    if not S3_BUCKET_NAME: # Check if S3_BUCKET_NAME is None or empty
-        raise RuntimeError(
-            "S3 bucket name is not configured. "
-            "Please set the S3_BUCKET_NAME environment variable."
-        )
+        raise RuntimeError("S3 client is not initialized. Check AWS credentials and S3 client initialization logs.")
+    # S3_BUCKET_NAME is guaranteed to be set if module import was successful.
 
     print(f"Attempting to download s3://{S3_BUCKET_NAME}/{s3_key}")
     try:
@@ -112,18 +150,13 @@ def put_s3_object_bytes(s3_key: str, object_bytes: bytes, content_type: str = 'a
         str: The full S3 path (s3://bucket/key) of the uploaded object.
 
     Raises:
-        RuntimeError: If the S3 client is not initialized or S3_BUCKET_NAME is not configured.
+        RuntimeError: If the S3 client is not initialized. (S3_BUCKET_NAME check is done at module load)
         PermissionError: If access to upload to S3 is denied.
         Exception: For other S3 related errors during upload.
     """
     if s3_client is None:
-        raise RuntimeError("S3 client is not initialized. Check AWS credentials and configuration.")
-
-    if not S3_BUCKET_NAME: # Check if S3_BUCKET_NAME is None or empty
-        raise RuntimeError(
-            "S3 bucket name is not configured. "
-            "Please set the S3_BUCKET_NAME environment variable."
-        )
+        raise RuntimeError("S3 client is not initialized. Check AWS credentials and S3 client initialization logs.")
+    # S3_BUCKET_NAME is guaranteed to be set.
 
     full_s3_path = f"s3://{S3_BUCKET_NAME}/{s3_key}"
     print(f"Attempting to upload to {full_s3_path} ({len(object_bytes)} bytes, Content-Type: {content_type})")
@@ -147,8 +180,11 @@ def put_s3_object_bytes(s3_key: str, object_bytes: bytes, content_type: str = 'a
 if __name__ == "__main__":
     print("\n--- S3 Handler Module Self-Test ---")
 
-    if not S3_BUCKET_NAME: # Check if S3_BUCKET_NAME is None or empty
-        print("CRITICAL: S3_BUCKET_NAME environment variable is not set or is empty. Most tests will be skipped or will fail.")
+    # S3_BUCKET_NAME check is now at the top level, so if this script runs, S3_BUCKET_NAME was set.
+    print(f"S3_BUCKET_NAME is set to: {S3_BUCKET_NAME}")
+    print(f"APP_ENV is set to: {APP_ENV}")
+
+
     if s3_client is None:
         print("CRITICAL: S3 client is not initialized (check AWS credentials/config). Most tests will be skipped or will fail.")
     
@@ -158,24 +194,16 @@ if __name__ == "__main__":
         # Test 1: Filename extraction
         print("\n--- Testing Filename Extraction ---")
         test_keys_for_extraction = [
-            "BEEHIVE/ORIGIN/image1.jpg",
-            "folder/subfolder/another_image.png",
-            "nofolder.txt",
-            "trailing/", # Edge case: key ends with a slash
-            "",
-            None 
+            "BEEHIVE/ORIGIN/image1.jpg", "folder/subfolder/another_image.png",
+            "nofolder.txt", "trailing/", "", None 
         ]
         for key in test_keys_for_extraction:
-            try:
-                extracted = extract_filename_from_s3_key(key)
-                print(f"Original: '{key}', Extracted: '{extracted}'")
-            except Exception as e: # Should not happen with os.path.basename for string inputs
-                print(f"Error extracting from '{key}': {e}")
-
+            extracted = extract_filename_from_s3_key(key)
+            print(f"Original: '{key}', Extracted: '{extracted}'")
 
         # Test 2: S3 Upload (PutObject)
         print("\n--- Testing S3 Upload (put_s3_object_bytes) ---")
-        test_upload_key = "test_uploads/s3_handler_self_test_sample.txt"
+        test_upload_key = f"test_uploads/s3_handler_self_test_{__import__('uuid').uuid4().hex[:8]}.txt"
         test_upload_data = f"This is a test file uploaded by s3_handler.py self-test at {__import__('datetime').datetime.now()}.".encode('utf-8')
         uploaded_s3_path = ""
         try:
@@ -190,17 +218,11 @@ if __name__ == "__main__":
                     print(f"Download test successful for key: {test_upload_key}. Content matches.")
                 else:
                     print(f"Download test for key: {test_upload_key}. Content MISMATCH!")
-                    print(f"Expected ({len(test_upload_data)} bytes): {test_upload_data[:100]}...")
-                    print(f"Got ({len(downloaded_bytes)} bytes): {downloaded_bytes[:100]}...")
             except Exception as e:
                 print(f"Error during download test for '{test_upload_key}': {e}")
-
-        except PermissionError as e:
-            print(f"Upload test failed for '{test_upload_key}': {e}. Check IAM permissions for PutObject.")
-        except RuntimeError as e: # Covers S3 client/config issues
-            print(f"Upload test failed for '{test_upload_key}': Runtime error - {e}")
         except Exception as e:
-            print(f"An error occurred during the S3 upload test for key '{test_upload_key}': {e}")
+            print(f"An error occurred during the S3 upload/download test for key '{test_upload_key}': {e}")
     else:
-        print("Basic S3 configuration (S3_BUCKET_NAME or s3_client) is missing. Skipping detailed S3 operation tests.")
+        print("Basic S3 configuration (S3_BUCKET_NAME or s3_client) is missing or failed. Skipping detailed S3 operation tests.")
     print("\n--- End of S3 Handler Module Self-Test ---")
+
