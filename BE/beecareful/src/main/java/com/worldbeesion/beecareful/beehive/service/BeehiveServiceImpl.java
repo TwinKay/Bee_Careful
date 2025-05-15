@@ -175,10 +175,15 @@ public class BeehiveServiceImpl implements BeehiveService{
 
 
         Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
+        Long turretId = null;
+        if(turret!=null){
+            turretId = turret.getId();
+        }
+
         return new BeehiveDetailResponseDto(
                 beehiveDiagnosisInfoList,
                 beehive.getNickname(),
-                turret.getId()
+                turretId
         );
     }
 
