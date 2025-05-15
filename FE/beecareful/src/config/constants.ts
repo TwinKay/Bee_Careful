@@ -5,7 +5,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2024-06-13T10:00:00+09:00',
       imagoCount: 30000,
       larvaCount: 12000,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 1200,
           varroaRatio: 10,
@@ -27,7 +27,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2024-07-05T10:00:00+09:00',
       imagoCount: 31000,
       larvaCount: 11000,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 1500,
           varroaRatio: 13.6,
@@ -49,7 +49,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2024-08-01T10:00:00+09:00',
       imagoCount: 32000,
       larvaCount: 10000,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 1100,
           varroaRatio: 11,
@@ -71,7 +71,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2024-09-22T10:00:00+09:00',
       imagoCount: 28000,
       larvaCount: 9500,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 1300,
           varroaRatio: 13.7,
@@ -93,7 +93,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2025-04-06T10:00:00+09:00',
       imagoCount: 25000,
       larvaCount: 10500,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 900,
           varroaRatio: 8.6,
@@ -115,7 +115,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2025-04-07T10:00:00+09:00',
       imagoCount: 27000,
       larvaCount: 10200,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 500,
           varroaRatio: 4.9,
@@ -137,7 +137,7 @@ export const TMP_DIAGNOSIS_API_DATA = {
       createdAt: '2025-04-09T10:00:00+09:00',
       imagoCount: 33000,
       larvaCount: 11500,
-      diagnosis: {
+      result: {
         larva: {
           varroaCount: 1900,
           varroaRatio: 16.5,

@@ -2,6 +2,7 @@ package com.worldbeesion.beecareful.beehive.repository;
 
 
 import com.worldbeesion.beecareful.beehive.model.dto.BeehiveDiagnosisProjection;
+import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
 import com.worldbeesion.beecareful.beehive.model.entity.Beehive;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -38,6 +39,24 @@ public interface BeehiveRepository extends JpaRepository<Beehive, Long> {
     """, nativeQuery = true)
     List<BeehiveDiagnosisProjection> findAllBeehiveDto(@Param("apiaryId") Long apiaryId);
 
+
+
+    @Query("""
+    SELECT CASE 
+        WHEN COUNT(b) > 0 THEN TRUE 
+        ELSE FALSE 
+    END 
+    FROM Beehive b 
+    WHERE b.apiary = :apiary 
+    AND b.xDirection = :xDirection 
+    AND b.yDirection = :yDirection
+""")
+    Boolean existsByApiaryAndDirection(@Param("apiary") Apiary apiary,
+                                       @Param("xDirection") Long xDirection,
+                                       @Param("yDirection") Long yDirection);
+
+
+    boolean existsByIdAndApiary(Long id, Apiary apiary);
 
 }
 

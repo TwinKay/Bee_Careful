@@ -6,9 +6,12 @@ import MainLayout from '@/layouts/MainLayout';
 import DiagnosisCreatePage from '@/pages/diagnosis/DiagnosisCreatePage';
 import BeehiveListPage from '@/pages/beehive/BeehiveListPage';
 import BeehiveDetailPage from '@/pages/beehive/BeehiveDetailPage';
+import AuthGuardLayout from '@/layouts/AuthGuardLayout';
+import NotificationPage from '@/pages/notification/NotificationPage';
 
 const router = createBrowserRouter([
   {
+    // 인증이 필요없는 페이지들 (로그인, 회원가입)
     path: '/',
     children: [
       {
@@ -19,8 +22,15 @@ const router = createBrowserRouter([
         path: ROUTES.SIGNUP,
         Component: SignUpPage,
       },
+    ],
+  },
+  {
+    // 인증이 필요한 페이지들
+    path: '/',
+    Component: AuthGuardLayout,
+    children: [
       {
-        path: ROUTES.BEEHIVES,
+        index: true,
         Component: BeehiveListPage,
       },
       {
@@ -40,6 +50,16 @@ const router = createBrowserRouter([
           {
             index: true,
             Component: DiagnosisCreatePage,
+          },
+        ],
+      },
+      {
+        path: ROUTES.NOTIFICATIONS,
+        Component: () => MainLayout(),
+        children: [
+          {
+            index: true,
+            Component: NotificationPage,
           },
         ],
       },

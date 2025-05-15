@@ -1,4 +1,4 @@
-import type { DiagnosisDataType } from '@/types/diagnosis/diagnosis';
+import type { DiagnosisDataType } from '@/types/diagnosis';
 import { useMemo } from 'react';
 import {
   LineChart,
@@ -53,10 +53,10 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
 
       return {
         name: `${monthDate}`,
-        '진드기(응애)': item.diagnosis.larva.varroaRatio,
-        부저병: item.diagnosis.larva.foulBroodRatio,
-        석고병: item.diagnosis.larva.chalkBroodRatio,
-        날개바이러스: item.diagnosis.imago.dwvRatio,
+        '진드기(응애)': item.result.larva.varroaRatio,
+        부저병: item.result.larva.foulBroodRatio,
+        석고병: item.result.larva.chalkBroodRatio,
+        날개바이러스: item.result.imago.dwvRatio,
       };
     });
   }, [data]);

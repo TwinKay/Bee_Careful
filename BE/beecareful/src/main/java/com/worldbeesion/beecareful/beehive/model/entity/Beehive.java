@@ -57,4 +57,22 @@ public class Beehive {
     @Column(name = "isInfected", nullable = false)
     private Boolean isInfected;
 
+    public void updateNickname(String newNickname) {
+        if (newNickname != null && !newNickname.isBlank()) {
+            this.nickname = newNickname;
+        }
+    }
+
+    public void updateDirection(Long newXDirection, Long newYDirection) {
+        if (newXDirection != null && newYDirection != null) {
+            this.xDirection = newXDirection;
+            this.yDirection = newYDirection;
+        }
+
+    }
+
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }

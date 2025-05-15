@@ -1,3 +1,4 @@
+import useBeehiveStore from '@/store/beehiveStore';
 import React from 'react';
 import 'remixicon/fonts/remixicon.css';
 
@@ -10,9 +11,12 @@ type MapControlsPropsType = {
 const MapControls: React.FC<MapControlsPropsType> = ({ scale, handleZoom, centerToHives }) => {
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
+  const { currentMode } = useBeehiveStore();
 
   return (
-    <div className="absolute bottom-4 right-4 z-10 flex space-x-2">
+    <div
+      className={`absolute right-2 z-10 flex space-x-2 ${currentMode === 'normal' ? 'bottom-4' : 'bottom-28'}`}
+    >
       <button
         onClick={() => handleZoom(Math.min(MAX_SCALE, scale * 1.2))}
         className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-700 shadow-md hover:bg-gray-100"

@@ -19,8 +19,26 @@ export type DiagnosisDataType = {
   createdAt: string;
   imagoCount: number;
   larvaCount: number;
-  diagnosis: {
+  result: {
     larva: DiagnosisLarvaType;
     imago: DiagnosisImagoType;
   };
+};
+
+export type ImageMetadataType = {
+  filename: string;
+  contentType: string;
+  expectedSize: number;
+};
+
+export type DiagnosisResponseType = {
+  filename: string;
+  status: number;
+  preSignedUrl: string;
+};
+
+export type DiagnosisRequestType = {
+  beeHiveId: number;
+  count: number;
+  photos: ImageMetadataType[];
 };

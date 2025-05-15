@@ -6,6 +6,8 @@ import com.worldbeesion.beecareful.beehive.constant.BeeStage;
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
 import com.worldbeesion.beecareful.beehive.constant.DiseaseName;
 import com.worldbeesion.beecareful.beehive.exception.BeehiveNotFoundException;
+import com.worldbeesion.beecareful.beehive.exception.DirectionDuplicateException;
+import com.worldbeesion.beecareful.beehive.exception.DirectionNullException;
 import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.model.entity.*;
 import com.worldbeesion.beecareful.beehive.repository.*;
@@ -19,21 +21,17 @@ import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
-import com.worldbeesion.beecareful.s3.service.S3FileService;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
 
-import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.web.reactive.function.client.WebClient;
+import java.time.LocalDateTime;
 
-import java.time.Duration; // For timeout on block()
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -45,7 +43,6 @@ import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisApiResponse;
 public class BeehiveServiceImpl implements BeehiveService {
 
     private final S3PresignService s3PresignService;
-    private final S3FileService s3FileService;
     private final AiDiagnosisService aiDiagnosisService;
     private final S3FileMetadataRepository s3FileMetadataRepository;
 
@@ -58,9 +55,6 @@ public class BeehiveServiceImpl implements BeehiveService {
     private final AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository;
     private final TurretRepository turretRepository;
     private final DiseaseRepository diseaseRepository;
-
-    @Resource(lookup = "diagnosisWebClient")
-    private final WebClient webClient;
 
     @Override
     @Transactional
@@ -173,7 +167,7 @@ public class BeehiveServiceImpl implements BeehiveService {
                 // Get S3 metadata for the analyzed image using the S3 key returned from the AI service
                 S3FileMetadata analyzedImageMetadata = s3FileMetadataRepository.findByS3Key(analyzedImageS3Key);
                 if (analyzedImageMetadata == null) {
-                    log.info("[DiagnosisId: {}, PhotoId: {}] Creating new S3FileMetadata for S3 key: {}", 
+                    log.info("[DiagnosisId: {}, PhotoId: {}] Creating new S3FileMetadata for S3 key: {}",
                         diagnosis.getId(), photoId, analyzedImageS3Key);
 
                     // Create a new S3FileMetadata entry
@@ -181,14 +175,15 @@ public class BeehiveServiceImpl implements BeehiveService {
                         .originalFilename(extractFilenameFromS3Key(analyzedImageS3Key))
                         .s3Key(analyzedImageS3Key)
                         .url(null) // URL will be generated when needed
-                        .contentType("image/jpeg") // Set content type to image/jpeg as required
+                        .contentType("image/jpeg") // Set the content type to image/jpeg as required
                         .status(S3FileStatus.STORED) // Mark as STORED (completed)
                         .build();
 
                     analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
                     log.info("[DiagnosisId: {}, PhotoId: {}] Created new S3FileMetadata with ID: {} for S3 key: {}",
                         diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
-                } else {
+                }
+                else {
                     // Update existing metadata if needed
                     analyzedImageMetadata.setStatus(S3FileStatus.STORED);
                     analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
@@ -276,17 +271,17 @@ public class BeehiveServiceImpl implements BeehiveService {
      */
     private void saveAnalyzedPhotoDisease(AnalyzedPhoto analyzedPhoto, String diseaseCodeString, boolean isLarva, Long count) {
         if (count != null && count > 0) {
-            DiseaseName diseaseNameEnum;
-            try {
-                // Convert the input string disease code to the DiseaseName enum
-                diseaseNameEnum = DiseaseName.valueOf(diseaseCodeString.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                log.error(
-                    "Unknown disease code string: {}. Cannot convert to DiseaseName enum. Please ensure this disease name is defined in the DiseaseName enum.",
-                    diseaseCodeString);
-                // Or throw a specific exception if this is a critical error and should halt processing
-                return; // Skip saving if disease code string is unknown/not in enum
-            }
+            // DiseaseName diseaseNameEnum;
+            // try {
+            //     // Convert the input string disease code to the DiseaseName enum
+            //     diseaseNameEnum = DiseaseName.valueOf(diseaseCodeString.toUpperCase());
+            // } catch (IllegalArgumentException e) {
+            //     log.error(
+            //         "Unknown disease code string: {}. Cannot convert to DiseaseName enum. Please ensure this disease name is defined in the DiseaseName enum.",
+            //         diseaseCodeString);
+            //     // Or throw a specific exception if this is a critical error and should halt processing
+            //     return; // Skip saving if disease code string is unknown/not in enum
+            // }
 
             // Convert the isLarva boolean to the BeeStage enum
             DiseaseName diseaseName = DiseaseName.valueOf(diseaseCodeString);
@@ -336,11 +331,26 @@ public class BeehiveServiceImpl implements BeehiveService {
     }
 
     @Override
-    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, Pageable pageable) {
-        Page<Diagnosis> diagnosisPage = diagnosisRepository.findDiagnosesByBeehiveId(beehiveId, pageable);
+    @Transactional(readOnly = true)
+    public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month, UserDetailsImpl userDetails) {
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
+        if (beehive == null || beehive.getDeletedAt() != null) {
+            throw new BeehiveNotFoundException();
+        }
+
+        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
+
+        if (!isExist) {
+            throw new BeehiveNotFoundException();
+        }
+
+        LocalDateTime startDate = LocalDateTime.now().minusMonths(month);
+        List<Diagnosis> diagnosisList = diagnosisRepository.findRecentDiagnosesByBeehiveId(beehiveId, startDate);
 
         List<Long> diagnosisIds = new ArrayList<>();
-        for (Diagnosis diagnosis : diagnosisPage.getContent()) {
+        for (Diagnosis diagnosis : diagnosisList) {
             diagnosisIds.add(diagnosis.getId());
         }
 
@@ -397,31 +407,83 @@ public class BeehiveServiceImpl implements BeehiveService {
             beehiveDiagnosisInfoList.add(beehiveDiagnosisInfoDto);
         }
 
-        PageInfoDto pageInfoDto = createPageInfo(diagnosisPage);
-
-        Optional<Beehive> beehive = beehiveRepository.findById(beehiveId);
-        if (beehive.isEmpty()) {
-            throw new BeehiveNotFoundException();
+        Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
+        Long turretId = null;
+        if (turret != null) {
+            turretId = turret.getId();
         }
 
-        Turret turret = turretRepository.findByBeehive(beehive.get()).orElse(null);
         return new BeehiveDetailResponseDto(
             beehiveDiagnosisInfoList,
-            pageInfoDto,
-            beehive.get().getNickname(),
-            (turret != null ? turret.getId() : null)
+            beehive.getNickname(),
+            turretId
         );
     }
 
-    private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
-        Long page = (long)diagnosisPage.getNumber();
-        Long size = (long)diagnosisPage.getSize();
-        Long totalElements = diagnosisPage.getTotalElements();
-        Long totalPages = (long)diagnosisPage.getTotalPages();
-        Boolean hasPreviousPage = diagnosisPage.hasPrevious();
-        Boolean hasNextPage = diagnosisPage.hasNext();
+    @Override
+    @Transactional
+    public void addTurret(Long beehiveId, TurretRequestDto turretRequestDto) {
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
 
-        return new PageInfoDto(page, size, totalElements, totalPages, hasPreviousPage, hasNextPage);
+        Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
+
+        if (turret != null) {
+            turret.updateTurret(turretRequestDto.serial());
+            return;
+        }
+
+        Turret newTurret = Turret.builder()
+            .beehive(beehive)
+            .serial(turretRequestDto.serial())
+            .build();
+
+        turretRepository.save(newTurret);
+    }
+
+    @Override
+    @Transactional
+    public void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails) {
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
+
+        if (beehiveUpdateDto.xDirection() == null || beehiveUpdateDto.yDirection() == null) {
+            throw new DirectionNullException();
+        }
+
+        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+
+        boolean isLocated = beehiveRepository.existsByApiaryAndDirection(
+            apiary,
+            beehiveUpdateDto.xDirection(),
+            beehiveUpdateDto.yDirection()
+        );
+
+        if (isLocated) {
+            throw new DirectionDuplicateException();
+        }
+
+        beehive.updateNickname(beehiveUpdateDto.nickname());
+        beehive.updateDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
+    }
+
+    @Override
+    @Transactional
+    public void deleteBeehive(Long beehiveId, UserDetailsImpl userDetails) {
+        Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
+        if (beehive == null || beehive.getDeletedAt() != null) {
+            throw new BeehiveNotFoundException();
+        }
+
+        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMembers(members);
+        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
+
+        if (!isExist) {
+            throw new BeehiveNotFoundException();
+        }
+
+        beehive.delete();
+
     }
 
     private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {

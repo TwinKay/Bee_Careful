@@ -3,8 +3,9 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Button } from '@/components/common/Button';
-import { useSignup } from '@/services/auth';
+import { useSignup } from '@/apis/auth';
 import { AxiosError } from 'axios';
+import { formatPhoneNumber, removeHyphenFromPhone } from '@/utils/format';
 
 type SignupFormType = {
   username: string;
@@ -22,7 +23,6 @@ const SignUpForm = ({ onGoBack }: SignUpFormPropsType) => {
   const navigate = useNavigate();
   const [isFormValid, setIsFormValid] = useState(false);
 
-  // TanStack Query 사용
   const signupMutation = useSignup();
 
   const {
@@ -38,6 +38,8 @@ const SignUpForm = ({ onGoBack }: SignUpFormPropsType) => {
 
   // 모든 필드가 채워졌는지 확인
   const allFields = watch();
+  const password = watch('password');
+  const phone = watch('phone');
 
   useEffect(() => {
     // 모든 필드가 입력되었고 에러가 없는지 확인
@@ -47,28 +49,9 @@ const SignUpForm = ({ onGoBack }: SignUpFormPropsType) => {
     setIsFormValid(allFieldsFilled && Object.keys(errors).length === 0);
   }, [allFields, errors]);
 
-  const password = watch('password');
-
-  const phone = watch('phone');
   useEffect(() => {
     if (phone) {
-      // 숫자만 추출
-      const numbers = phone.replace(/[^0-9]/g, '');
-
-      // 하이픈 추가
-      let formattedPhone = '';
-      if (numbers.length <= 3) {
-        formattedPhone = numbers;
-      } else if (numbers.length <= 7) {
-        formattedPhone = `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
-      } else {
-        formattedPhone = `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
-      }
-
-      // 11자리를 넘어가면 자르기
-      if (numbers.length > 11) {
-        formattedPhone = `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
-      }
+      const formattedPhone = formatPhoneNumber(phone);
 
       if (formattedPhone !== phone) {
         setValue('phone', formattedPhone, { shouldValidate: false });
@@ -76,13 +59,14 @@ const SignUpForm = ({ onGoBack }: SignUpFormPropsType) => {
     }
   }, [phone, setValue]);
 
+  // 회원가입 API 호출
   const onSubmit = async (data: SignupFormType) => {
     try {
       const requestData = {
         memberLoginId: data.username,
         password: data.password,
         memberName: data.name,
-        phone: data.phone.replace(/-/g, ''),
+        phone: removeHyphenFromPhone(data.phone),
       };
 
       await signupMutation.mutateAsync(requestData);
