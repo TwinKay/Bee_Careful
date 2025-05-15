@@ -13,9 +13,18 @@ const MainLayout = (icon?: string) => {
   const [headerIconOption, setHeaderIconOption] = useState<HeaderIconOptionType>({});
   return (
     <div className="flex h-screen flex-col bg-gray-50">
-      <header className="flex h-16 flex-row items-center justify-between border-b border-gray-300 bg-white p-4">
-        <RemixIcon name={'ri-arrow-left-s-line'} onClick={() => route(-1)} />
-        {icon && <RemixIcon name={icon} onClick={headerIconOption.onClick} />}
+      <header className="relative flex h-16 flex-row items-center border-b border-gray-300 bg-white px-4">
+        <div className="absolute left-4">
+          <RemixIcon name={'ri-arrow-left-s-line'} onClick={() => route(-1)} />
+        </div>
+        <div className="flex w-full justify-center">
+          {headerIconOption.title && (
+            <h1 className="text-lg font-bold">{headerIconOption.title}</h1>
+          )}
+        </div>
+        <div className="absolute right-4">
+          {icon && <RemixIcon name={icon} onClick={headerIconOption.onClick} />}
+        </div>
       </header>
       <div className="flex w-full flex-col items-center gap-4 overflow-y-scroll p-4">
         <Outlet context={{ headerIconOption, setHeaderIconOption }} />

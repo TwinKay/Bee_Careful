@@ -1,8 +1,14 @@
 export type NotificationType = {
-  id: string;
+  id?: string;
   title: string;
   body: string;
-  data?: Record<string, string>;
-  read: boolean;
-  createdAt: Date;
+  data?: NotificationDataType;
+  read?: boolean;
+  createdAt: string;
+};
+
+export type NotificationDataType = {
+  beehiveId: string;
+  message: string;
+  status: 'warning' | 'success' | 'danger';
 };
