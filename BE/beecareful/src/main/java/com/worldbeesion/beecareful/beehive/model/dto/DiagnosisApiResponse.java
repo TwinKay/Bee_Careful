@@ -1,35 +1,19 @@
 package com.worldbeesion.beecareful.beehive.model.dto;
 
 import lombok.Builder;
-import lombok.Getter;
 
-@Getter
 @Builder
-public class DiagnosisApiResponse {
-    private DiagnosisResult diagnosis;
-    private byte[] imageData;
+public record DiagnosisApiResponse(DiagnosisResult diagnosis, String analyzedImageS3Key) {
 
-    @Getter
     @Builder
-    public static class DiagnosisResult {
-        private LarvaResult larva;
-        private ImagoResult imago;
+    public record DiagnosisResult(LarvaResult larva, ImagoResult imago) {
     }
 
-    @Getter
     @Builder
-    public static class LarvaResult {
-        private Long normalCount;
-        private Long varroaCount;
-        private Long foulBroodCount;
-        private Long chalkBroodCount;
+    public record LarvaResult(Long normalCount, Long varroaCount, Long foulBroodCount, Long chalkBroodCount) {
     }
 
-    @Getter
     @Builder
-    public static class ImagoResult {
-        private Long normalCount;
-        private Long varroaCount;
-        private Long dwvCount;
+    public record ImagoResult(Long normalCount, Long varroaCount, Long dwvCount) {
     }
 }

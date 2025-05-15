@@ -19,6 +19,7 @@ import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
 
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
+import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 import com.worldbeesion.beecareful.s3.service.S3FileService;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
 
@@ -47,6 +48,7 @@ public class BeehiveServiceImpl implements BeehiveService {
     private final S3PresignService s3PresignService;
     private final S3FileService s3FileService;
     private final AiDiagnosisService aiDiagnosisService;
+    private final S3FileMetadataRepository s3FileMetadataRepository;
 
     private final BeehiveRepository beehiveRepository;
     private final DiagnosisRepository diagnosisRepository;
@@ -136,8 +138,7 @@ public class BeehiveServiceImpl implements BeehiveService {
     private CompletableFuture<Void> processSinglePhotoAnalysis(OriginalPhoto originalPhoto, Diagnosis diagnosis) {
         // supplyAsync runs the lambda in a separate thread from the common ForkJoinPool (or a custom executor if provided)
         return CompletableFuture.supplyAsync(() -> {
-            String originalPhotoS3Url = originalPhoto.getS3FileMetadata().getUrl();
-            String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key(); // Used for naming the analyzed image
+            String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key();
             Long photoId = originalPhoto.getId();
             log.info("[DiagnosisId: {}, PhotoId: {}] Starting processing.", diagnosis.getId(), photoId);
 
@@ -148,40 +149,54 @@ public class BeehiveServiceImpl implements BeehiveService {
                 log.debug("[DiagnosisId: {}, PhotoId: {}] Status set to ANALYZING.", diagnosis.getId(), photoId);
 
                 // Timeout is important to prevent indefinite blocking.
-                AnalyzedPhotoImageDto analyzedPhotoImageDto = aiDiagnosisService.analyzePhoto(originalPhotoS3Url)
+                DiagnosisApiResponse diagnosisApiResponse = aiDiagnosisService.analyzePhoto(originalS3Key)
                     .block(Duration.ofSeconds(120)); // Increased timeout for AI call + parsing
 
-                if (analyzedPhotoImageDto == null) {
+                if (diagnosisApiResponse == null) {
                     log.error("[DiagnosisId: {}, PhotoId: {}] AI analysis returned no data.", diagnosis.getId(), photoId);
                     throw new IllegalStateException("AI analysis returned null data.");
                 }
 
-                DiagnosisApiResponse.DiagnosisResult diagResult = analyzedPhotoImageDto.diagnosisResult();
-                byte[] analyzedImageData = analyzedPhotoImageDto.analyzedImageData();
-                String imageContentType = analyzedPhotoImageDto.imageContentType();
+                DiagnosisApiResponse.DiagnosisResult diagResult = diagnosisApiResponse.diagnosis();
+                String analyzedImageS3Key = diagnosisApiResponse.analyzedImageS3Key();
 
                 if (diagResult == null) {
                     log.error("[DiagnosisId: {}, PhotoId: {}] DiagnosisResult from AI analysis is null.", diagnosis.getId(), photoId);
                     throw new IllegalStateException("AI analysis returned null DiagnosisResult.");
                 }
-                if (analyzedImageData == null || analyzedImageData.length == 0) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] Analyzed image data from AI analysis is null or empty.", diagnosis.getId(), photoId);
-                    throw new IllegalStateException("AI analysis returned null or empty image data.");
+                if (analyzedImageS3Key == null || analyzedImageS3Key.isEmpty()) {
+                    log.error("[DiagnosisId: {}, PhotoId: {}] Analyzed image S3 key from AI analysis is null or empty.", diagnosis.getId(), photoId);
+                    throw new IllegalStateException("AI analysis returned null or empty analyzed image S3 key.");
                 }
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Received AI analysis data. Image size: {} bytes.",
-                    diagnosis.getId(), photoId, analyzedImageData.length);
+                log.debug("[DiagnosisId: {}, PhotoId: {}] Received AI analysis data with analyzed image S3 key: {}",
+                    diagnosis.getId(), photoId, analyzedImageS3Key);
 
-                // Generate a filename for the analyzed image
-                String analyzedFilename = "analyzed_" + extractFilenameFromS3Key(originalS3Key);
+                // Get S3 metadata for the analyzed image using the S3 key returned from the AI service
+                S3FileMetadata analyzedImageMetadata = s3FileMetadataRepository.findByS3Key(analyzedImageS3Key);
+                if (analyzedImageMetadata == null) {
+                    log.info("[DiagnosisId: {}, PhotoId: {}] Creating new S3FileMetadata for S3 key: {}", 
+                        diagnosis.getId(), photoId, analyzedImageS3Key);
 
-                // Upload the analyzed image (received as byte[]) to S3
-                S3FileMetadata analyzedImageMetadata = s3FileService.putObject(
-                    analyzedImageData,
-                    analyzedFilename,
-                    imageContentType,
-                    FilePathPrefix.BEEHIVE_DIAGNOSIS // Ensure this prefix is correct
-                );
-                log.info("[DiagnosisId: {}, PhotoId: {}] Uploaded analyzed image to S3. New Key: {}",
+                    // Create a new S3FileMetadata entry
+                    analyzedImageMetadata = S3FileMetadata.builder()
+                        .originalFilename(extractFilenameFromS3Key(analyzedImageS3Key))
+                        .s3Key(analyzedImageS3Key)
+                        .url(null) // URL will be generated when needed
+                        .contentType("image/jpeg") // Set content type to image/jpeg as required
+                        .status(com.worldbeesion.beecareful.s3.constant.FileStatus.STORED) // Mark as STORED (completed)
+                        .build();
+
+                    analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
+                    log.info("[DiagnosisId: {}, PhotoId: {}] Created new S3FileMetadata with ID: {} for S3 key: {}",
+                        diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
+                } else {
+                    // Update existing metadata if needed
+                    analyzedImageMetadata.setStatus(com.worldbeesion.beecareful.s3.constant.FileStatus.STORED);
+                    analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
+                    log.info("[DiagnosisId: {}, PhotoId: {}] Updated existing S3FileMetadata with ID: {} for S3 key: {}",
+                        diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
+                }
+                log.info("[DiagnosisId: {}, PhotoId: {}] Retrieved metadata for analyzed image with S3 Key: {}",
                     diagnosis.getId(), photoId, analyzedImageMetadata.getS3Key());
 
                 // Create and save AnalyzedPhoto entity
@@ -224,14 +239,14 @@ public class BeehiveServiceImpl implements BeehiveService {
         S3FileMetadata analyzedImageMetadata,
         DiagnosisApiResponse.DiagnosisResult diagResult
     ) {
-        long totalImagoCount = Optional.ofNullable(diagResult.getImago().getNormalCount()).orElse(0L)
-            + Optional.ofNullable(diagResult.getImago().getVarroaCount()).orElse(0L)
-            + Optional.ofNullable(diagResult.getImago().getDwvCount()).orElse(0L);
+        long totalImagoCount = Optional.ofNullable(diagResult.imago().normalCount()).orElse(0L)
+            + Optional.ofNullable(diagResult.imago().varroaCount()).orElse(0L)
+            + Optional.ofNullable(diagResult.imago().dwvCount()).orElse(0L);
 
-        long totalLarvaCount = Optional.ofNullable(diagResult.getLarva().getNormalCount()).orElse(0L)
-            + Optional.ofNullable(diagResult.getLarva().getVarroaCount()).orElse(0L)
-            + Optional.ofNullable(diagResult.getLarva().getFoulBroodCount()).orElse(0L)
-            + Optional.ofNullable(diagResult.getLarva().getChalkBroodCount()).orElse(0L);
+        long totalLarvaCount = Optional.ofNullable(diagResult.larva().normalCount()).orElse(0L)
+            + Optional.ofNullable(diagResult.larva().varroaCount()).orElse(0L)
+            + Optional.ofNullable(diagResult.larva().foulBroodCount()).orElse(0L)
+            + Optional.ofNullable(diagResult.larva().chalkBroodCount()).orElse(0L);
 
         return AnalyzedPhoto.builder()
             .originalPhoto(originalPhoto)
@@ -247,13 +262,13 @@ public class BeehiveServiceImpl implements BeehiveService {
      */
     private void saveAnalyzedDiseases(AnalyzedPhoto analyzedPhoto, DiagnosisApiResponse.DiagnosisResult result) {
         // Larva diseases
-        saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", true, result.getLarva().getVarroaCount());
-        saveAnalyzedPhotoDisease(analyzedPhoto, "FOULBROOD", true, result.getLarva().getFoulBroodCount());
-        saveAnalyzedPhotoDisease(analyzedPhoto, "CHALKBROOD", true, result.getLarva().getChalkBroodCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", true, result.larva().varroaCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, "FOULBROOD", true, result.larva().foulBroodCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, "CHALKBROOD", true, result.larva().chalkBroodCount());
 
         // Imago diseases
-        saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", false, result.getImago().getVarroaCount());
-        saveAnalyzedPhotoDisease(analyzedPhoto, "DWV", false, result.getImago().getDwvCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", false, result.imago().varroaCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, "DWV", false, result.imago().dwvCount());
     }
 
     /**
