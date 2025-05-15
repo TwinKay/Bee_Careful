@@ -8,6 +8,7 @@ import { useCreateBeehive } from '@/apis/beehive';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
 import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
+import RemixIcon from '@/components/common/RemixIcon';
 
 const BeehiveListPage = () => {
   // useRef에 타입 명시
@@ -167,22 +168,31 @@ const BeehiveListPage = () => {
         isVisible={showToast}
         onClose={() => setShowToast(false)}
       />
-      <div className="flex h-screen w-full flex-col bg-gray-50">
+      <div className="flex h-screen w-full flex-col justify-around overflow-hidden bg-gray-50">
+        <header className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-2 rounded-full bg-gray-100 p-2 px-4">
+            <RemixIcon name="ri-alert-fill" className="text-bc-yellow-90" />
+            <p className="font-bold text-gray-600">1번 벌통 말벌 출몰</p>
+            <span className="text-sm text-gray-400">17:53</span>
+          </div>
+          <RemixIcon name="ri-notification-2-fill" className="text-2xl text-gray-500" />
+        </header>
+
         <BeehiveMap ref={mapRef} />
 
-        <section className="absolute bottom-6 left-4 right-4 flex justify-between gap-2">
-          <Link to={ROUTES.DIAGNOSIS_CREATE}>
-            <Button variant="success" size="xxl">
-              질병 검사
+        <section className="flex justify-between gap-4 p-4">
+          <Link to={ROUTES.DIAGNOSIS_CREATE} className="w-full">
+            <Button variant="success" size="xxl" fullWidth>
+              <p className="font-bold">질병 검사</p>
             </Button>
           </Link>
           <Button
             onClick={openNicknameBottomSheet}
             variant="neutral"
-            size="lg"
+            size="md"
             className="flex items-center justify-center"
           >
-            <img src="/icons/hive-add.png" alt="벌통 추가" className="h-7 w-8 object-contain" />
+            <img src="/icons/hive-add.png" alt="벌통 추가" className="h-full w-12 object-contain" />
           </Button>
         </section>
 
