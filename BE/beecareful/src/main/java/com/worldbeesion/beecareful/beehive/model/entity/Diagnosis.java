@@ -32,4 +32,18 @@ public class Diagnosis {
     @CreatedDate
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "imago_count")
+    private Long imagoCount;
+
+    @Column(name = "larva_count")
+    private Long larvaCount;
+
+    public void setImagoCount(Long imagoCount) {
+        this.imagoCount = imagoCount;
+    }
+
+    public void setLarvaCount(Long larvaCount) {
+        this.larvaCount = larvaCount;
+    }
 }

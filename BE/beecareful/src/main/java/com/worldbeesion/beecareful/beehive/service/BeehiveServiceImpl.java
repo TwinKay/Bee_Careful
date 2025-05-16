@@ -103,17 +103,43 @@ public class BeehiveServiceImpl implements BeehiveService {
         }
         log.info("Found {} original photos for diagnosisId: {}", originalPhotos.size(), diagnosisId);
 
-        // 3. Process each photo asynchronously
-        List<CompletableFuture<Void>> futures = originalPhotos.stream()
+        // 3. Process each photo asynchronously and collect the responses
+        List<CompletableFuture<DiagnosisApiResponse.DiagnosisResult>> futures = originalPhotos.stream()
             .map(originalPhoto ->
-                CompletableFuture.runAsync(() -> processSinglePhotoAnalysis(originalPhoto, diagnosis))
+                CompletableFuture.supplyAsync(() -> requestSinglePhotoAnalysis(originalPhoto, diagnosis))
             )
             .toList();
 
-        // 4. Wait for all asynchronous tasks to complete
+        // 4. Wait for all asynchronous tasks to complete and collect results
         try {
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             log.info("All photo processing tasks completed for diagnosisId: {}", diagnosisId);
+
+            // 5. Sum up all the responses
+            List<DiagnosisApiResponse.DiagnosisResult> diagnosisResults = futures.stream()
+                .map(CompletableFuture::join)
+                .toList();
+
+            DiagnosisApiResponse.DiagnosisResult summedDiagnosisResult = sumUpDiagnosisResults(diagnosisResults);
+
+            // 6. Update the Diagnosis entity with the summed up results
+            // Calculate total counts for diagnosis
+            long totalImagoCount = Optional.ofNullable(summedDiagnosisResult.imago().normalCount()).orElse(0L)
+                + Optional.ofNullable(summedDiagnosisResult.imago().varroaCount()).orElse(0L)
+                + Optional.ofNullable(summedDiagnosisResult.imago().dwvCount()).orElse(0L);
+            long totalLarvaCount = Optional.ofNullable(summedDiagnosisResult.larva().normalCount()).orElse(0L)
+                + Optional.ofNullable(summedDiagnosisResult.larva().varroaCount()).orElse(0L)
+                + Optional.ofNullable(summedDiagnosisResult.larva().foulBroodCount()).orElse(0L)
+                + Optional.ofNullable(summedDiagnosisResult.larva().chalkBroodCount()).orElse(0L);
+
+            diagnosis.setImagoCount(totalImagoCount);
+            diagnosis.setLarvaCount(totalLarvaCount);
+            diagnosisRepository.save(diagnosis);
+
+            // 7. Save the summed up disease details at the diagnosis level
+            // Pass null to saveAnalyzedPhotoDiseases to log the summed up disease details without saving them to the database
+            saveAnalyzedPhotoDiseases(null, summedDiagnosisResult);
+
         } catch (Exception e) {
             // This catch block might capture CompletionException if any future failed unexpectedly *during join*
             log.error("Error occurred while waiting for all photo processing tasks for diagnosisId: {}", diagnosisId, e);
@@ -130,7 +156,7 @@ public class BeehiveServiceImpl implements BeehiveService {
      * - Saves the analysis results (AnalyzedPhoto, AnalyzedPhotoDisease) to the database.
      * - Updates the original photo's status to SUCCESS or FAIL.
      */
-    private void processSinglePhotoAnalysis(OriginalPhoto originalPhoto, Diagnosis diagnosis) {
+    private DiagnosisApiResponse.DiagnosisResult requestSinglePhotoAnalysis(OriginalPhoto originalPhoto, Diagnosis diagnosis) {
         String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key();
         Long photoId = originalPhoto.getId();
         log.info("[DiagnosisId: {}, PhotoId: {}] Starting processing.", diagnosis.getId(), photoId);
@@ -207,6 +233,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             originalPhoto.updateStatus(DiagnosisStatus.SUCCESS);
             originalPhotoRepository.save(originalPhoto); // Explicitly save status update
             log.info("[DiagnosisId: {}, PhotoId: {}] Successfully processed.", diagnosis.getId(), photoId);
+
+            return diagnosisApiResponse.diagnosis();
         } catch (Exception e) {
             log.error("[DiagnosisId: {}, PhotoId: {}] FAILED to process diagnosis.", diagnosis.getId(), photoId, e);
             // Attempt to update status to FAIL
@@ -248,7 +276,8 @@ public class BeehiveServiceImpl implements BeehiveService {
     }
 
     /**
-     * Saves all detected diseases for a given analyzed photo.
+     * Saves all detected diseases for a given analyzed photo or diagnosis.
+     * If analyzedPhoto is null, the method will create DiagnosisDisease entities instead.
      */
     private void saveAnalyzedPhotoDiseases(AnalyzedPhoto analyzedPhoto, DiagnosisApiResponse.DiagnosisResult result) {
         // Larva diseases
@@ -264,17 +293,23 @@ public class BeehiveServiceImpl implements BeehiveService {
     /**
      * Helper to create and save AnalyzedPhotoDisease only if the count is positive.
      * This method now uses DiseaseRepository to find the Disease entity by its name and stage.
+     * If analyzedPhoto is null, this method will log the disease details without saving them to the database.
      */
     private void saveAnalyzedPhotoDisease(AnalyzedPhoto analyzedPhoto, BeeStage beeStage, DiseaseName diseaseName, Long count) {
         if (count != null && count > 0) {
-            Disease disease = diseaseRepository.findByNameAndStage(diseaseName, beeStage);
+            if (analyzedPhoto != null) {
+                Disease disease = diseaseRepository.findByNameAndStage(diseaseName, beeStage);
 
-            AnalyzedPhotoDisease diseaseRecord = AnalyzedPhotoDisease.builder()
-                .analyzedPhoto(analyzedPhoto)
-                .disease(disease)
-                .count(count)
-                .build();
-            analyzedPhotoDiseaseRepository.save(diseaseRecord);
+                AnalyzedPhotoDisease diseaseRecord = AnalyzedPhotoDisease.builder()
+                    .analyzedPhoto(analyzedPhoto)
+                    .disease(disease)
+                    .count(count)
+                    .build();
+                analyzedPhotoDiseaseRepository.save(diseaseRecord);
+            } else {
+                // Log the summed up disease details without saving them to the database
+                log.info("Summed up disease details: {} {} count: {}", beeStage, diseaseName, count);
+            }
         }
     }
 
@@ -470,6 +505,61 @@ public class BeehiveServiceImpl implements BeehiveService {
         if (totalCount == 0)
             return 0;
         return (double)diseaseCount / totalCount * 100;
+    }
+
+    /**
+     * Sums up all the diagnosis results from multiple photos.
+     * 
+     * @param diagnosisResults List of diagnosis results to sum up
+     * @return A single DiagnosisResult containing the summed up values
+     */
+    private DiagnosisApiResponse.DiagnosisResult sumUpDiagnosisResults(List<DiagnosisApiResponse.DiagnosisResult> diagnosisResults) {
+        // Create a summed up DiagnosisResult
+        long larvaVarroaCount = 0L;
+        long larvaFoulBroodCount = 0L;
+        long larvaChalkBroodCount = 0L;
+        long larvaNormalCount = 0L;
+        long imagoVarroaCount = 0L;
+        long imagoDwvCount = 0L;
+        long imagoNormalCount = 0L;
+
+        for (DiagnosisApiResponse.DiagnosisResult diagnosisResult : diagnosisResults) {
+            if (diagnosisResult != null) {
+                // Sum up larva counts
+                if (diagnosisResult.larva() != null) {
+                    larvaVarroaCount += Optional.ofNullable(diagnosisResult.larva().varroaCount()).orElse(0L);
+                    larvaFoulBroodCount += Optional.ofNullable(diagnosisResult.larva().foulBroodCount()).orElse(0L);
+                    larvaChalkBroodCount += Optional.ofNullable(diagnosisResult.larva().chalkBroodCount()).orElse(0L);
+                    larvaNormalCount += Optional.ofNullable(diagnosisResult.larva().normalCount()).orElse(0L);
+                }
+
+                // Sum up imago counts
+                if (diagnosisResult.imago() != null) {
+                    imagoVarroaCount += Optional.ofNullable(diagnosisResult.imago().varroaCount()).orElse(0L);
+                    imagoDwvCount += Optional.ofNullable(diagnosisResult.imago().dwvCount()).orElse(0L);
+                    imagoNormalCount += Optional.ofNullable(diagnosisResult.imago().normalCount()).orElse(0L);
+                }
+            }
+        }
+
+        // Create summed up result
+        DiagnosisApiResponse.LarvaResult summedLarvaResult = DiagnosisApiResponse.LarvaResult.builder()
+            .varroaCount(larvaVarroaCount)
+            .foulBroodCount(larvaFoulBroodCount)
+            .chalkBroodCount(larvaChalkBroodCount)
+            .normalCount(larvaNormalCount)
+            .build();
+
+        DiagnosisApiResponse.ImagoResult summedImagoResult = DiagnosisApiResponse.ImagoResult.builder()
+            .varroaCount(imagoVarroaCount)
+            .dwvCount(imagoDwvCount)
+            .normalCount(imagoNormalCount)
+            .build();
+
+        return DiagnosisApiResponse.DiagnosisResult.builder()
+            .larva(summedLarvaResult)
+            .imago(summedImagoResult)
+            .build();
     }
 
     private Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds) {
