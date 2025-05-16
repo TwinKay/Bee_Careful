@@ -66,61 +66,18 @@ public class S3FileServiceImpl implements S3FileService {
         }
 
         String fileExtension = validateFileExtension(file.getOriginalFilename(), allowedExtensions);
-
-        String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
-        String s3Key = filePathPrefix.getPrefix() + uniqueFilename;
-
-        // Build metadata entity
-        S3FileMetadata entity = S3FileMetadata.builder()
-            .originalFilename(file.getOriginalFilename())
-            .s3Key(s3Key)
-            .size(file.getSize())
-            // .url(fileUrl)
-            .contentType(file.getContentType()) // Use content type from MultipartFile
-            .status(S3FileStatus.PENDING)
-            .build();
-        s3FileMetadataRepository.save(entity); // Save pending record
+        String originalFilename = file.getOriginalFilename();
+        String contentType = file.getContentType();
+        long fileSize = file.getSize();
 
         try {
-            // Prepare S3 request
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(s3Key)
-                .contentType(file.getContentType()) // Use content type from MultipartFile
-                .contentLength(file.getSize())
-                .build();
-
-            // Upload
-            PutObjectResponse response = s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
-
-            // Check response and update status
-            if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
-                entity.setStatus(S3FileStatus.STORED);
-                log.info("Successfully uploaded file to S3. Key: {}", s3Key);
-            }
-            else {
-                entity.setStatus(S3FileStatus.FAILED);
-                log.error("S3 upload failed for key: {}. Response status: {}", s3Key,
-                    response.sdkHttpResponse() != null ? response.sdkHttpResponse().statusCode() : "N/A");
-                throw new FileUploadFailException();
-            }
-        } catch (S3Exception e) {
-            entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on S3 exception
-            log.error("S3Exception during upload for key {}: {}", s3Key, e.getMessage(), e);
-            // Rethrow or wrap in a custom exception if needed, consistent with noRollbackFor
-            throw e; // Rethrowing S3Exception as per noRollbackFor
+            byte[] fileData = file.getBytes();
+            return uploadToS3(fileData, originalFilename, contentType, fileSize, fileExtension, filePathPrefix);
         } catch (IOException e) {
-            entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on IO exception
-            log.error("IOException reading MultipartFile bytes for key {}: {}", s3Key, e.getMessage(), e);
+            log.error("IOException reading MultipartFile bytes: {}", e.getMessage(), e);
             // TODO: Define a more specific custom exception (e.g., FileReadException)
-            // Rethrow or wrap, consistent with noRollbackFor
-            throw new RuntimeException("Error reading file data: " + e.getMessage(), e); // Rethrowing RuntimeException as per original code
-        } finally {
-            // Save the final status (STORED or FAILED)
-            s3FileMetadataRepository.save(entity);
+            throw new RuntimeException("Error reading file data: " + e.getMessage(), e);
         }
-
-        return entity;
     }
 
     /**
@@ -145,21 +102,35 @@ public class S3FileServiceImpl implements S3FileService {
             // contentType = "application/octet-stream"; // Option: Default content type
         }
 
-        // Validate extension before proceeding
         String fileExtension = validateFileExtension(filename, allowedExtensions);
+        long fileSize = fileData.length;
+
+        return uploadToS3(fileData, filename, contentType, fileSize, fileExtension, filePathPrefix);
+    }
+
+    /**
+     * Common method to handle S3 upload logic for both MultipartFile and byte array sources.
+     * 
+     * @param fileData The file data as byte array
+     * @param originalFilename The original filename
+     * @param contentType The content type of the file
+     * @param fileSize The size of the file in bytes
+     * @param fileExtension The validated file extension
+     * @param filePathPrefix The path prefix for S3 storage
+     * @return The S3FileMetadata entity with upload status
+     */
+    private S3FileMetadata uploadToS3(byte[] fileData, String originalFilename, String contentType, 
+                                     long fileSize, String fileExtension, FilePathPrefix filePathPrefix) {
         // Generate unique filename using the validated extension
         String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
         String s3Key = filePathPrefix.getPrefix() + uniqueFilename;
-        // String fileUrl = generateS3Url(s3Key);
-        long fileSize = fileData.length;
 
         // Build metadata entity
         S3FileMetadata entity = S3FileMetadata.builder()
-            .originalFilename(filename) // Use the provided filename
+            .originalFilename(originalFilename)
             .s3Key(s3Key)
             .size(fileSize)
-            // .url(fileUrl)
-            .contentType(contentType) // Use the provided content type
+            .contentType(contentType)
             .status(S3FileStatus.PENDING)
             .build();
         s3FileMetadataRepository.save(entity); // Save pending record
@@ -169,17 +140,17 @@ public class S3FileServiceImpl implements S3FileService {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(s3Key)
-                .contentType(contentType) // Use the provided content type
+                .contentType(contentType)
                 .contentLength(fileSize)
                 .build();
 
             // Upload
-            PutObjectResponse response = s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData)); // Use byte array directly
+            PutObjectResponse response = s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData));
 
             // Check response and update status
             if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
                 entity.setStatus(S3FileStatus.STORED);
-                log.info("Successfully uploaded byte data to S3. Key: {}", s3Key);
+                log.info("Successfully uploaded file to S3. Key: {}", s3Key);
             }
             else {
                 entity.setStatus(S3FileStatus.FAILED);
@@ -190,11 +161,9 @@ public class S3FileServiceImpl implements S3FileService {
         } catch (S3Exception e) {
             entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on S3 exception
             log.error("S3Exception during upload for key {}: {}", s3Key, e.getMessage(), e);
-            // Rethrow or wrap, consistent with noRollbackFor
+            // Rethrow or wrap in a custom exception if needed, consistent with noRollbackFor
             throw e; // Rethrowing S3Exception as per noRollbackFor
-        }
-        // No IOException expected here as we already have the bytes
-        finally {
+        } finally {
             // Save the final status (STORED or FAILED)
             s3FileMetadataRepository.save(entity);
         }
