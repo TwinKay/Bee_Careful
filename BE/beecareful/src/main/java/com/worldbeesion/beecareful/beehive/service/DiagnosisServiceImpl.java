@@ -20,11 +20,13 @@ import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
@@ -35,14 +37,16 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @RequiredArgsConstructor
 public class DiagnosisServiceImpl implements DiagnosisService {
-
-    @Resource(lookup = "diagnosisWebClient")
-    private final WebClient webClient;
-
+    
     @Value("${ai-server.diagnosis-path}")
     private String aiDiagnosisPath;
+    @Value("${ai-server.baseUrl}")
+    private String aiServerBaseUrl;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final WebClient webClient = WebClient.builder()
+        .baseUrl(aiServerBaseUrl)
+        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(128 * 1024 * 1024)) // 128MB buffer
+        .build();
 
     private final S3PresignService s3PresignService;
     private final S3FileMetadataRepository s3FileMetadataRepository;
