@@ -18,12 +18,17 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] 백그라운드 메시지 수신:', payload);
 
-  const notificationTitle = payload.notification.title;
+  const notificationTitle = payload.alert.title;
   const notificationOptions = {
-    body: payload.notification.body,
+    body: payload.alert.body,
     icon: '/icons/beecareful-192x192.png', // PWA 아이콘 경로
     tag: payload.messageId || 'fcm-notification',
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close(); // Close the notification
+  clients.openWindow('/'); // Open a specific page
 });
