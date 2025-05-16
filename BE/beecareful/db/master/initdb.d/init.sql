@@ -30,7 +30,7 @@ CREATE TABLE `apiaries`
 );
 
 CREATE TABLE `member_device` (
-    `member_device_id`	bigint	NOT NULL,
+    `member_device_id`	bigint	NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `member_id`	bigint	NOT NULL,
     `fcm_token`	varchar(255)	NOT NULL
 );
