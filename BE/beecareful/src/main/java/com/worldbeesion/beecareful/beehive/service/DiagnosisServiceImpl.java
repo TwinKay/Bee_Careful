@@ -391,7 +391,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         List<DiagnosisResponseDto> response = new ArrayList<>();
 
         for (Photo photo : photos) {
-            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutOriginPhotoUrl(photo.filename(), photo.contentType());
+            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutOriginPhotoUrl(photo.filename(), photo.contentType(), photo.expectedSize());
             S3FileMetadata s3FileMetadata = putUrlDto.s3FileMetadata();
             String putUrl = putUrlDto.preSignedUrl();
 

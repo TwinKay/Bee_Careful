@@ -46,7 +46,7 @@ public class S3PresignService {
 
 
     @Transactional
-    public GeneratePutUrlResponse generatePutOriginPhotoUrl(String originalFilename, String contentType) {
+    public GeneratePutUrlResponse generatePutOriginPhotoUrl(String originalFilename, String contentType, Long expectedSize) {
 
         String s3Key = FilePathPrefix.BEEHIVE_ORIGIN.getPrefix() + generateUniqueFilename(contentType.split("/")[1] );
 
@@ -64,6 +64,7 @@ public class S3PresignService {
         S3FileMetadata s3FileMetadata = S3FileMetadata.builder()
                 .s3Key(s3Key)
                 .originalFilename(originalFilename)
+                .size(expectedSize)
                 .status(S3FileStatus.PENDING)
                 .contentType(contentType)
                 .build();
