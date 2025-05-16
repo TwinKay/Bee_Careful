@@ -3,6 +3,8 @@ package com.worldbeesion.beecareful.beehive.repository;
 import com.worldbeesion.beecareful.beehive.model.dto.OriginalPhotoStatusDto;
 import com.worldbeesion.beecareful.beehive.model.entity.Diagnosis;
 import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
+import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,5 +25,5 @@ public interface OriginalPhotoRepository extends JpaRepository<OriginalPhoto,Lon
 
     List<OriginalPhoto> findAllByDiagnosis(Diagnosis diagnosis);
 
-    OriginalPhoto findByS3FileMetadata_Id(Long s3FileMetadataId);
+    OriginalPhoto findByS3FileMetadata(S3FileMetadata s3FileMetadata);
 }

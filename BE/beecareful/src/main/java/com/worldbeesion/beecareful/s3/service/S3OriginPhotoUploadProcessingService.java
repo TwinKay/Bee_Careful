@@ -40,7 +40,7 @@ public class S3OriginPhotoUploadProcessingService {
      */
     @Transactional
     public OriginalPhoto updateOriginPhotoFileStatus(S3FileMetadata metadata) {
-        OriginalPhoto originalPhoto = originalPhotoRepository.findByS3FileMetadata_Id(metadata.getId());
+        OriginalPhoto originalPhoto = originalPhotoRepository.findByS3FileMetadata(metadata);
         if (originalPhoto == null) {
             log.warn("No OriginalPhoto found for S3FileMetadata with key: {}", metadata.getS3Key());
             throw new S3EventProcessingException(); // TODO: implement metadata not found exception
