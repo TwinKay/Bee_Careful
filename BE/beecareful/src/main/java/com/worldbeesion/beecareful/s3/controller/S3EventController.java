@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
+import com.worldbeesion.beecareful.s3.model.enums.S3EventType;
 import com.worldbeesion.beecareful.s3.service.S3EventService; // Import the service interface
 
 import lombok.extern.slf4j.Slf4j;
@@ -55,7 +56,12 @@ public class S3EventController {
 			eventPayload.getObjectKey(),
 			eventPayload.getEventName());
 
-		s3EventService.processS3Event(eventPayload);
+		S3EventType eventType = S3EventType.valueOf(eventPayload.getEventName());
+		if (eventType == S3EventType.OBJECT_CREATED_PUT)
+			s3EventService.processS3PutEvent(eventPayload);
+		else
+			throw new IllegalArgumentException("Unsupported event type: " + eventPayload.getEventName()); // TODO: exception
+
 
 		return ResponseEntity.ok("Event processed successfully for: " + eventPayload.getObjectKey());
 	}

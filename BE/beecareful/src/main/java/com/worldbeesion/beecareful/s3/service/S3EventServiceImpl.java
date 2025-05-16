@@ -42,7 +42,6 @@ public class S3EventServiceImpl implements S3EventService {
 		this.s3BucketName = s3BucketName;
 	}
 
-	private static final String EXPECTED_EVENT_NAME = "ObjectCreated:Put";
 	/**
 	 * S3에 업로드된 파일의 실제 크기와 예상 크기 간의 허용 가능한 최대 차이 백분율
 	 * 예상 크기와 실제 크기의 차이가 20%를 초과하면 InvalidS3EventException이 발생함
@@ -52,7 +51,7 @@ public class S3EventServiceImpl implements S3EventService {
 
 	@Override
 	@Transactional // Make the method transactional (optional but good practice for DB updates)
-	public void processS3Event(S3EventPayload eventPayload) {
+	public void processS3PutEvent(S3EventPayload eventPayload) {
 		log.info("Processing S3 event for Key: {}", eventPayload.getObjectKey());
 
 		// 1. Validate the payload
@@ -73,12 +72,6 @@ public class S3EventServiceImpl implements S3EventService {
 		if (!s3BucketName.equals(eventPayload.getBucketName())) {
 			String errorMsg = String.format("Bucket name mismatch. Received: %s, Expected: %s",
 				eventPayload.getBucketName(), s3BucketName);
-			log.warn(errorMsg);
-			throw new InvalidS3EventException();
-		}
-		if (!EXPECTED_EVENT_NAME.equals(eventPayload.getEventName())) {
-			String errorMsg = String.format("Invalid event name. Received: %s, Expected: %s",
-				eventPayload.getEventName(), EXPECTED_EVENT_NAME);
 			log.warn(errorMsg);
 			throw new InvalidS3EventException();
 		}
