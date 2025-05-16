@@ -105,7 +105,9 @@ public class BeehiveServiceImpl implements BeehiveService {
 
         // 3. Process each photo asynchronously
         List<CompletableFuture<Void>> futures = originalPhotos.stream()
-            .map(originalPhoto -> processSinglePhotoAnalysis(originalPhoto, diagnosis))
+            .map(originalPhoto ->
+                CompletableFuture.runAsync(() -> processSinglePhotoAnalysis(originalPhoto, diagnosis))
+            )
             .toList();
 
         // 4. Wait for all asynchronous tasks to complete
@@ -128,103 +130,97 @@ public class BeehiveServiceImpl implements BeehiveService {
      * - Saves the analysis results (AnalyzedPhoto, AnalyzedPhotoDisease) to the database.
      * - Updates the original photo's status to SUCCESS or FAIL.
      */
-    private CompletableFuture<Void> processSinglePhotoAnalysis(OriginalPhoto originalPhoto, Diagnosis diagnosis) {
-        // supplyAsync runs the lambda in a separate thread from the common ForkJoinPool (or a custom executor if provided)
-        return CompletableFuture.supplyAsync(() -> {
-            String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key();
-            Long photoId = originalPhoto.getId();
-            log.info("[DiagnosisId: {}, PhotoId: {}] Starting processing.", diagnosis.getId(), photoId);
+    private void processSinglePhotoAnalysis(OriginalPhoto originalPhoto, Diagnosis diagnosis) {
+        String originalS3Key = originalPhoto.getS3FileMetadata().getS3Key();
+        Long photoId = originalPhoto.getId();
+        log.info("[DiagnosisId: {}, PhotoId: {}] Starting processing.", diagnosis.getId(), photoId);
 
-            try {
-                // Note: This database update runs within this async task's transaction (if any).
-                originalPhoto.updateStatus(DiagnosisStatus.ANALYZING);
-                originalPhotoRepository.save(originalPhoto); // Explicitly save status update
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Status set to ANALYZING.", diagnosis.getId(), photoId);
+        try {
+            // Note: This database update runs within this async task's transaction (if any).
+            originalPhoto.updateStatus(DiagnosisStatus.ANALYZING);
+            originalPhotoRepository.save(originalPhoto); // Explicitly save status update
+            log.debug("[DiagnosisId: {}, PhotoId: {}] Status set to ANALYZING.", diagnosis.getId(), photoId);
 
-                // Timeout is important to prevent indefinite blocking.
-                DiagnosisApiResponse diagnosisApiResponse = aiDiagnosisService.analyzePhoto(originalS3Key)
-                    .block(Duration.ofSeconds(120)); // Increased timeout for AI call + parsing
+            // Timeout is important to prevent indefinite blocking.
+            DiagnosisApiResponse diagnosisApiResponse = aiDiagnosisService.analyzePhoto(originalS3Key)
+                .block(Duration.ofSeconds(120)); // Increased timeout for AI call + parsing
 
-                if (diagnosisApiResponse == null) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] AI analysis returned no data.", diagnosis.getId(), photoId);
-                    throw new IllegalStateException("AI analysis returned null data.");
-                }
+            if (diagnosisApiResponse == null) {
+                log.error("[DiagnosisId: {}, PhotoId: {}] AI analysis returned no data.", diagnosis.getId(), photoId);
+                throw new IllegalStateException("AI analysis returned null data.");
+            }
 
-                DiagnosisApiResponse.DiagnosisResult diagResult = diagnosisApiResponse.diagnosis();
-                String analyzedImageS3Key = diagnosisApiResponse.analyzedImageS3Key();
+            DiagnosisApiResponse.DiagnosisResult diagResult = diagnosisApiResponse.diagnosis();
+            String analyzedImageS3Key = diagnosisApiResponse.analyzedImageS3Key();
 
-                if (diagResult == null) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] DiagnosisResult from AI analysis is null.", diagnosis.getId(), photoId);
-                    throw new IllegalStateException("AI analysis returned null DiagnosisResult.");
-                }
-                if (analyzedImageS3Key == null || analyzedImageS3Key.isEmpty()) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] Analyzed image S3 key from AI analysis is null or empty.", diagnosis.getId(), photoId);
-                    throw new IllegalStateException("AI analysis returned null or empty analyzed image S3 key.");
-                }
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Received AI analysis data with analyzed image S3 key: {}",
+            if (diagResult == null) {
+                log.error("[DiagnosisId: {}, PhotoId: {}] DiagnosisResult from AI analysis is null.", diagnosis.getId(), photoId);
+                throw new IllegalStateException("AI analysis returned null DiagnosisResult.");
+            }
+            if (analyzedImageS3Key == null || analyzedImageS3Key.isEmpty()) {
+                log.error("[DiagnosisId: {}, PhotoId: {}] Analyzed image S3 key from AI analysis is null or empty.", diagnosis.getId(), photoId);
+                throw new IllegalStateException("AI analysis returned null or empty analyzed image S3 key.");
+            }
+            log.debug("[DiagnosisId: {}, PhotoId: {}] Received AI analysis data with analyzed image S3 key: {}",
+                diagnosis.getId(), photoId, analyzedImageS3Key);
+
+            // Get S3 metadata for the analyzed image using the S3 key returned from the AI service
+            S3FileMetadata analyzedImageMetadata = s3FileMetadataRepository.findByS3Key(analyzedImageS3Key);
+            if (analyzedImageMetadata == null) {
+                log.info("[DiagnosisId: {}, PhotoId: {}] Creating new S3FileMetadata for S3 key: {}",
                     diagnosis.getId(), photoId, analyzedImageS3Key);
 
-                // Get S3 metadata for the analyzed image using the S3 key returned from the AI service
-                S3FileMetadata analyzedImageMetadata = s3FileMetadataRepository.findByS3Key(analyzedImageS3Key);
-                if (analyzedImageMetadata == null) {
-                    log.info("[DiagnosisId: {}, PhotoId: {}] Creating new S3FileMetadata for S3 key: {}",
-                        diagnosis.getId(), photoId, analyzedImageS3Key);
+                // Create a new S3FileMetadata entry
+                analyzedImageMetadata = S3FileMetadata.builder()
+                    .originalFilename(extractFilenameFromS3Key(analyzedImageS3Key))
+                    .s3Key(analyzedImageS3Key)
+                    .url(null) // URL will be generated when needed
+                    .contentType("image/jpeg") // Set the content type to image/jpeg as required
+                    .status(S3FileStatus.STORED) // Mark as STORED (completed)
+                    .build();
 
-                    // Create a new S3FileMetadata entry
-                    analyzedImageMetadata = S3FileMetadata.builder()
-                        .originalFilename(extractFilenameFromS3Key(analyzedImageS3Key))
-                        .s3Key(analyzedImageS3Key)
-                        .url(null) // URL will be generated when needed
-                        .contentType("image/jpeg") // Set the content type to image/jpeg as required
-                        .status(S3FileStatus.STORED) // Mark as STORED (completed)
-                        .build();
-
-                    analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
-                    log.info("[DiagnosisId: {}, PhotoId: {}] Created new S3FileMetadata with ID: {} for S3 key: {}",
-                        diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
-                }
-                else {
-                    // Update existing metadata if needed
-                    analyzedImageMetadata.setStatus(S3FileStatus.STORED);
-                    analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
-                    log.info("[DiagnosisId: {}, PhotoId: {}] Updated existing S3FileMetadata with ID: {} for S3 key: {}",
-                        diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
-                }
-                log.info("[DiagnosisId: {}, PhotoId: {}] Retrieved metadata for analyzed image with S3 Key: {}",
-                    diagnosis.getId(), photoId, analyzedImageMetadata.getS3Key());
-
-                // Create and save AnalyzedPhoto entity
-                AnalyzedPhoto analyzedPhoto = createAnalyzedPhotoEntity(originalPhoto, diagnosis, analyzedImageMetadata, diagResult);
-                analyzedPhotoRepository.save(analyzedPhoto);
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhoto entity with ID: {}",
-                    diagnosis.getId(), photoId, analyzedPhoto.getId());
-
-                // Save associated disease details
-                saveAnalyzedDiseases(analyzedPhoto, diagResult);
-                log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhotoDisease entities.", diagnosis.getId(), photoId);
-
-                // Update original photo status to SUCCESS
-                originalPhoto.updateStatus(DiagnosisStatus.SUCCESS);
-                originalPhotoRepository.save(originalPhoto); // Explicitly save status update
-                log.info("[DiagnosisId: {}, PhotoId: {}] Successfully processed.", diagnosis.getId(), photoId);
-
-                return null; // Indicate success for this CompletableFuture
-
-            } catch (Exception e) {
-                log.error("[DiagnosisId: {}, PhotoId: {}] FAILED to process diagnosis.", diagnosis.getId(), photoId, e);
-                // Attempt to update status to FAIL
-                try {
-                    originalPhoto.updateStatus(DiagnosisStatus.FAIL);
-                    originalPhotoRepository.save(originalPhoto); // Explicitly save status update
-                } catch (Exception dbEx) {
-                    log.error("[DiagnosisId: {}, PhotoId: {}] CRITICAL: Failed to update originalPhoto status to FAIL after processing error.",
-                        diagnosis.getId(), photoId, dbEx);
-                }
-                // Allow the CompletableFuture to complete exceptionally.
-                // This exception will be caught by the .join() in the main runDiagnosis method if it's a direct cause of failure.
-                throw new RuntimeException("Failed processing photoId " + photoId + " for diagnosisId " + diagnosis.getId(), e);
+                analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
+                log.info("[DiagnosisId: {}, PhotoId: {}] Created new S3FileMetadata with ID: {} for S3 key: {}",
+                    diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
             }
-        });
+            else {
+                // Update existing metadata if needed
+                analyzedImageMetadata.setStatus(S3FileStatus.STORED);
+                analyzedImageMetadata = s3FileMetadataRepository.save(analyzedImageMetadata);
+                log.info("[DiagnosisId: {}, PhotoId: {}] Updated existing S3FileMetadata with ID: {} for S3 key: {}",
+                    diagnosis.getId(), photoId, analyzedImageMetadata.getId(), analyzedImageS3Key);
+            }
+            log.info("[DiagnosisId: {}, PhotoId: {}] Retrieved metadata for analyzed image with S3 Key: {}",
+                diagnosis.getId(), photoId, analyzedImageMetadata.getS3Key());
+
+            // Create and save AnalyzedPhoto entity
+            AnalyzedPhoto analyzedPhoto = createAnalyzedPhotoEntity(originalPhoto, diagnosis, analyzedImageMetadata, diagResult);
+            analyzedPhotoRepository.save(analyzedPhoto);
+            log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhoto entity with ID: {}",
+                diagnosis.getId(), photoId, analyzedPhoto.getId());
+
+            // Save associated disease details
+            saveAnalyzedDiseases(analyzedPhoto, diagResult);
+            log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhotoDisease entities.", diagnosis.getId(), photoId);
+
+            // Update original photo status to SUCCESS
+            originalPhoto.updateStatus(DiagnosisStatus.SUCCESS);
+            originalPhotoRepository.save(originalPhoto); // Explicitly save status update
+            log.info("[DiagnosisId: {}, PhotoId: {}] Successfully processed.", diagnosis.getId(), photoId);
+        } catch (Exception e) {
+            log.error("[DiagnosisId: {}, PhotoId: {}] FAILED to process diagnosis.", diagnosis.getId(), photoId, e);
+            // Attempt to update status to FAIL
+            try {
+                originalPhoto.updateStatus(DiagnosisStatus.FAIL);
+                originalPhotoRepository.save(originalPhoto); // Explicitly save status update
+            } catch (Exception dbEx) {
+                log.error("[DiagnosisId: {}, PhotoId: {}] CRITICAL: Failed to update originalPhoto status to FAIL after processing error.",
+                    diagnosis.getId(), photoId, dbEx);
+            }
+            // Allow the CompletableFuture to complete exceptionally.
+            // This exception will be caught by the .join() in the main runDiagnosis method if it's a direct cause of failure.
+            throw new RuntimeException("Failed processing photoId " + photoId + " for diagnosisId " + diagnosis.getId(), e);
+        }
     }
 
     private AnalyzedPhoto createAnalyzedPhotoEntity(
