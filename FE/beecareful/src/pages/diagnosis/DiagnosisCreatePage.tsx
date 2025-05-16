@@ -7,7 +7,7 @@ import type { ImageMetadataType } from '@/types/diagnosis';
 import { removeMetadata } from '@/utils/removeMetadata';
 import { useEffect, useState } from 'react';
 import { uploadImages } from '@/services/s3';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const DiagnosisCreatePage = () => {
   const params = useParams();
@@ -16,6 +16,8 @@ const DiagnosisCreatePage = () => {
   const [metadata, setMetadata] = useState<ImageMetadataType[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isSucessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const route = useNavigate();
 
   const { mutate: requestDiagnosis } = useRequestDiagnosis();
 
@@ -87,7 +89,7 @@ const DiagnosisCreatePage = () => {
             },
             {
               onSuccess: () => {
-                console.log('Images uploaded successfully');
+                setIsSuccessModalOpen(true);
               },
               onError: (error) => {
                 console.error('Image upload failed:', error);
@@ -95,7 +97,6 @@ const DiagnosisCreatePage = () => {
               },
             },
           );
-          alert('진단 요청이 완료되었습니다.');
         },
         onError: (error) => {
           console.error('Diagnosis request failed:', error);
@@ -194,6 +195,20 @@ const DiagnosisCreatePage = () => {
         }}
         title="사진을 삭제하시겠어요?"
         confirmText="삭제"
+      />
+      <ConfirmModal
+        isOpen={isSucessModalOpen}
+        onClose={() => {
+          setIsSuccessModalOpen(false);
+          route('/');
+        }}
+        onConfirm={() => {
+          setIsSuccessModalOpen(false);
+          route('/');
+        }}
+        title="사진 업로드가 완료되었습니다."
+        confirmText="확인"
+        description="업로드한 사진은 진단 결과와 함께 제공됩니다."
       />
     </div>
   );
