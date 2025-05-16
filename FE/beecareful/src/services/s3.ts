@@ -26,7 +26,7 @@ export const uploadImages = async (
       formData.append('file', imageMap[filename], filename);
 
       fetch(preSignedUrl, {
-        method: 'POST',
+        method: 'PUT',
         body: formData,
       })
         .then((response) => response.json())
