@@ -28,6 +28,10 @@ export const uploadImages = async (
       fetch(preSignedUrl, {
         method: 'PUT',
         body: formData,
+        headers: {
+          'Content-Type': imageMap[filename].type,
+          'x-amz-acl': 'public-read',
+        },
       })
         .then((response) => response.json())
         .catch((error) => {
