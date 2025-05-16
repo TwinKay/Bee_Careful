@@ -1,5 +1,5 @@
 import type { MessagePayload } from 'firebase/messaging';
-import { getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { messaging } from '@/services/firebase';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/apis/api';
@@ -39,6 +39,22 @@ export function useSaveFCMToken() {
 }
 
 // 포그라운드 메시지 처리를 위한 리스너
+// export const setupMessageListener = (callback: (payload: MessagePayload) => void) => {
+//   return onMessage(messaging, callback);
+// };
 export const setupMessageListener = (callback: (payload: MessagePayload) => void) => {
-  return onMessage(messaging, callback);
+  try {
+    const messaging = getMessaging();
+
+    // onMessage는 앱이 포그라운드일 때만 작동
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('FCM message received in foreground:', payload);
+      callback(payload);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('FCM message listener setup failed:', error);
+    return undefined;
+  }
 };
