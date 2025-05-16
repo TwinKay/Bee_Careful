@@ -7,8 +7,11 @@ import type { ImageMetadataType } from '@/types/diagnosis';
 import { removeMetadata } from '@/utils/removeMetadata';
 import { useEffect, useState } from 'react';
 import { uploadImages } from '@/services/s3';
+import { useParams } from 'react-router-dom';
 
 const DiagnosisCreatePage = () => {
+  const params = useParams();
+  const { id: beehiveId } = params;
   const [images, setImages] = useState<File[]>([]);
   const [metadata, setMetadata] = useState<ImageMetadataType[]>([]);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -62,10 +65,15 @@ const DiagnosisCreatePage = () => {
       return;
     }
 
+    if (!beehiveId) {
+      alert('벌통 ID가 없습니다.');
+      return;
+    }
+
     // send metadata to server
     requestDiagnosis(
       {
-        beeHiveId: 1,
+        beeHiveId: beehiveId,
         count: images.length,
         photos: metadata,
       },

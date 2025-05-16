@@ -44,7 +44,7 @@ const router = createBrowserRouter([
         ],
       },
       {
-        path: ROUTES.DIAGNOSIS_CREATE,
+        path: ROUTES.DIAGNOSIS_CREATE(':id'),
         Component: () => MainLayout('ri-information-line'),
         children: [
           {

@@ -66,7 +66,7 @@ const BottomArea = ({
       <div className="flex gap-4">
         <div className="w-1/2">
           <Link
-            to={selectedBeehive ? ROUTES.DIAGNOSIS_CREATE : '#'}
+            to={selectedBeehive ? ROUTES.DIAGNOSIS_CREATE(selectedBeehive.beehiveId) : '#'}
             onClick={(e) => {
               if (!onCompleteDiagnosis()) {
                 e.preventDefault();
