@@ -2,13 +2,10 @@ package com.worldbeesion.beecareful.s3.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import com.worldbeesion.beecareful.beehive.model.entity.Diagnosis;
 import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
-import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
-import com.worldbeesion.beecareful.beehive.service.DiagnosisService;
+import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
 import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
@@ -17,30 +14,14 @@ import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-
 @Service // Mark this as a Spring service bean
 @Slf4j
 public class S3EventServiceImpl implements S3EventService {
 
 	private final S3FileMetadataRepository s3FileMetadataRepository;
-	private final OriginalPhotoRepository originalPhotoRepository;
-	private final DiagnosisService diagnosisService;
+	private final S3OriginPhotoUploadProcessingService s3OriginPhotoUploadProcessingService;
 
 	private final String s3BucketName;
-
-	public S3EventServiceImpl(
-		S3FileMetadataRepository s3FileMetadataRepository,
-		OriginalPhotoRepository originalPhotoRepository,
-		DiagnosisService diagnosisService,
-		@Value("${aws.s3.bucketName}") String s3BucketName
-	) {
-		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
-		this.s3FileMetadataRepository = s3FileMetadataRepository;
-		this.originalPhotoRepository = originalPhotoRepository;
-		this.diagnosisService = diagnosisService;
-		this.s3BucketName = s3BucketName;
-	}
 
 	/**
 	 * S3에 업로드된 파일의 실제 크기와 예상 크기 간의 허용 가능한 최대 차이 백분율
@@ -48,22 +29,38 @@ public class S3EventServiceImpl implements S3EventService {
 	 */
 	private static final double MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
 
+	public S3EventServiceImpl(
+		S3FileMetadataRepository s3FileMetadataRepository,
+		S3OriginPhotoUploadProcessingService s3OriginPhotoUploadProcessingService,
+		@Value("${aws.s3.bucketName}") String s3BucketName
+	) {
+		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
+		this.s3FileMetadataRepository = s3FileMetadataRepository;
+		this.s3OriginPhotoUploadProcessingService = s3OriginPhotoUploadProcessingService;
+		this.s3BucketName = s3BucketName;
+	}
 
 	@Override
-	@Transactional // Make the method transactional (optional but good practice for DB updates)
 	public void processS3PutEvent(S3EventPayload eventPayload) {
 		log.info("Processing S3 event for Key: {}", eventPayload.getObjectKey());
 
 		// 1. Validate the payload
 		validateEventPayload(eventPayload);
 
-		// 2. Find Metadata and Validate Size
-		S3FileMetadata metadata = findAndValidateMetadata(eventPayload);
+		// only when ORIGIN PHOTO RECEIVED
+		if (eventPayload.getObjectKey().startsWith(FilePathPrefix.BEEHIVE_ORIGIN.getPrefix())) {
 
-		// 3. Update the status of the upload.
-		updateFileStatus(metadata);
+			// 2. Find Metadata and Validate Size
+			S3FileMetadata metadata = findAndValidateMetadata(eventPayload);
 
-		log.info("Successfully processed S3 event for Key: {}", eventPayload.getObjectKey());
+			// 3. Update the status of the upload.
+			OriginalPhoto originalPhoto = s3OriginPhotoUploadProcessingService.updateOriginPhotoFileStatus(metadata);
+
+			// 4. Check if all Origin Photos are uploaded
+			s3OriginPhotoUploadProcessingService.checkUploadStatusOfOriginPhotosOfTheDiagnosisAndRunDiagnosis(originalPhoto);
+
+			log.info("Successfully processed S3 event for Key: {}", eventPayload.getObjectKey());
+		}
 	}
 
 	private void validateEventPayload(S3EventPayload eventPayload) {
@@ -127,7 +124,6 @@ public class S3EventServiceImpl implements S3EventService {
 			log.debug("File size validated successfully for Key: {} (both expected and received are 0).", eventPayload.getObjectKey());
 		}
 
-
 		// Check if the file is already processed
 		if (metadata.getStatus() == S3FileStatus.STORED) {
 			log.warn("Received duplicate S3 event for already stored file: {}", eventPayload.getObjectKey());
@@ -136,45 +132,6 @@ public class S3EventServiceImpl implements S3EventService {
 			throw new InvalidS3EventException();
 		}
 
-
 		return metadata;
-	}
-
-	private void updateFileStatus(S3FileMetadata metadata) {
-		// Find the OriginalPhoto associated with this S3FileMetadata
-		OriginalPhoto originalPhoto = originalPhotoRepository.findByS3FileMetadata_Id(metadata.getId());
-		if (originalPhoto == null) {
-			log.warn("No OriginalPhoto found for S3FileMetadata with key: {}", metadata.getS3Key());
-			return;
-		}
-
-		// Get the diagnosis ID
-		Diagnosis diagnosis = originalPhoto.getDiagnosis();
-		log.info("Found diagnosis ID: {} for S3FileMetadata with key: {}", diagnosis.getId(), metadata.getS3Key());
-
-		// Get all original photos for this diagnosis
-		List<OriginalPhoto> allPhotosForDiagnosis = originalPhotoRepository.findAllByDiagnosis(diagnosis);
-		log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosis.getId());
-
-		metadata.setStatus(S3FileStatus.STORED);
-		s3FileMetadataRepository.save(metadata); // Save the updated entity
-		log.info("Updated status to STORED for Key: {}", metadata.getS3Key());
-
-		// Check if all photos have been uploaded (their S3FileMetadata status is STORED)
-		boolean allPhotosUploaded = true;
-		for (OriginalPhoto photo : allPhotosForDiagnosis) {
-			if (photo.getS3FileMetadata().getStatus() != S3FileStatus.STORED) {
-				allPhotosUploaded = false;
-				break;
-			}
-		}
-
-		// TODO: prevent duplicate call with lock or whatever
-		if (allPhotosUploaded) {
-			log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosis.getId());
-			diagnosisService.runDiagnosis(diagnosis.getId());
-		} else {
-			log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosis.getId());
-		}
 	}
 }
