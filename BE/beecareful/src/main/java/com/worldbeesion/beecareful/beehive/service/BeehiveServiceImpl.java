@@ -1,7 +1,5 @@
 package com.worldbeesion.beecareful.beehive.service;
 
-
-import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
 import com.worldbeesion.beecareful.beehive.exception.BeehiveNotFoundException;
 import com.worldbeesion.beecareful.beehive.exception.DirectionDuplicateException;
 import com.worldbeesion.beecareful.beehive.exception.DirectionNullException;
@@ -12,29 +10,24 @@ import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
 import com.worldbeesion.beecareful.member.model.Members;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
-import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
-import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
-import com.worldbeesion.beecareful.s3.service.S3FileService;
-import com.worldbeesion.beecareful.s3.service.S3PresignService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
-
 @Service
 @RequiredArgsConstructor
-public class BeehiveServiceImpl implements BeehiveService{
+@Slf4j
+public class BeehiveServiceImpl implements BeehiveService {
 
-    private final S3FileService s3FileService;
-    private final S3PresignService s3PresignService;
+    private final DiagnosisService diagnosisService;
     private final BeehiveRepository beehiveRepository;
     private final DiagnosisRepository diagnosisRepository;
-    private final OriginalPhotoRepository originalPhotoRepository;
     private final ApiaryRepository apiaryRepository;
     private final MembersRepository membersRepository;
     private final AnalyzedPhotoRepository analyzedPhotoRepository;
@@ -49,21 +42,22 @@ public class BeehiveServiceImpl implements BeehiveService{
         Long yDirection = beehiveRequestDto.yDirection();
 
         Long memberId = userDetails.getMemberId();
-        Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        Members members = membersRepository.findById(memberId)
+            .orElseThrow(MemberNotFoundException::new);
 
         Apiary apiary = apiaryRepository.findByMembers(members);
 
         Beehive beehive = Beehive.builder()
-                .apiary(apiary)
-                .nickname(nickname)
-                .xDirection(xDirection)
-                .yDirection(yDirection)
-                .isInfected(false)
-                .build();
+            .apiary(apiary)
+            .nickname(nickname)
+            .xDirection(xDirection)
+            .yDirection(yDirection)
+            .isInfected(false)
+            .build();
 
         beehiveRepository.save(beehive);
+        log.info("Added new beehive '{}' with ID: {} for member ID: {}", nickname, beehive.getId(), memberId);
     }
-
 
     @Override
     public List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails) {
@@ -74,34 +68,34 @@ public class BeehiveServiceImpl implements BeehiveService{
         List<BeehiveDiagnosisProjection> beehiveList = beehiveRepository.findAllBeehiveDto(apiary.getId());
 
         List<Long> diagnosisIds = beehiveList.stream()
-                .map(BeehiveDiagnosisProjection::getLastDiagnosisId)
-                .filter(Objects::nonNull)
-                .toList();
+            .map(BeehiveDiagnosisProjection::getLastDiagnosisId)
+            .filter(Objects::nonNull)
+            .toList();
 
-        Map<Long, Long> statusMap = getStatusEachBeehive(diagnosisIds);
+        Map<Long, Long> statusMap = diagnosisService.getStatusesOfDiagnoses(diagnosisIds);
 
         return beehiveList.stream()
-                .map(dto -> new AllBeehiveResponseDto(
-                        dto.getBeehiveId(),
-                        dto.getNickname(),
-                        dto.getCreatedAt(),
-                        dto.getXDirection(),
-                        dto.getYDirection(),
-                        dto.getHornetAppearedAt(),
-                        dto.getIsInfected(),
-                        dto.getRecordCreatedAt(),
-                        dto.getLastDiagnosedAt(),
-                        dto.getLastDiagnosisId(),
-                        statusMap.get(dto.getLastDiagnosisId())
-                ))
-                .toList();
+            .map(dto -> new AllBeehiveResponseDto(
+                dto.getBeehiveId(),
+                dto.getNickname(),
+                dto.getCreatedAt(),
+                dto.getXDirection(),
+                dto.getYDirection(),
+                dto.getHornetAppearedAt(),
+                dto.getIsInfected(),
+                dto.getRecordCreatedAt(),
+                dto.getLastDiagnosedAt(),
+                dto.getLastDiagnosisId(),
+                statusMap.get(dto.getLastDiagnosisId())
+            ))
+            .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month, UserDetailsImpl userDetails) {
         Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
-        if(beehive == null || beehive.getDeletedAt() != null) {
+        if (beehive == null || beehive.getDeletedAt() != null) {
             throw new BeehiveNotFoundException();
         }
 
@@ -109,7 +103,7 @@ public class BeehiveServiceImpl implements BeehiveService{
         Apiary apiary = apiaryRepository.findByMembers(members);
         boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
-        if(!isExist){
+        if (!isExist) {
             throw new BeehiveNotFoundException();
         }
 
@@ -117,24 +111,25 @@ public class BeehiveServiceImpl implements BeehiveService{
         List<Diagnosis> diagnosisList = diagnosisRepository.findRecentDiagnosesByBeehiveId(beehiveId, startDate);
 
         List<Long> diagnosisIds = new ArrayList<>();
-        for(Diagnosis diagnosis : diagnosisList) {
+        for (Diagnosis diagnosis : diagnosisList) {
             diagnosisIds.add(diagnosis.getId());
         }
 
         List<AnalyzedPhotoResultDto> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisIdIn(diagnosisIds);
 
         List<Long> analyzedPhotoIdList = new ArrayList<>();
-        for(AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
+        for (AnalyzedPhotoResultDto analyzedPhotoResultDto : analyzedPhotoIds) {
             analyzedPhotoIdList.add(analyzedPhotoResultDto.analyzedPhotoId());
         }
 
-
-        List<DiagnosisResultProjection> diagnosisResultList = analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(analyzedPhotoIdList);
+        List<DiagnosisResultProjection> diagnosisResultList = analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(
+            analyzedPhotoIdList);
 
         List<BeehiveDiagnosisInfoDto> beehiveDiagnosisInfoList = new ArrayList<>();
 
-        for(DiagnosisResultProjection diagnosisResultProjection : diagnosisResultList) {
-            TotalCountImagoLarvaProjection totalCountByDiagnosis = analyzedPhotoRepository.getTotalCountByDiagnosis(diagnosisResultProjection.getDiagnosisId());
+        for (DiagnosisResultProjection diagnosisResultProjection : diagnosisResultList) {
+            TotalCountImagoLarvaProjection totalCountByDiagnosis = analyzedPhotoRepository.getTotalCountByDiagnosis(
+                diagnosisResultProjection.getDiagnosisId());
             Long totalLarva = totalCountByDiagnosis.getLarvaCount();
             Long totalImago = totalCountByDiagnosis.getImagoCount();
 
@@ -145,45 +140,44 @@ public class BeehiveServiceImpl implements BeehiveService{
             double imagoDwvRatio = calculateDiseaseRatio(diagnosisResultProjection.getImagodwvCount(), totalImago);
 
             Larva larva = new Larva(
-                    diagnosisResultProjection.getLarvavarroaCount(),
-                    larvaVarroaRatio,
-                    diagnosisResultProjection.getLarvafoulBroodCount(),
-                    larvaFoulBroodRatio,
-                    diagnosisResultProjection.getLarvachalkBroodCount(),
-                    larvaChalkBroodRatio
+                diagnosisResultProjection.getLarvavarroaCount(),
+                larvaVarroaRatio,
+                diagnosisResultProjection.getLarvafoulBroodCount(),
+                larvaFoulBroodRatio,
+                diagnosisResultProjection.getLarvachalkBroodCount(),
+                larvaChalkBroodRatio
             );
 
             Imago imago = new Imago(
-                    diagnosisResultProjection.getImagovarroaCount(),
-                    imagoVarroaRatio,
-                    diagnosisResultProjection.getImagodwvCount(),
-                    imagoDwvRatio
+                diagnosisResultProjection.getImagovarroaCount(),
+                imagoVarroaRatio,
+                diagnosisResultProjection.getImagodwvCount(),
+                imagoDwvRatio
             );
 
             DiagnosisResultDto diagnosisResultDto = new DiagnosisResultDto(larva, imago);
 
             BeehiveDiagnosisInfoDto beehiveDiagnosisInfoDto = new BeehiveDiagnosisInfoDto(
-                    diagnosisResultProjection.getDiagnosisId(),
-                    diagnosisResultProjection.getCreatedAt(),
-                    totalImago,
-                    totalLarva,
-                    diagnosisResultDto
+                diagnosisResultProjection.getDiagnosisId(),
+                diagnosisResultProjection.getCreatedAt(),
+                totalImago,
+                totalLarva,
+                diagnosisResultDto
             );
 
             beehiveDiagnosisInfoList.add(beehiveDiagnosisInfoDto);
         }
 
-
         Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
         Long turretId = null;
-        if(turret!=null){
+        if (turret != null) {
             turretId = turret.getId();
         }
 
         return new BeehiveDetailResponseDto(
-                beehiveDiagnosisInfoList,
-                beehive.getNickname(),
-                turretId
+            beehiveDiagnosisInfoList,
+            beehive.getNickname(),
+            turretId
         );
     }
 
@@ -194,15 +188,15 @@ public class BeehiveServiceImpl implements BeehiveService{
 
         Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
 
-        if(turret != null) {
+        if (turret != null) {
             turret.updateTurret(turretRequestDto.serial());
             return;
         }
 
         Turret newTurret = Turret.builder()
-                .beehive(beehive)
-                .serial(turretRequestDto.serial())
-                .build();
+            .beehive(beehive)
+            .serial(turretRequestDto.serial())
+            .build();
 
         turretRepository.save(newTurret);
     }
@@ -212,7 +206,7 @@ public class BeehiveServiceImpl implements BeehiveService{
     public void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails) {
         Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
 
-        if(beehiveUpdateDto.xDirection() == null || beehiveUpdateDto.yDirection() == null) {
+        if (beehiveUpdateDto.xDirection() == null || beehiveUpdateDto.yDirection() == null) {
             throw new DirectionNullException();
         }
 
@@ -220,12 +214,12 @@ public class BeehiveServiceImpl implements BeehiveService{
         Apiary apiary = apiaryRepository.findByMembers(members);
 
         boolean isLocated = beehiveRepository.existsByApiaryAndDirection(
-                apiary,
-                beehiveUpdateDto.xDirection(),
-                beehiveUpdateDto.yDirection()
+            apiary,
+            beehiveUpdateDto.xDirection(),
+            beehiveUpdateDto.yDirection()
         );
 
-        if(isLocated) {
+        if (isLocated) {
             throw new DirectionDuplicateException();
         }
 
@@ -237,7 +231,7 @@ public class BeehiveServiceImpl implements BeehiveService{
     @Transactional
     public void deleteBeehive(Long beehiveId, UserDetailsImpl userDetails) {
         Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
-        if(beehive == null || beehive.getDeletedAt() != null) {
+        if (beehive == null || beehive.getDeletedAt() != null) {
             throw new BeehiveNotFoundException();
         }
 
@@ -245,7 +239,7 @@ public class BeehiveServiceImpl implements BeehiveService{
         Apiary apiary = apiaryRepository.findByMembers(members);
         boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
-        if(!isExist) {
+        if (!isExist) {
             throw new BeehiveNotFoundException();
         }
 
@@ -253,98 +247,9 @@ public class BeehiveServiceImpl implements BeehiveService{
 
     }
 
-    private PageInfoDto createPageInfo(Page<Diagnosis> diagnosisPage) {
-        Long page = (long) diagnosisPage.getNumber();
-        Long size = (long) diagnosisPage.getSize();
-        Long totalElements = diagnosisPage.getTotalElements();
-        Long totalPages = (long) diagnosisPage.getTotalPages();
-        Boolean hasPreviousPage = diagnosisPage.hasPrevious();
-        Boolean hasNextPage = diagnosisPage.hasNext();
-
-        return new PageInfoDto(page, size, totalElements, totalPages, hasPreviousPage, hasNextPage);
-    }
-
     private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {
-        if (totalCount == 0) return 0;
-        return (double) diseaseCount / totalCount * 100;
+        if (totalCount == 0)
+            return 0;
+        return (double)diseaseCount / totalCount * 100;
     }
-
-
-    private Map<Long, Long> getStatusEachBeehive(List<Long> diagnosisIds) {
-        List<OriginalPhotoStatusDto> statusList = originalPhotoRepository.findStatusesByDiagnosisIds(diagnosisIds);
-        Map<Long, List<DiagnosisStatus>> group = new HashMap<>();
-
-        for(OriginalPhotoStatusDto originalPhotoStatusDto : statusList) {
-            group.computeIfAbsent(originalPhotoStatusDto.diagnosisId(), k -> new ArrayList<>()).add(originalPhotoStatusDto.status());
-        }
-
-        return calculateStatus(group);
-    }
-
-
-    private Map<Long, Long> calculateStatus(Map<Long, List<DiagnosisStatus>> group) {
-        Map<Long, Long> result = new HashMap<>();
-        for(Map.Entry<Long, List<DiagnosisStatus>> entry : group.entrySet()) {
-            List<DiagnosisStatus> diagnosisStatuses = entry.getValue();
-            if(diagnosisStatuses.contains(DiagnosisStatus.FAIL) || diagnosisStatuses.contains(DiagnosisStatus.UNRECIEVED)) {
-                result.put(entry.getKey(), 2L);
-            } else if (diagnosisStatuses.contains(DiagnosisStatus.WAITING) || diagnosisStatuses.contains(DiagnosisStatus.ANALYZING)) {
-                result.put(entry.getKey(), 0L);
-            } else {
-                result.put(entry.getKey(), 1L);
-            }
-        }
-        return result;
-    }
-
-
-    @Transactional
-    public List<DiagnosisResponseDto> generateDiagnosisPresignedUrl(DiagnosisDto dto){
-        //TODO 파일 메타데이터 처리, s3Presigned 제약조건
-
-        Long beeHiveId = dto.beeHiveId();
-        Beehive findBeeHive = beehiveRepository.findById(beeHiveId).orElseThrow();
-        // TODO
-        // 1. 벌통 존재유무 확인
-        // 2. 벌통 소유자 확인
-
-        Diagnosis diagnosis = Diagnosis.builder()
-                .beehive(findBeeHive)
-                .build();
-
-        diagnosisRepository.save(diagnosis);
-
-        List<Photo> photos = dto.photos();
-        List<DiagnosisResponseDto> response= new ArrayList<>();
-
-        for(Photo photo : photos){
-            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutUrl(photo.filename(),photo.contentType());
-            S3FileMetadata s3FileMetadata = putUrlDto.s3FileMetadata();
-            String putUrl = putUrlDto.preSignedUrl();
-
-            OriginalPhoto originalPhoto = OriginalPhoto.builder()
-                    .diagnosis(diagnosis)
-                    .s3FileMetadata(s3FileMetadata)
-                    .status(DiagnosisStatus.WAITING)
-                    .build();
-
-            originalPhotoRepository.save(originalPhoto);
-
-            int status = 0;
-            if(null == putUrl || putUrl.isEmpty()){
-                status = 1;
-            }
-
-            DiagnosisResponseDto build = DiagnosisResponseDto.builder()
-                    .filename(photo.filename())
-                    .status(status)
-                    .preSignedUrl(putUrl)
-                    .build();
-            response.add(build);
-        }
-
-        return response;
-    }
-
-
 }

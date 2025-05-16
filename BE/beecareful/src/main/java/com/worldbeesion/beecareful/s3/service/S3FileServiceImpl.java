@@ -1,8 +1,10 @@
 package com.worldbeesion.beecareful.s3.service;
 
-import com.worldbeesion.beecareful.common.exception.BadRequestException;
+import static com.worldbeesion.beecareful.common.util.FileUtil.*;
+
+import com.worldbeesion.beecareful.common.exception.BadRequestException; // Assuming this exists
 import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
-import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.exception.FileUploadFailException;
 import com.worldbeesion.beecareful.s3.exception.S3ConnectionException;
@@ -12,11 +14,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -25,105 +30,193 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-
 @Service
 @Slf4j
 public class S3FileServiceImpl implements S3FileService {
     private final S3Client s3Client;
     private final String bucketName;
-    private final String region;
+    // private final String region;
     private final List<String> allowedExtensions;
-
     private final S3FileMetadataRepository s3FileMetadataRepository;
 
+    // Constructor for explicit dependency injection
     public S3FileServiceImpl(
-            @Value("${cloud.aws.s3.bucket}") String bucketName,
-            @Value("${cloud.aws.region.static}") String region
-            , S3Client s3Client
-            , S3FileMetadataRepository s3FileMetadataRepository) {
+        @Value("${cloud.aws.s3.bucket}") String bucketName,
+        // @Value("${cloud.aws.region.static}") String region,
+        S3Client s3Client,
+        S3FileMetadataRepository s3FileMetadataRepository) {
         this.s3Client = s3Client;
         this.bucketName = bucketName;
-        this.region = region;
-        this.allowedExtensions = Arrays.asList("jpg", "png", "gif", "jpeg","webp");
+        // this.region = region;
+        // TODO: consider making this configurable
+        this.allowedExtensions = Arrays.asList("jpg", "png", "gif", "jpeg", "webp");
         this.s3FileMetadataRepository = s3FileMetadataRepository;
     }
 
+    /**
+     * Handles file uploads from MultipartFile (e.g., direct web uploads).
+     */
     @Override
-    @Transactional(noRollbackFor = { S3Exception.class})
+    @Transactional(noRollbackFor = {S3Exception.class, FileUploadFailException.class, IOException.class})
+    // Keep transaction but don't rollback for S3/IO issues during upload itself
     public S3FileMetadata putObject(MultipartFile file, FilePathPrefix filePathPrefix) {
-        String s3Key = filePathPrefix.getPrefix() + generateUniqueFilename(file);
+        if (file == null || file.isEmpty()) {
+            log.warn("Attempted to upload an empty or null MultipartFile.");
+            throw new BadRequestException();
+        }
+
+        String fileExtension = validateFileExtension(file.getOriginalFilename(), allowedExtensions);
+        String originalFilename = file.getOriginalFilename();
+        String contentType = file.getContentType();
+        long fileSize = file.getSize();
+
+        try {
+            byte[] fileData = file.getBytes();
+            return uploadToS3(fileData, originalFilename, contentType, fileSize, fileExtension, filePathPrefix);
+        } catch (IOException e) {
+            log.error("IOException reading MultipartFile bytes: {}", e.getMessage(), e);
+            // TODO: Define a more specific custom exception (e.g., FileReadException)
+            throw new RuntimeException("Error reading file data: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Handles file uploads from byte array (e.g., data received from an API call).
+     */
+    @Override
+    @Transactional(noRollbackFor = {S3Exception.class, FileUploadFailException.class})
+    // Keep transaction but don't rollback for S3 issues during upload
+    public S3FileMetadata putObject(byte[] fileData, String filename, String contentType, FilePathPrefix filePathPrefix) {
+        if (fileData == null || fileData.length == 0) {
+            log.warn("Attempted to upload empty or null byte array for filename: {}", filename);
+            throw new BadRequestException();
+        }
+        if (filename == null || filename.isBlank()) {
+            log.warn("Attempted to upload file data with null or blank filename.");
+            throw new BadRequestException();
+        }
+        if (contentType == null || contentType.isBlank()) {
+            log.warn("Attempted to upload file data with null or blank contentType for filename: {}. Defaulting or failing.", filename);
+            // Decide whether to default (e.g., to 'application/octet-stream') or throw an error
+            throw new BadRequestException();
+            // contentType = "application/octet-stream"; // Option: Default content type
+        }
+
+        String fileExtension = validateFileExtension(filename, allowedExtensions);
+        long fileSize = fileData.length;
+
+        return uploadToS3(fileData, filename, contentType, fileSize, fileExtension, filePathPrefix);
+    }
+
+    /**
+     * Common method to handle S3 upload logic for both MultipartFile and byte array sources.
+     * 
+     * @param fileData The file data as byte array
+     * @param originalFilename The original filename
+     * @param contentType The content type of the file
+     * @param fileSize The size of the file in bytes
+     * @param fileExtension The validated file extension
+     * @param filePathPrefix The path prefix for S3 storage
+     * @return The S3FileMetadata entity with upload status
+     */
+    private S3FileMetadata uploadToS3(byte[] fileData, String originalFilename, String contentType, 
+                                     long fileSize, String fileExtension, FilePathPrefix filePathPrefix) {
+        // Generate unique filename using the validated extension
+        String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
+        String s3Key = filePathPrefix.getPrefix() + uniqueFilename;
+
+        // Build metadata entity
         S3FileMetadata entity = S3FileMetadata.builder()
-                .originalFilename(file.getOriginalFilename())
-                .s3Key(s3Key)
-                .size(file.getSize())
-                .url("https://" + bucketName + ".s3." + region + ".amazonaws.com/" + s3Key)
-                .contentType(file.getContentType())
-                .status(FileStatus.PENDING)
-                .build();
-        s3FileMetadataRepository.save(entity);
-        try{
+            .originalFilename(originalFilename)
+            .s3Key(s3Key)
+            .size(fileSize)
+            .contentType(contentType)
+            .status(S3FileStatus.PENDING)
+            .build();
+        s3FileMetadataRepository.save(entity); // Save pending record
+
+        try {
+            // Prepare S3 request
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(s3Key)
-                    .contentType(file.getContentType())
-                    .contentLength(file.getSize())
-                    .build();
-            PutObjectResponse response = s3Client.putObject(putObjectRequest, RequestBody.fromBytes(file.getBytes()));
-            if(response.sdkHttpResponse().isSuccessful()){
-                entity.setStatus(FileStatus.STORED);
-            }else{
-                entity.setStatus(FileStatus.FAILED);
+                .bucket(bucketName)
+                .key(s3Key)
+                .contentType(contentType)
+                .contentLength(fileSize)
+                .build();
+
+            // Upload
+            PutObjectResponse response = s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData));
+
+            // Check response and update status
+            if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
+                entity.setStatus(S3FileStatus.STORED);
+                log.info("Successfully uploaded file to S3. Key: {}", s3Key);
+            }
+            else {
+                entity.setStatus(S3FileStatus.FAILED);
+                log.error("S3 upload failed for key: {}. Response status: {}", s3Key,
+                    response.sdkHttpResponse() != null ? response.sdkHttpResponse().statusCode() : "N/A");
                 throw new FileUploadFailException();
             }
-        }catch(S3Exception e){
-            throw e;
-        }catch (IOException e){
-            //TODO Exception 정의
-            throw new RuntimeException();
+        } catch (S3Exception e) {
+            entity.setStatus(S3FileStatus.FAILED); // Ensure status is FAILED on S3 exception
+            log.error("S3Exception during upload for key {}: {}", s3Key, e.getMessage(), e);
+            // Rethrow or wrap in a custom exception if needed, consistent with noRollbackFor
+            throw e; // Rethrowing S3Exception as per noRollbackFor
+        } finally {
+            // Save the final status (STORED or FAILED)
+            s3FileMetadataRepository.save(entity);
         }
 
         return entity;
     }
 
-
-    //
+    /**
+     * Deletes an object from S3 and marks the metadata record as removed.
+     */
     @Override
-    @Transactional(noRollbackFor = S3ConnectionException.class)
+    @Transactional(noRollbackFor = S3ConnectionException.class) // Keep original noRollbackFor logic
     public int deleteObject(Long s3FileMetadataId) {
-
+        // Find metadata or throw exception
         S3FileMetadata s3FileMetadata = s3FileMetadataRepository.findById(s3FileMetadataId)
-                .orElseThrow(BadRequestException::new);
+            .orElseThrow(BadRequestException::new); // More specific message
 
-        try{
+        // Check if already removed (optional, prevents trying to delete again)
+        if (s3FileMetadata.getStatus() == S3FileStatus.DELETED) {
+            log.warn("Attempted to delete already removed S3 object with key: {}", s3FileMetadata.getS3Key());
+            return 0; // Indicate no action needed or taken
+        }
+
+        try {
+            // Prepare S3 delete request
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(s3FileMetadata.getS3Key())
-                    .build();
+                .bucket(bucketName)
+                .key(s3FileMetadata.getS3Key())
+                .build();
+
+            // Execute delete
             DeleteObjectResponse deleteObjectResponse = s3Client.deleteObject(deleteObjectRequest);
-            if(deleteObjectResponse.sdkHttpResponse().isSuccessful()){
-                s3FileMetadata.remove();
-            }else{
+
+            // Check response and update metadata status
+            // Note: Successful delete often returns 204 No Content, check isSuccessful()
+            if (deleteObjectResponse.sdkHttpResponse() != null && deleteObjectResponse.sdkHttpResponse().isSuccessful()) {
+                s3FileMetadata.remove(); // Call the remove method on the entity
+                s3FileMetadataRepository.save(s3FileMetadata); // Explicitly save the updated entity
+                log.info("Successfully deleted object from S3 and marked as REMOVED. Key: {}", s3FileMetadata.getS3Key());
+                return 1; // Indicate success
+            }
+            else {
+                log.error("S3 delete request failed for key: {}. Response status: {}", s3FileMetadata.getS3Key(),
+                    deleteObjectResponse.sdkHttpResponse() != null ? deleteObjectResponse.sdkHttpResponse().statusCode() : "N/A");
+                // Throw exception consistent with original logic
                 throw new S3ConnectionException();
             }
-        }catch (S3Exception e){
+        } catch (S3Exception e) {
+            log.error("S3Exception during delete for key {}: {}", s3FileMetadata.getS3Key(), e.getMessage(), e);
+            // Throw exception consistent with original logic and noRollbackFor
             throw new S3ConnectionException();
         }
-        return 0;
-    }
-    private String generateUniqueFilename(MultipartFile multipartFile) {
-        String originalFilename = multipartFile.getOriginalFilename();
-        String fileExtension = validateFileExtension(originalFilename);
-        return UUID.randomUUID() + "." + fileExtension;
-    }
-
-    private String validateFileExtension(String originalFilename) {
-        String fileExtension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
-
-        if (!allowedExtensions.contains(fileExtension)) {
-            log.error("지원하지않는 파일 확장자입니다 : "+ fileExtension);
-//            throw new ImageExtensionNotSupportedException();
-        }
-        return fileExtension;
+        // return 0; // Original code returned 0, returning 1 on success seems more informative
     }
 
 }

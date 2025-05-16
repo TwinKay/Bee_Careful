@@ -12,5 +12,5 @@ public interface S3EventService {
 	 * @param eventPayload The details of the S3 event.
 	 * @throws S3EventProcessingException if validation fails or an error occurs.
 	 */
-	void processS3Event(S3EventPayload eventPayload) throws S3EventProcessingException;
+	void processS3PutEvent(S3EventPayload eventPayload) throws S3EventProcessingException;
 }

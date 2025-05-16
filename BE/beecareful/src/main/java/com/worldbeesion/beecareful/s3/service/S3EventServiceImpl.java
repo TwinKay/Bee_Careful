@@ -2,10 +2,11 @@ package com.worldbeesion.beecareful.s3.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Import Transactional
 import org.springframework.util.Assert;
 
-import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
+import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
@@ -18,54 +19,56 @@ import lombok.extern.slf4j.Slf4j;
 public class S3EventServiceImpl implements S3EventService {
 
 	private final S3FileMetadataRepository s3FileMetadataRepository;
+	private final S3OriginPhotoUploadProcessingService s3OriginPhotoUploadProcessingService;
 
 	private final String s3BucketName;
 
-	public S3EventServiceImpl(
-		S3FileMetadataRepository s3FileMetadataRepository,
-		@Value("${aws.s3.bucketName}") String s3BucketName
-	) {
-		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
-		this.s3FileMetadataRepository = s3FileMetadataRepository;
-		this.s3BucketName = s3BucketName;
-	}
-
-	private static final String EXPECTED_EVENT_NAME = "ObjectCreated:Put";
 	/**
 	 * S3에 업로드된 파일의 실제 크기와 예상 크기 간의 허용 가능한 최대 차이 백분율
 	 * 예상 크기와 실제 크기의 차이가 20%를 초과하면 InvalidS3EventException이 발생함
 	 */
-	private static final double MAX_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
+	private static final double MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
 
+	public S3EventServiceImpl(
+		S3FileMetadataRepository s3FileMetadataRepository,
+		S3OriginPhotoUploadProcessingService s3OriginPhotoUploadProcessingService,
+		@Value("${aws.s3.bucketName}") String s3BucketName
+	) {
+		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
+		this.s3FileMetadataRepository = s3FileMetadataRepository;
+		this.s3OriginPhotoUploadProcessingService = s3OriginPhotoUploadProcessingService;
+		this.s3BucketName = s3BucketName;
+	}
 
 	@Override
-	@Transactional // Make the method transactional (optional but good practice for DB updates)
-	public void processS3Event(S3EventPayload eventPayload) {
+	public void processS3PutEvent(S3EventPayload eventPayload) {
 		log.info("Processing S3 event for Key: {}", eventPayload.getObjectKey());
 
 		// 1. Validate the payload
 		validateEventPayload(eventPayload);
 
-		// 2. Find Metadata and Validate Size
-		S3FileMetadata metadata = findAndValidateMetadata(eventPayload);
+		// only when ORIGIN PHOTO RECEIVED
+		if (eventPayload.getObjectKey().startsWith(FilePathPrefix.BEEHIVE_ORIGIN.getPrefix())) {
 
-		// 3. Update the status of the upload.
-		updateFileStatus(metadata);
+			// 2. Find Metadata and Validate Size
+			S3FileMetadata metadata = findAndValidateMetadata(eventPayload);
 
-		log.info("Successfully processed S3 event for Key: {}", eventPayload.getObjectKey());
+			// 3. Update the status of the upload.
+			OriginalPhoto originalPhoto = s3OriginPhotoUploadProcessingService.updateOriginPhotoFileStatus(metadata);
+
+			// 4. Check if all Origin Photos are uploaded
+			s3OriginPhotoUploadProcessingService.checkUploadStatusOfOriginPhotosOfTheDiagnosisAndRunDiagnosis(originalPhoto);
+
+			log.info("Successfully processed S3 event for Key: {}", eventPayload.getObjectKey());
+		}
 	}
 
 	private void validateEventPayload(S3EventPayload eventPayload) {
 		// TODO: add InvalidS3EventException handling logic (status to FAILED)
+		// TODO: implement specific Exceptions for each following cases
 		if (!s3BucketName.equals(eventPayload.getBucketName())) {
 			String errorMsg = String.format("Bucket name mismatch. Received: %s, Expected: %s",
 				eventPayload.getBucketName(), s3BucketName);
-			log.warn(errorMsg);
-			throw new InvalidS3EventException(); // Throw specific exception
-		}
-		if (!EXPECTED_EVENT_NAME.equals(eventPayload.getEventName())) {
-			String errorMsg = String.format("Invalid event name. Received: %s, Expected: %s",
-				eventPayload.getEventName(), EXPECTED_EVENT_NAME);
 			log.warn(errorMsg);
 			throw new InvalidS3EventException();
 		}
@@ -108,9 +111,9 @@ public class S3EventServiceImpl implements S3EventService {
 		} else if (expectedSize != 0) {
 			double sizeDifferencePercentage = Math.abs((double) (expectedSize - receivedSize) / expectedSize) * 100;
 
-			if (sizeDifferencePercentage > MAX_SIZE_DIFFERENCE_PERCENTAGE) {
+			if (sizeDifferencePercentage > MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE) {
 				String errorMsg = String.format("File size mismatch for objectKey: %s. Expected: %d, Received: %d, Difference: %.2f%% (Limit: %.1f%%)",
-					eventPayload.getObjectKey(), expectedSize, receivedSize, sizeDifferencePercentage, MAX_SIZE_DIFFERENCE_PERCENTAGE);
+					eventPayload.getObjectKey(), expectedSize, receivedSize, sizeDifferencePercentage, MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE);
 				log.warn(errorMsg);
 				throw new InvalidS3EventException(); // Throw specific exception
 			}
@@ -121,22 +124,14 @@ public class S3EventServiceImpl implements S3EventService {
 			log.debug("File size validated successfully for Key: {} (both expected and received are 0).", eventPayload.getObjectKey());
 		}
 
-
 		// Check if the file is already processed
-		if (metadata.getStatus() == FileStatus.STORED) {
+		if (metadata.getStatus() == S3FileStatus.STORED) {
 			log.warn("Received duplicate S3 event for already stored file: {}", eventPayload.getObjectKey());
 			// Decide how to handle duplicates. Maybe throw a specific exception or just log and ignore.
 			// For now, let's throw an exception to indicate it's already processed.
 			throw new InvalidS3EventException();
 		}
 
-
 		return metadata;
-	}
-
-	private void updateFileStatus(S3FileMetadata metadata) {
-		metadata.setStatus(FileStatus.STORED);
-		s3FileMetadataRepository.save(metadata); // Save the updated entity
-		log.info("Updated status to STORED for Key: {}", metadata.getS3Key()); // Assuming getS3Key() exists
 	}
 }

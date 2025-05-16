@@ -1,6 +1,6 @@
 package com.worldbeesion.beecareful.s3.service;
 
-import com.worldbeesion.beecareful.s3.constant.FileStatus;
+import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import java.time.Duration;
@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
+
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -63,7 +63,7 @@ public class S3PresignService {
         S3FileMetadata s3FileMetadata = S3FileMetadata.builder()
                 .s3Key(originalFilename)
                 .originalFilename(originalFilename)
-                .status(FileStatus.PENDING)
+                .status(S3FileStatus.PENDING)
                 .contentType(contentType)
                 .build();
 
