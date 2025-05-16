@@ -4,7 +4,7 @@ import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisApiResponse;
 
 import reactor.core.publisher.Mono; // If the service method itself is to be reactive
 
-public interface AiDiagnosisService {
+public interface DiagnosisService {
 
     /**
      * Analyzes a photo by calling an external AI API.

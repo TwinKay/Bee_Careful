@@ -17,7 +17,7 @@ import java.util.Map;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class AiDiagnosisServiceImpl implements AiDiagnosisService {
+public class DiagnosisServiceImpl implements DiagnosisService {
 
     @Resource(lookup = "diagnosisWebClient")
     private final WebClient webClient;

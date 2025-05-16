@@ -43,7 +43,7 @@ import com.worldbeesion.beecareful.beehive.model.dto.DiagnosisApiResponse;
 public class BeehiveServiceImpl implements BeehiveService {
 
     private final S3PresignService s3PresignService;
-    private final AiDiagnosisService aiDiagnosisService;
+    private final DiagnosisService diagnosisService;
     private final S3FileMetadataRepository s3FileMetadataRepository;
 
     private final BeehiveRepository beehiveRepository;
@@ -143,7 +143,7 @@ public class BeehiveServiceImpl implements BeehiveService {
             log.debug("[DiagnosisId: {}, PhotoId: {}] Status set to ANALYZING.", diagnosis.getId(), photoId);
 
             // Timeout is important to prevent indefinite blocking.
-            DiagnosisApiResponse diagnosisApiResponse = aiDiagnosisService.analyzePhoto(originalS3Key)
+            DiagnosisApiResponse diagnosisApiResponse = diagnosisService.analyzePhoto(originalS3Key)
                 .block(Duration.ofSeconds(120)); // Increased timeout for AI call + parsing
 
             if (diagnosisApiResponse == null) {
