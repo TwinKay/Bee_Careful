@@ -2,7 +2,6 @@ package com.worldbeesion.beecareful.beehive.service;
 
 import static com.worldbeesion.beecareful.common.util.S3Util.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.worldbeesion.beecareful.beehive.constant.BeeStage;
 import com.worldbeesion.beecareful.beehive.constant.DiagnosisStatus;
 import com.worldbeesion.beecareful.beehive.constant.DiseaseName;
@@ -16,11 +15,9 @@ import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
 
-import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -37,7 +34,7 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @RequiredArgsConstructor
 public class DiagnosisServiceImpl implements DiagnosisService {
-    
+
     @Value("${ai-server.diagnosis-path}")
     private String aiDiagnosisPath;
     @Value("${ai-server.baseUrl}")
@@ -394,7 +391,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         List<DiagnosisResponseDto> response = new ArrayList<>();
 
         for (Photo photo : photos) {
-            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutUrl(photo.filename(), photo.contentType());
+            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutOriginPhotoUrl(photo.filename(), photo.contentType());
             S3FileMetadata s3FileMetadata = putUrlDto.s3FileMetadata();
             String putUrl = putUrlDto.preSignedUrl();
 

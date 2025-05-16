@@ -1,5 +1,6 @@
 package com.worldbeesion.beecareful.s3.service;
 
+import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
 import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
@@ -45,13 +46,13 @@ public class S3PresignService {
 
 
     @Transactional
-    public GeneratePutUrlResponse generatePutUrl(String originalFilename, String contentType) {
+    public GeneratePutUrlResponse generatePutOriginPhotoUrl(String originalFilename, String contentType) {
 
-        String key = generateUniqueFilename(contentType);
+        String s3Key = FilePathPrefix.BEEHIVE_ORIGIN.getPrefix() + generateUniqueFilename(contentType.split("/")[1] );
 
         PutObjectRequest objectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
-                .key(key)
+                .key(s3Key)
                 .contentType(contentType)
                 .build();
 
@@ -61,7 +62,7 @@ public class S3PresignService {
         );
 
         S3FileMetadata s3FileMetadata = S3FileMetadata.builder()
-                .s3Key(originalFilename)
+                .s3Key(s3Key)
                 .originalFilename(originalFilename)
                 .status(S3FileStatus.PENDING)
                 .contentType(contentType)
