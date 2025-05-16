@@ -1,5 +1,7 @@
 package com.worldbeesion.beecareful.s3.service;
 
+import static com.worldbeesion.beecareful.common.util.FileUtil.*;
+
 import com.worldbeesion.beecareful.common.exception.BadRequestException; // Assuming this exists
 import com.worldbeesion.beecareful.s3.constant.FilePathPrefix;
 import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
@@ -12,12 +14,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils; // For checking filename extension
 import org.springframework.web.multipart.MultipartFile;
+
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -26,26 +30,25 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-
 @Service
 @Slf4j
 public class S3FileServiceImpl implements S3FileService {
     private final S3Client s3Client;
     private final String bucketName;
-    private final String region;
+    // private final String region;
     private final List<String> allowedExtensions;
     private final S3FileMetadataRepository s3FileMetadataRepository;
 
     // Constructor for explicit dependency injection
     public S3FileServiceImpl(
         @Value("${cloud.aws.s3.bucket}") String bucketName,
-        @Value("${cloud.aws.region.static}") String region,
+        // @Value("${cloud.aws.region.static}") String region,
         S3Client s3Client,
         S3FileMetadataRepository s3FileMetadataRepository) {
         this.s3Client = s3Client;
         this.bucketName = bucketName;
-        this.region = region;
-        // Define allowed extensions (consider making this configurable)
+        // this.region = region;
+        // TODO: consider making this configurable
         this.allowedExtensions = Arrays.asList("jpg", "png", "gif", "jpeg", "webp");
         this.s3FileMetadataRepository = s3FileMetadataRepository;
     }
@@ -54,25 +57,25 @@ public class S3FileServiceImpl implements S3FileService {
      * Handles file uploads from MultipartFile (e.g., direct web uploads).
      */
     @Override
-    @Transactional(noRollbackFor = { S3Exception.class, FileUploadFailException.class, IOException.class }) // Keep transaction but don't rollback for S3/IO issues during upload itself
+    @Transactional(noRollbackFor = {S3Exception.class, FileUploadFailException.class, IOException.class})
+    // Keep transaction but don't rollback for S3/IO issues during upload itself
     public S3FileMetadata putObject(MultipartFile file, FilePathPrefix filePathPrefix) {
         if (file == null || file.isEmpty()) {
             log.warn("Attempted to upload an empty or null MultipartFile.");
             throw new BadRequestException();
         }
 
-        String fileExtension = validateFileExtension(file.getOriginalFilename());
+        String fileExtension = validateFileExtension(file.getOriginalFilename(), allowedExtensions);
 
         String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
         String s3Key = filePathPrefix.getPrefix() + uniqueFilename;
-        String fileUrl = generateS3Url(s3Key);
 
         // Build metadata entity
         S3FileMetadata entity = S3FileMetadata.builder()
             .originalFilename(file.getOriginalFilename())
             .s3Key(s3Key)
             .size(file.getSize())
-            .url(fileUrl)
+            // .url(fileUrl)
             .contentType(file.getContentType()) // Use content type from MultipartFile
             .status(S3FileStatus.PENDING)
             .build();
@@ -94,7 +97,8 @@ public class S3FileServiceImpl implements S3FileService {
             if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
                 entity.setStatus(S3FileStatus.STORED);
                 log.info("Successfully uploaded file to S3. Key: {}", s3Key);
-            } else {
+            }
+            else {
                 entity.setStatus(S3FileStatus.FAILED);
                 log.error("S3 upload failed for key: {}. Response status: {}", s3Key,
                     response.sdkHttpResponse() != null ? response.sdkHttpResponse().statusCode() : "N/A");
@@ -123,7 +127,8 @@ public class S3FileServiceImpl implements S3FileService {
      * Handles file uploads from byte array (e.g., data received from an API call).
      */
     @Override
-    @Transactional(noRollbackFor = { S3Exception.class, FileUploadFailException.class }) // Keep transaction but don't rollback for S3 issues during upload
+    @Transactional(noRollbackFor = {S3Exception.class, FileUploadFailException.class})
+    // Keep transaction but don't rollback for S3 issues during upload
     public S3FileMetadata putObject(byte[] fileData, String filename, String contentType, FilePathPrefix filePathPrefix) {
         if (fileData == null || fileData.length == 0) {
             log.warn("Attempted to upload empty or null byte array for filename: {}", filename);
@@ -140,13 +145,12 @@ public class S3FileServiceImpl implements S3FileService {
             // contentType = "application/octet-stream"; // Option: Default content type
         }
 
-
         // Validate extension before proceeding
-        String fileExtension = validateFileExtension(filename);
+        String fileExtension = validateFileExtension(filename, allowedExtensions);
         // Generate unique filename using the validated extension
         String uniqueFilename = UUID.randomUUID() + "." + fileExtension;
         String s3Key = filePathPrefix.getPrefix() + uniqueFilename;
-        String fileUrl = generateS3Url(s3Key);
+        // String fileUrl = generateS3Url(s3Key);
         long fileSize = fileData.length;
 
         // Build metadata entity
@@ -154,7 +158,7 @@ public class S3FileServiceImpl implements S3FileService {
             .originalFilename(filename) // Use the provided filename
             .s3Key(s3Key)
             .size(fileSize)
-            .url(fileUrl)
+            // .url(fileUrl)
             .contentType(contentType) // Use the provided content type
             .status(S3FileStatus.PENDING)
             .build();
@@ -176,7 +180,8 @@ public class S3FileServiceImpl implements S3FileService {
             if (response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
                 entity.setStatus(S3FileStatus.STORED);
                 log.info("Successfully uploaded byte data to S3. Key: {}", s3Key);
-            } else {
+            }
+            else {
                 entity.setStatus(S3FileStatus.FAILED);
                 log.error("S3 upload failed for key: {}. Response status: {}", s3Key,
                     response.sdkHttpResponse() != null ? response.sdkHttpResponse().statusCode() : "N/A");
@@ -230,7 +235,8 @@ public class S3FileServiceImpl implements S3FileService {
                 s3FileMetadataRepository.save(s3FileMetadata); // Explicitly save the updated entity
                 log.info("Successfully deleted object from S3 and marked as REMOVED. Key: {}", s3FileMetadata.getS3Key());
                 return 1; // Indicate success
-            } else {
+            }
+            else {
                 log.error("S3 delete request failed for key: {}. Response status: {}", s3FileMetadata.getS3Key(),
                     deleteObjectResponse.sdkHttpResponse() != null ? deleteObjectResponse.sdkHttpResponse().statusCode() : "N/A");
                 // Throw exception consistent with original logic
@@ -244,49 +250,4 @@ public class S3FileServiceImpl implements S3FileService {
         // return 0; // Original code returned 0, returning 1 on success seems more informative
     }
 
-    // --- Private Helper Methods ---
-    /**
-     * Validates the file extension from a given filename.
-     *
-     * @param filename The full filename (e.g., "image.jpg").
-     * @return The lowercased file extension if valid.
-     * @throws BadRequestException if the extension is missing or not allowed.
-     */
-    private String validateFileExtension(String filename) {
-        if (filename == null || filename.lastIndexOf('.') == -1) {
-            log.error("Filename is null or missing extension: {}", filename);
-            // Or throw a specific exception like InvalidFilenameException
-            throw new BadRequestException();
-        }
-
-        // Extract extension using StringUtils for robustness
-        String fileExtension = StringUtils.getFilenameExtension(filename);
-
-        if (fileExtension == null || fileExtension.isEmpty()) {
-            log.error("Could not extract extension from filename: {}", filename);
-            throw new BadRequestException();
-        }
-
-        fileExtension = fileExtension.toLowerCase(); // Normalize to lower case for comparison
-
-        if (!allowedExtensions.contains(fileExtension)) {
-            log.error("Unsupported file extension: {}. Allowed extensions: {}", fileExtension, allowedExtensions);
-            // TODO: Throw a more specific exception if available
-            // throw new ImageExtensionNotSupportedException("Unsupported file extension: " + fileExtension);
-            throw new BadRequestException();
-        }
-        return fileExtension;
-    }
-
-    /**
-     * Generates the full HTTPS URL for the S3 object.
-     *
-     * @param s3Key The unique key of the object in the bucket.
-     * @return The full S3 object URL.
-     */
-    private String generateS3Url(String s3Key) {
-        // Construct the URL based on bucket name, region, and key
-        // Adjust format if using custom domain or different S3 URL structure
-        return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + s3Key;
-    }
 }
