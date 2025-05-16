@@ -23,4 +23,18 @@ public enum S3EventType {
     REPLICATION_OPERATION_NOT_TRACKED("Replication:OperationNotTracked");
 
     private final String eventName;
+
+    // Static method to find the enum constant by its eventName string
+    public static S3EventType fromEventNameString(String text) {
+        if (text == null) {
+            throw new IllegalArgumentException("Event name string cannot be null");
+        }
+        for (S3EventType b : S3EventType.values()) { // Iterate through all enum constants
+            if (b.eventName.equalsIgnoreCase(text)) { // Compare with the eventName field
+                return b;
+            }
+        }
+        // If no match is found, throw an exception
+        throw new IllegalArgumentException("No enum constant " + S3EventType.class.getCanonicalName() + " with eventName " + text);
+    }
 }
