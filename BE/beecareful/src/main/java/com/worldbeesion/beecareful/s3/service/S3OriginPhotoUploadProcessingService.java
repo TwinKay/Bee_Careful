@@ -59,6 +59,8 @@ public class S3OriginPhotoUploadProcessingService {
      */
     @Transactional
     public void checkUploadStatusOfOriginPhotosOfTheDiagnosisAndRunDiagnosis(OriginalPhoto originalPhoto) {
+        // TODO: prevent duplicate call with lock or whatever
+
         // Get the diagnosis ID
         Diagnosis diagnosis = originalPhoto.getDiagnosis();
         log.info("Found diagnosis ID: {}", diagnosis.getId());
@@ -68,20 +70,14 @@ public class S3OriginPhotoUploadProcessingService {
         log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosis.getId());
 
         // Check if all photos have been uploaded (their S3FileMetadata status is STORED)
-        boolean allPhotosUploaded = true;
         for (OriginalPhoto photo : allPhotosForDiagnosis) {
             if (photo.getS3FileMetadata().getStatus() != S3FileStatus.STORED) {
-                allPhotosUploaded = false;
-                break;
+                log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosis.getId());
+                return;
             }
         }
 
-        // TODO: prevent duplicate call with lock or whatever
-        if (allPhotosUploaded) {
-            log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosis.getId());
-            diagnosisService.runDiagnosis(diagnosis.getId());
-        } else {
-            log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosis.getId());
-        }
+        log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosis.getId());
+        diagnosisService.runDiagnosis(diagnosis.getId());
     }
 }
