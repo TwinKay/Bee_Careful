@@ -53,8 +53,8 @@ export function useDeleteBeehive() {
 // 말벌 퇴치 장치 연동
 export function useLinkTurret() {
   return useMutation({
-    mutationFn: ({ code }: { code: string }) =>
-      api.post('/api/v1/beehives/turret', { code }).then((res) => res.data),
+    mutationFn: ({ beehiveId, serial }: { beehiveId: string | number; serial: string }) =>
+      api.post(`/api/v1/beehives/${beehiveId}/turret`, { serial }).then((res) => res.data),
   });
 }
 

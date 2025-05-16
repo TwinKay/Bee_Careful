@@ -10,11 +10,17 @@ import { useHeaderIcon } from '@/hooks/useHeaderIcon';
 import BottomSheet from '@/components/common/BottomSheet';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useDeleteBeehive, useGetBeehiveRecords, useUpdateBeehive } from '@/apis/beehive';
+import {
+  useDeleteBeehive,
+  useGetBeehiveRecords,
+  useLinkTurret,
+  useUpdateBeehive,
+} from '@/apis/beehive';
 import type { DiagnosisDataType } from '@/types/diagnosis';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import { ROUTES } from '@/config/routes';
 import Toast from '@/components/common/Toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 const BeehiveDetailPage = () => {
   const param = useParams();
@@ -29,12 +35,17 @@ const BeehiveDetailPage = () => {
   const [isDeleteBeehiveOpen, setIsDeleteBeehiveOpen] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [isNicknameChanged, setIsNicknameChanged] = useState(false);
+  const [turretSerial, setTurretSerial] = useState('');
 
   // Toast 상태
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<ToastType>('info');
   const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
   const [showToast, setShowToast] = useState(false);
+
+  const { mutate: mutateTurret } = useLinkTurret();
+
+  const queryClient = useQueryClient();
 
   // Toast 표시 함수
   const showToastMessage = (
@@ -154,7 +165,7 @@ const BeehiveDetailPage = () => {
     setIsEditNameOpen(true);
   };
 
-  if (!beehiveData || isError) {
+  if (!beehiveData || isError || !beehiveId) {
     return <div className="flex h-full w-full items-center justify-center">Error...</div>;
   }
 
@@ -162,9 +173,29 @@ const BeehiveDetailPage = () => {
     return <div className="flex h-full w-full items-center justify-center">Loading...</div>;
   }
 
-  const linkTurret = () => {
+  const openLinkTurret = () => {
     setIsEditTurretOpen(true);
-    console.log('link turret');
+  };
+
+  const linkTurret = () => {
+    mutateTurret(
+      {
+        beehiveId: beehiveId,
+        serial: turretSerial,
+      },
+      {
+        onSuccess: () => {
+          showToastMessage('말벌 퇴치 장치가 연동되었습니다.', 'success', 'middle');
+          queryClient.invalidateQueries({
+            queryKey: ['beehiveRecords'],
+          });
+        },
+        onError: (error) => {
+          console.log(error);
+          showToastMessage('말벌 퇴치 장치 연동에 실패하였습니다.', 'warning', 'middle');
+        },
+      },
+    );
   };
 
   return (
@@ -183,12 +214,12 @@ const BeehiveDetailPage = () => {
           <p className="font-semibold text-bc-yellow-100">벌통</p>
         </div>
         {beehiveData.turretId ? (
-          <Button onClick={linkTurret} variant="success" className="py-2">
+          <Button onClick={openLinkTurret} variant="success" className="py-2">
             <p className="text-brown-100 font-bold">장치 연동 중</p>
           </Button>
         ) : (
           <Button
-            onClick={linkTurret}
+            onClick={openLinkTurret}
             className="bg-gray-300 py-2 hover:bg-gray-300"
             variant="text"
           >
@@ -280,27 +311,24 @@ const BeehiveDetailPage = () => {
         content="신규 등록 시 기존 장치와의 연동이 해제됩니다."
         buttons={[
           {
-            id: 'capture QR',
-            label: 'QR 코드 촬영',
-            variant: 'neutral',
-            onClick: () => {
-              setIsLinkTurretOpen(false);
-            },
-          },
-          {
             id: 'link turret',
             label: '등록하기',
             variant: 'success',
             onClick: () => {
               setIsLinkTurretOpen(false);
+              linkTurret();
             },
           },
         ]}
         inputs={[
           {
-            id: 'turret code',
+            id: 'turret serial',
             placeholder: '장치 코드',
             type: 'text',
+            value: turretSerial,
+            onChange: (e) => {
+              setTurretSerial(e.target.value);
+            },
           },
         ]}
       />
@@ -316,6 +344,7 @@ const BeehiveDetailPage = () => {
             variant: 'success',
             onClick: () => {
               setIsEditTurretOpen(false);
+              setIsLinkTurretOpen(true);
             },
           },
           {
