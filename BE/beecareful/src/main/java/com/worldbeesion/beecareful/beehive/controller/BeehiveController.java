@@ -3,6 +3,7 @@ package com.worldbeesion.beecareful.beehive.controller;
 
 import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
+import com.worldbeesion.beecareful.beehive.service.DiagnosisService;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.List;
 public class BeehiveController {
 
     private final BeehiveService beehiveService;
+    private final DiagnosisService diagnosisService;
 
     @PostMapping("")
     public ResponseEntity<?> createBeehive(@RequestBody BeehiveRequestDto beehiveRequestDto,
@@ -71,7 +73,7 @@ public class BeehiveController {
         System.out.println("request = " + request);
 
         DiagnosisDto diagnosisDto = new DiagnosisDto(beeHiveId, request.photos());
-        List<DiagnosisResponseDto> response = beehiveService.generateDiagnosisPresignedUrl(diagnosisDto);
+        List<DiagnosisResponseDto> response = diagnosisService.generateDiagnosisPresignedUrls(diagnosisDto);
         return ResponseEntity
                 .ok()
                 .body(response);

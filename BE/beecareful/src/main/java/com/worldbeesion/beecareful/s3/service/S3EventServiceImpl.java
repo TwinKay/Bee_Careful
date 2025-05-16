@@ -8,6 +8,7 @@ import org.springframework.util.Assert;
 import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
 import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
+import com.worldbeesion.beecareful.beehive.service.DiagnosisService;
 import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
 import com.worldbeesion.beecareful.s3.model.dto.S3EventPayload;
@@ -24,20 +25,20 @@ public class S3EventServiceImpl implements S3EventService {
 
 	private final S3FileMetadataRepository s3FileMetadataRepository;
 	private final OriginalPhotoRepository originalPhotoRepository;
-	private final BeehiveService beehiveService;
+	private final DiagnosisService diagnosisService;
 
 	private final String s3BucketName;
 
 	public S3EventServiceImpl(
 		S3FileMetadataRepository s3FileMetadataRepository,
 		OriginalPhotoRepository originalPhotoRepository,
-		BeehiveService beehiveService,
+		DiagnosisService diagnosisService,
 		@Value("${aws.s3.bucketName}") String s3BucketName
 	) {
 		Assert.hasText(s3BucketName, "Expected bucket name must not be empty");
 		this.s3FileMetadataRepository = s3FileMetadataRepository;
 		this.originalPhotoRepository = originalPhotoRepository;
-		this.beehiveService = beehiveService;
+		this.diagnosisService = diagnosisService;
 		this.s3BucketName = s3BucketName;
 	}
 
@@ -177,7 +178,7 @@ public class S3EventServiceImpl implements S3EventService {
 		// TODO: prevent duplicate call with lock or whatever
 		if (allPhotosUploaded) {
 			log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosisId);
-			beehiveService.runDiagnosis(diagnosisId);
+			diagnosisService.runDiagnosis(diagnosisId);
 		} else {
 			log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosisId);
 		}
