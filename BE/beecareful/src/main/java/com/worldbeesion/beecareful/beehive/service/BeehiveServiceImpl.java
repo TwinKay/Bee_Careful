@@ -200,7 +200,7 @@ public class BeehiveServiceImpl implements BeehiveService {
                 diagnosis.getId(), photoId, analyzedPhoto.getId());
 
             // Save associated disease details
-            saveAnalyzedDiseases(analyzedPhoto, diagResult);
+            saveAnalyzedPhotoDiseases(analyzedPhoto, diagResult);
             log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhotoDisease entities.", diagnosis.getId(), photoId);
 
             // Update original photo status to SUCCESS
@@ -250,40 +250,24 @@ public class BeehiveServiceImpl implements BeehiveService {
     /**
      * Saves all detected diseases for a given analyzed photo.
      */
-    private void saveAnalyzedDiseases(AnalyzedPhoto analyzedPhoto, DiagnosisApiResponse.DiagnosisResult result) {
+    private void saveAnalyzedPhotoDiseases(AnalyzedPhoto analyzedPhoto, DiagnosisApiResponse.DiagnosisResult result) {
         // Larva diseases
-        saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", true, result.larva().varroaCount());
-        saveAnalyzedPhotoDisease(analyzedPhoto, "FOULBROOD", true, result.larva().foulBroodCount());
-        saveAnalyzedPhotoDisease(analyzedPhoto, "CHALKBROOD", true, result.larva().chalkBroodCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, BeeStage.LARVA, DiseaseName.VARROA, result.larva().varroaCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, BeeStage.LARVA, DiseaseName.FOULBROOD, result.larva().foulBroodCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, BeeStage.LARVA, DiseaseName.CHALKBROOD, result.larva().chalkBroodCount());
 
         // Imago diseases
-        saveAnalyzedPhotoDisease(analyzedPhoto, "VARROA", false, result.imago().varroaCount());
-        saveAnalyzedPhotoDisease(analyzedPhoto, "DWV", false, result.imago().dwvCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, BeeStage.IMAGO, DiseaseName.VARROA, result.imago().varroaCount());
+        saveAnalyzedPhotoDisease(analyzedPhoto, BeeStage.IMAGO, DiseaseName.DWV, result.imago().dwvCount());
     }
 
     /**
      * Helper to create and save AnalyzedPhotoDisease only if the count is positive.
      * This method now uses DiseaseRepository to find the Disease entity by its name and stage.
      */
-    private void saveAnalyzedPhotoDisease(AnalyzedPhoto analyzedPhoto, String diseaseCodeString, boolean isLarva, Long count) {
+    private void saveAnalyzedPhotoDisease(AnalyzedPhoto analyzedPhoto, BeeStage beeStage, DiseaseName diseaseName, Long count) {
         if (count != null && count > 0) {
-            // DiseaseName diseaseNameEnum;
-            // try {
-            //     // Convert the input string disease code to the DiseaseName enum
-            //     diseaseNameEnum = DiseaseName.valueOf(diseaseCodeString.toUpperCase());
-            // } catch (IllegalArgumentException e) {
-            //     log.error(
-            //         "Unknown disease code string: {}. Cannot convert to DiseaseName enum. Please ensure this disease name is defined in the DiseaseName enum.",
-            //         diseaseCodeString);
-            //     // Or throw a specific exception if this is a critical error and should halt processing
-            //     return; // Skip saving if disease code string is unknown/not in enum
-            // }
-
-            // Convert the isLarva boolean to the BeeStage enum
-            DiseaseName diseaseName = DiseaseName.valueOf(diseaseCodeString);
-            BeeStage beeStageEnum = isLarva ? BeeStage.LARVA : BeeStage.IMAGO;
-
-            Disease disease = diseaseRepository.findByNameAndStage(diseaseName, beeStageEnum);
+            Disease disease = diseaseRepository.findByNameAndStage(diseaseName, beeStage);
 
             AnalyzedPhotoDisease diseaseRecord = AnalyzedPhotoDisease.builder()
                 .analyzedPhoto(analyzedPhoto)
