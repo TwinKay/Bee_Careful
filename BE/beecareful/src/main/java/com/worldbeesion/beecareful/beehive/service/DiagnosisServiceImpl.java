@@ -32,18 +32,11 @@ import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class DiagnosisServiceImpl implements DiagnosisService {
 
-    @Value("${ai-server.diagnosis-path}")
-    private String aiDiagnosisPath;
-    @Value("${ai-server.baseUrl}")
-    private String aiServerBaseUrl;
+    private final String aiDiagnosisPath;
 
-    private final WebClient webClient = WebClient.builder()
-        .baseUrl(aiServerBaseUrl)
-        .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(128 * 1024 * 1024)) // 128MB buffer
-        .build();
+    private final WebClient webClient;
 
     private final S3PresignService s3PresignService;
     private final S3FileMetadataRepository s3FileMetadataRepository;
@@ -53,6 +46,28 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private final AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository;
     private final DiseaseRepository diseaseRepository;
     private final BeehiveRepository beehiveRepository;
+
+    public DiagnosisServiceImpl(
+        @Value("${ai-server.diagnosis-path}") String aiDiagnosisPath,
+        @Value("${ai-server.baseUrl}") String aiServerBaseUrl,
+        S3PresignService s3PresignService,
+        S3FileMetadataRepository s3FileMetadataRepository, DiagnosisRepository diagnosisRepository, OriginalPhotoRepository originalPhotoRepository,
+        AnalyzedPhotoRepository analyzedPhotoRepository, AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository,
+        DiseaseRepository diseaseRepository, BeehiveRepository beehiveRepository) {
+        this.aiDiagnosisPath = aiDiagnosisPath;
+        this.webClient = WebClient.builder()
+            .baseUrl(aiServerBaseUrl)
+            .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(128 * 1024 * 1024)) // 128MB buffer
+            .build();
+        this.s3PresignService = s3PresignService;
+        this.s3FileMetadataRepository = s3FileMetadataRepository;
+        this.diagnosisRepository = diagnosisRepository;
+        this.originalPhotoRepository = originalPhotoRepository;
+        this.analyzedPhotoRepository = analyzedPhotoRepository;
+        this.analyzedPhotoDiseaseRepository = analyzedPhotoDiseaseRepository;
+        this.diseaseRepository = diseaseRepository;
+        this.beehiveRepository = beehiveRepository;
+    }
 
     @Override
     public Mono<DiagnosisApiResponse> analyzePhoto(String originalPhotoS3Key) {
