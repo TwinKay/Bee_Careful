@@ -38,7 +38,7 @@ export type DiagnosisResponseType = {
 };
 
 export type DiagnosisRequestType = {
-  beeHiveId: number;
+  beeHiveId: number | string;
   count: number;
   photos: ImageMetadataType[];
 };

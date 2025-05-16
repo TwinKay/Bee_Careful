@@ -30,14 +30,11 @@ export const uploadImages = async (
         body: formData,
         headers: {
           'Content-Type': imageMap[filename].type,
-          'x-amz-acl': 'public-read',
         },
-      })
-        .then((response) => response.json())
-        .catch((error) => {
-          console.error('Error uploading images:', error);
-          throw error;
-        });
+      }).catch((error) => {
+        console.error('Error uploading images:', error);
+        throw error;
+      });
     });
   } catch (error) {
     console.error('Error uploading images:', error);
