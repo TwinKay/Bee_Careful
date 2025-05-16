@@ -5,9 +5,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
+import com.worldbeesion.beecareful.beehive.model.entity.Diagnosis;
 import com.worldbeesion.beecareful.beehive.model.entity.OriginalPhoto;
 import com.worldbeesion.beecareful.beehive.repository.OriginalPhotoRepository;
-import com.worldbeesion.beecareful.beehive.service.BeehiveService;
 import com.worldbeesion.beecareful.beehive.service.DiagnosisService;
 import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.exception.InvalidS3EventException;
@@ -155,12 +155,12 @@ public class S3EventServiceImpl implements S3EventService {
 		}
 
 		// Get the diagnosis ID
-		Long diagnosisId = originalPhoto.getDiagnosis().getId();
-		log.info("Found diagnosis ID: {} for S3FileMetadata with key: {}", diagnosisId, metadata.getS3Key());
+		Diagnosis diagnosis = originalPhoto.getDiagnosis();
+		log.info("Found diagnosis ID: {} for S3FileMetadata with key: {}", diagnosis.getId(), metadata.getS3Key());
 
 		// Get all original photos for this diagnosis
-		List<OriginalPhoto> allPhotosForDiagnosis = originalPhotoRepository.findAllByDiagnosisId(diagnosisId);
-		log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosisId);
+		List<OriginalPhoto> allPhotosForDiagnosis = originalPhotoRepository.findAllByDiagnosis(diagnosis);
+		log.info("Found {} photos for diagnosis ID: {}", allPhotosForDiagnosis.size(), diagnosis.getId());
 
 		metadata.setStatus(S3FileStatus.STORED);
 		s3FileMetadataRepository.save(metadata); // Save the updated entity
@@ -177,10 +177,10 @@ public class S3EventServiceImpl implements S3EventService {
 
 		// TODO: prevent duplicate call with lock or whatever
 		if (allPhotosUploaded) {
-			log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosisId);
-			diagnosisService.runDiagnosis(diagnosisId);
+			log.info("All photos for diagnosis ID: {} have been uploaded. Running diagnosis...", diagnosis.getId());
+			diagnosisService.runDiagnosis(diagnosis.getId());
 		} else {
-			log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosisId);
+			log.info("Not all photos for diagnosis ID: {} have been uploaded yet.", diagnosis.getId());
 		}
 	}
 }

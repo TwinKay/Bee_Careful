@@ -102,7 +102,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             });
 
         // 2. Retrieve all OriginalPhoto entities associated with this Diagnosis
-        List<OriginalPhoto> originalPhotos = originalPhotoRepository.findAllByDiagnosisId(diagnosisId);
+        List<OriginalPhoto> originalPhotos = originalPhotoRepository.findAllByDiagnosis(diagnosis);
 
         if (originalPhotos.isEmpty()) {
             log.warn("No original photos found for diagnosisId: {}. Diagnosis process cannot run.", diagnosisId);
