@@ -47,7 +47,7 @@ public class S3EventServiceImpl implements S3EventService {
 	 * S3에 업로드된 파일의 실제 크기와 예상 크기 간의 허용 가능한 최대 차이 백분율
 	 * 예상 크기와 실제 크기의 차이가 20%를 초과하면 InvalidS3EventException이 발생함
 	 */
-	private static final double MAX_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
+	private static final double MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE = 20.0;
 
 
 	@Override
@@ -121,9 +121,9 @@ public class S3EventServiceImpl implements S3EventService {
 		} else if (expectedSize != 0) {
 			double sizeDifferencePercentage = Math.abs((double) (expectedSize - receivedSize) / expectedSize) * 100;
 
-			if (sizeDifferencePercentage > MAX_SIZE_DIFFERENCE_PERCENTAGE) {
+			if (sizeDifferencePercentage > MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE) {
 				String errorMsg = String.format("File size mismatch for objectKey: %s. Expected: %d, Received: %d, Difference: %.2f%% (Limit: %.1f%%)",
-					eventPayload.getObjectKey(), expectedSize, receivedSize, sizeDifferencePercentage, MAX_SIZE_DIFFERENCE_PERCENTAGE);
+					eventPayload.getObjectKey(), expectedSize, receivedSize, sizeDifferencePercentage, MAXIMUM_ALLOWED_SIZE_DIFFERENCE_PERCENTAGE);
 				log.warn(errorMsg);
 				throw new InvalidS3EventException(); // Throw specific exception
 			}
