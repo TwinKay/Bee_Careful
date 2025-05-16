@@ -56,7 +56,7 @@ public class S3EventController {
 			eventPayload.getObjectKey(),
 			eventPayload.getEventName());
 
-		S3EventType eventType = S3EventType.valueOf(eventPayload.getEventName());
+		S3EventType eventType = S3EventType.fromEventNameString(eventPayload.getEventName());
 		if (eventType == S3EventType.OBJECT_CREATED_PUT)
 			s3EventService.processS3PutEvent(eventPayload);
 		else
