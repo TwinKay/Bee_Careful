@@ -19,6 +19,10 @@ export type BeehiveMapRefType = {
 
 const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, ref) => {
   const [hives, setHives] = useState<BeehiveType[]>([]);
+  // 초기 로딩 여부를 추적하는 상태 추가
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  // 수동으로 맵 새로고침이 요청되었는지 추적하는 상태 추가
+  const [isManualRefresh, setIsManualRefresh] = useState(false);
 
   // 벌통 상태 팝업 관련 상태
   const [selectedHive, setSelectedHive] = useState<BeehiveType | null>(null);
@@ -76,9 +80,11 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
     setShowToast(true);
   };
 
-  // 맵 새로고침 함수
+  // 맵 새로고침 함수 - 수정된 버전
   const refreshMap = async () => {
     try {
+      // 수동 새로고침 플래그 설정
+      setIsManualRefresh(true);
       await refetch();
     } catch (refreshError) {
       let errorMessage = '맵 새로고침 중 오류가 발생했습니다.';
@@ -88,6 +94,9 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
       }
 
       showToastMessage(errorMessage, 'warning', 'middle');
+    } finally {
+      // 새로고침 완료 후 플래그 초기화
+      setIsManualRefresh(false);
     }
   };
 
@@ -118,16 +127,18 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>((_props, r
     }
   }, [isError, error]);
 
-  // 초기 위치 설정
+  // 초기 위치 설정 - 수정된 버전
   useEffect(() => {
-    // 데이터 로드 후 맵 중앙(벌통 위치)으로 스크롤
-    if (beehives && beehives.length > 0) {
+    // 초기 로딩 시에만 centerToHives 실행
+    // isManualRefresh가 true일 때는 벌통 위치로 중앙 이동하지 않음
+    if (beehives && beehives.length > 0 && !initialLoadComplete && !isManualRefresh) {
       centerToHives();
+      setInitialLoadComplete(true);
     }
-  }, [beehives, centerToHives]);
+  }, [beehives, centerToHives, initialLoadComplete, isManualRefresh]);
 
   // 로딩 상태 표시
-  if (isLoading) {
+  if (isLoading && !isManualRefresh) {
     return (
       <div className="flex h-full w-full items-center justify-center">
         <span className="text-lg font-medium">벌통 데이터를 불러오는 중...</span>

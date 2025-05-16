@@ -137,33 +137,35 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
 
   // 진단 상태에 따른 아이콘 결정
   let statusIcon = null;
-  if (showDiagnosisIcon && hive.diagnosisStatus === 0) {
-    // loading
-    statusIcon = (
-      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-2 shadow-sm">
-          <i className="ri-loader-4-line animate-spin text-3xl text-blue-500"></i>
+  if (!isSelected) {
+    if (showDiagnosisIcon && hive.diagnosisStatus === 0) {
+      // loading
+      statusIcon = (
+        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-2 shadow-sm">
+            <i className="ri-loader-4-line animate-spin text-3xl text-blue-500"></i>
+          </div>
         </div>
-      </div>
-    );
-  } else if (showDiagnosisIcon && hive.diagnosisStatus === 1) {
-    // success
-    statusIcon = (
-      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
-          <i className="ri-checkbox-circle-line text-3xl text-green-500"></i>
+      );
+    } else if (showDiagnosisIcon && hive.diagnosisStatus === 1) {
+      // success
+      statusIcon = (
+        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
+            <i className="ri-checkbox-circle-line text-3xl text-green-500"></i>
+          </div>
         </div>
-      </div>
-    );
-  } else if (showDiagnosisIcon && hive.diagnosisStatus === 2) {
-    // warning
-    statusIcon = (
-      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
-          <i className="ri-information-line text-3xl text-red-500"></i>
+      );
+    } else if (showDiagnosisIcon && hive.diagnosisStatus === 2) {
+      // warning
+      statusIcon = (
+        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
+            <i className="ri-information-line text-3xl text-red-500"></i>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   // 선택 상태 아이콘 (진단 모드에서 선택된 경우에만 표시)
@@ -194,7 +196,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
       }
     : {};
 
-  const containerClass = `relative rounded-xl flex flex-col items-center justify-center h-full w-full p-2`;
+  const containerClass = `relative rounded-xl flex flex-col items-center justify-center h-full w-full`;
 
   return (
     <div

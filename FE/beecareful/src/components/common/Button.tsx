@@ -13,7 +13,7 @@ export type ButtonVariantType =
   | 'neutral'
   | 'outline'
   | 'text';
-export type ButtonSizeType = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+export type ButtonSizeType = 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'fixed_xxl' | 'fixed_xl';
 
 export type ButtonPropsType = {
   /** 버튼의 시각적 스타일 */
@@ -58,6 +58,8 @@ export const Button = ({
     lg: 'px-6 py-4 text-lg',
     xl: 'px-12 py-4 text-lg',
     xxl: 'px-24 py-4 text-lg',
+    fixed_xxl: 'w-32 py-4 text-lg',
+    fixed_xl: 'w-24 py-4 text-lg',
   };
 
   // 변형별 클래스
