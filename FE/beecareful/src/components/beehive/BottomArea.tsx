@@ -1,3 +1,5 @@
+// BottomArea.tsx 수정
+
 import { Link } from 'react-router-dom';
 import Button from '@/components/common/Button';
 import { ROUTES } from '@/config/routes';
@@ -46,8 +48,8 @@ const BottomArea = ({
 }: BottomAreaPropsType) => {
   // 진단 모드일 때 UI
   const renderDiagnosisMode = () => (
-    <div className="fixed bottom-0 left-0 right-0 px-4 py-6 shadow-lg">
-      <div className="my-10 ml-2">
+    <div className="safe-area-bottom w-full px-4 pb-10 pt-4 shadow-lg">
+      <div className="mb-8">
         <h2 className="text-bold text-left text-xl font-bold text-bc-brown-100">
           검사를 진행할 벌통을 선택해주세요
         </h2>
@@ -72,13 +74,13 @@ const BottomArea = ({
             }}
             className="w-full"
           >
-            <Button variant="success" size="xl" fullWidth>
+            <Button variant="success" size="fixed_xl" fullWidth>
               선택 완료
             </Button>
           </Link>
         </div>
         <div className="w-1/2">
-          <Button variant="secondary" size="xl" onClick={onCancelDiagnosis} fullWidth>
+          <Button variant="secondary" size="fixed_xl" onClick={onCancelDiagnosis} fullWidth>
             취소하기
           </Button>
         </div>
@@ -88,8 +90,8 @@ const BottomArea = ({
 
   // 일반 모드일 때 UI
   const renderNormalMode = () => (
-    <section className="flex justify-between gap-4 py-4">
-      <Button onClick={onDiagnosisClick} variant="success" size="xxl" fullWidth>
+    <section className="safe-area-bottom flex justify-between gap-4 pt-4">
+      <Button onClick={onDiagnosisClick} variant="success" size="fixed_xxl" fullWidth>
         질병 검사
       </Button>
       <Button
@@ -106,7 +108,9 @@ const BottomArea = ({
   return (
     <>
       {/* 모드에 따른 하단 영역 렌더링 */}
-      {mode === 'diagnosis' ? renderDiagnosisMode() : renderNormalMode()}
+      <div className={`w-full ${mode === 'diagnosis' ? 'absolute bottom-0 left-0 right-0' : ''}`}>
+        {mode === 'diagnosis' ? renderDiagnosisMode() : renderNormalMode()}
+      </div>
 
       {/* 벌통 별명 입력 바텀시트 */}
       <BottomSheet

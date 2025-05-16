@@ -238,8 +238,17 @@ const BeehiveListPage = () => {
         {/* 메인 컨텐츠 영역 */}
         <main className="flex flex-1 flex-col overflow-hidden px-4 lg:flex-row">
           {/* 벌통 맵 영역 */}
+          {/* <section className={`lg:w-2/3 ${currentMode === 'normal' ? 'h-[80vh]' : 'h-[70vh]'}`}>
+            <div className="h-full w-full overflow-hidden rounded-lg bg-white">
+              <BeehiveMap ref={mapRef} />
+            </div>
+          </section> */}
+
+          {/* 벌통 맵 영역 - 진단 모드일 때 하단 영역 공간 확보 */}
           <section
-            className={`lg:h-auto lg:w-2/3 ${currentMode === 'normal' ? 'h-[80vh]' : 'h-[70vh]'}`}
+            className={`transition-all duration-300 lg:w-2/3 ${
+              currentMode === 'normal' ? 'h-[calc(100vh-200px)]' : 'h-[calc(100vh-280px)]'
+            }`}
           >
             <div className="h-full w-full overflow-hidden rounded-lg bg-white">
               <BeehiveMap ref={mapRef} />
