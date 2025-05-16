@@ -30,9 +30,9 @@ aws:
     bucketName: ${S3_BUCKET_NAME}
     apiSecret: ${S3_API_SECRET}
 
-ai:
-  api:
-    endpoint: ${AI_ENDPOINT}
+ai-server:
+  baseUrl: ${AI_BASEURL}
+  diagnosis-path: ${AI_DIAGNOSIS_PATH}
 
 logging:
   level:

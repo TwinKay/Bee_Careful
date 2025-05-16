@@ -39,8 +39,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Resource(lookup = "diagnosisWebClient")
     private final WebClient webClient;
 
-    @Value("${beecareful.ai.api.endpoint}")
-    private String aiApiEndpoint;
+    @Value("${ai-server.diagnosis-path}")
+    private String aiDiagnosisPath;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -58,7 +58,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         log.debug("Sending S3 key {} to AI API for analysis.", originalPhotoS3Key);
 
         return webClient.post()
-            .uri(aiApiEndpoint)
+            .uri(aiDiagnosisPath)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(Map.of("s3Key", originalPhotoS3Key))
             .accept(MediaType.APPLICATION_JSON)
