@@ -19,26 +19,29 @@ export const uploadImages = async (
   );
 
   try {
-    imageUrls.urls.forEach(({ filename, status, preSignedUrl }) => {
+    const promises = imageUrls.urls.map(({ filename, status, preSignedUrl }) => {
       if (status > 0) throw new Error(`Error uploading image ${filename}: ${status}`);
 
       const formData = new FormData();
       formData.append('file', imageMap[filename], filename);
 
-      fetch(preSignedUrl, {
+      return fetch(preSignedUrl, {
         method: 'PUT',
         body: formData,
         headers: {
           'Content-Type': imageMap[filename].type,
         },
-      }).catch((error) => {
-        console.error('Error uploading images:', error);
-        throw error;
       });
     });
+    const results = await Promise.all(promises);
+    const allSuccessful = results.every((result) => result.ok);
+    if (allSuccessful) {
+      callbacks.onSuccess();
+    } else {
+      throw new Error('Some images failed to upload');
+    }
   } catch (error) {
     console.error('Error uploading images:', error);
     callbacks.onError(error as AxiosError);
   }
-  callbacks.onSuccess();
 };
