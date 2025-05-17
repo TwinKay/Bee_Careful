@@ -1,5 +1,3 @@
-'use client';
-
 import type React from 'react';
 import BeehiveCell from '@/components/beehive/BeehiveCell';
 import type { BeehiveType } from '@/types/beehive';
@@ -13,10 +11,10 @@ type DraggableHivePropsType = {
   hiveSize: number;
   onDragStart: (id: number, e: React.MouseEvent | React.TouchEvent) => void;
   onDragEnd: () => void;
-  onOpenStatusPopup: (hive: BeehiveType) => void; // 팝업 열기 함수 추가
+  onOpenStatusPopup: (hive: BeehiveType) => void;
+  collisionDetected?: boolean;
 };
 
-// 드래그 중 상세보기 팝업 열림 문제 해결을 위한 코드 수정
 const DraggableHive: React.FC<DraggableHivePropsType> = ({
   hive,
   scale,
@@ -26,6 +24,7 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
   onDragStart,
   onDragEnd,
   onOpenStatusPopup,
+  collisionDetected = false, // 기본값 false
 }) => {
   // 드래그 중인지 여부를 추적하는 ref 추가
   const dragInProgress = useRef(false);
@@ -49,6 +48,15 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
     }
   };
 
+  // 충돌 시 시각적 피드백을 위한 스타일 추가
+  const collisionStyle =
+    collisionDetected && isDragging && isLongPress
+      ? {
+          boxShadow: '0 0 0 2px rgba(255, 0, 0, 0.5), 0 0 10px rgba(255, 0, 0, 0.5)',
+          transition: 'box-shadow 0.2s ease',
+        }
+      : {};
+
   return (
     <div
       className={`absolute ${isDragging && isLongPress ? 'z-10 ring-2 ring-blue-300 ring-offset-2' : ''}`}
@@ -71,6 +79,7 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
         minHeight: `${hiveSize}px`,
         WebkitTransform: `translate3d(0, 0, 0) scale(${scale})`,
         contain: 'strict',
+        ...collisionStyle, // 충돌 시 스타일 적용
       }}
       onMouseDown={(e) => handleDragStart(e)}
       onTouchStart={(e) => {
@@ -84,7 +93,8 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
     >
       <BeehiveCell
         hive={hive}
-        onOpenStatusPopup={handleOpenPopup} // 수정된 팝업 열기 함수 전달
+        onOpenStatusPopup={handleOpenPopup}
+        collisionDetected={collisionDetected}
       />
     </div>
   );

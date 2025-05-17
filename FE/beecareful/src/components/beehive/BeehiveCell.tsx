@@ -9,10 +9,15 @@ import useAppStore from '@/store/beehiveStore';
 type HiveCellPropsType = {
   hive: BeehiveType;
   onOpenStatusPopup?: (hive: BeehiveType) => void;
+  collisionDetected?: boolean;
 };
 
-const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) => {
-  // 스토어에서 현재 모드와 선택된 벌통 ID 가져오기
+const BeehiveCell: React.FC<HiveCellPropsType> = ({
+  hive,
+  onOpenStatusPopup,
+  collisionDetected = false,
+}) => {
+  // 앱 상태 스토어에서 현재 모드와 선택된 벌통 ID 가져오기
   const { currentMode, selectedBeehive, setSelectedBeehive } = useAppStore();
 
   // 현재 벌통이 선택되었는지 확인
@@ -48,8 +53,12 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
       filter: 'opacity(0.4) grayscale(20%)',
       WebkitFilter: 'opacity(0.4) grayscale(20%)',
     }),
-    // 이벤트를 전파하기 위해 포인터 이벤트 허용
     pointerEvents: 'auto',
+    // 충돌 시 시각적 피드백
+    ...(collisionDetected && {
+      filter: 'drop-shadow(0 0 5px rgba(255, 0, 0, 0.8))',
+      WebkitFilter: 'drop-shadow(0 0 5px rgba(255, 0, 0, 0.8))',
+    }),
   };
 
   // 진동 함수
@@ -244,6 +253,11 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
     </>
   );
 
+  // 충돌 표시 아이콘 (충돌이 감지된 경우에만 표시)
+  const collisionIcon = collisionDetected && (
+    <div className="pointer-events-none absolute inset-0 z-10 rounded-xl border-2 border-red-500 bg-red-500/10" />
+  );
+
   // 진단 모드일 때 추가 스타일 (움직임 방지)
   const diagnosisModeStyle: React.CSSProperties = isDiagnosisMode
     ? {
@@ -293,19 +307,26 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
         className="relative flex w-full items-center justify-center"
         style={{
           WebkitTouchCallout: 'none',
+          // 진단 모드 추가 스타일
           ...diagnosisModeStyle,
         }}
+        // 내부 div에도 클릭 이벤트 추가
         onClick={handleClick}
+        // 드래그 방지
         onDragStart={handleDragStart}
         draggable={!isDiagnosisMode}
+        // 터치 이동 제한
         onTouchMove={handleTouchMove}
       >
         {/* 벌통 SVG */}
         <div
           className="relative flex w-full items-center justify-center"
+          // 이미지 컨테이너에도 클릭 이벤트 추가
           onClick={handleClick}
+          // 드래그 방지
           onDragStart={handleDragStart}
           draggable={!isDiagnosisMode}
+          // 터치 이동 제한
           onTouchMove={handleTouchMove}
         >
           <img
@@ -314,20 +335,27 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
             className="h-full w-full"
             style={{
               ...svgStyle,
+              // 진단 모드에서 드래그 방지
               pointerEvents: isDiagnosisMode ? 'auto' : 'auto',
             }}
+            // 이미지 저장 및 드래그 방지
             draggable={!isDiagnosisMode}
             onContextMenu={(e) => e.preventDefault()}
+            // 이미지 자체에도 클릭 이벤트 추가
             onClick={(e) => {
               e.stopPropagation();
               handleCellAction();
             }}
+            // 드래그 방지
             onDragStart={handleDragStart}
+            // 터치 이동 제한
             onTouchMove={handleTouchMove}
+            // 이미지 최적화를 위한 속성
             loading="lazy"
             decoding="async"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
+              // SVG 로드 실패 시 대체 텍스트 표시 등 처리 가능
             }}
           />
 
@@ -336,6 +364,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
             <span
               className="inline-block max-w-[80px] overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold text-black"
               style={{
+                // iOS에서 폰트 렌더링 최적화
                 WebkitFontSmoothing: 'antialiased',
                 MozOsxFontSmoothing: 'grayscale',
                 textRendering: 'optimizeLegibility',
@@ -351,6 +380,9 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
 
         {/* 선택 상태 아이콘 (진단 모드에서만 표시) */}
         {selectionIcon}
+
+        {/* 충돌 표시 아이콘 (충돌이 감지된 경우에만 표시) */}
+        {collisionIcon}
       </div>
     </div>
   );

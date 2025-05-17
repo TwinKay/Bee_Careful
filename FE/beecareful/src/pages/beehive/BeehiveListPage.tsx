@@ -1,3 +1,7 @@
+'use client';
+
+import type React from 'react';
+
 import { useState, useRef, useEffect } from 'react';
 import BeehiveMap from '@/components/beehive/BeehiveMap';
 import { ROUTES } from '@/config/routes';
@@ -8,7 +12,8 @@ import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
 import RemixIcon from '@/components/common/RemixIcon';
 import useBeehiveStore from '@/store/beehiveStore';
 import BottomArea from '@/components/beehive/BottomArea';
-import { useCreateBeehive } from '@/apis/beehive';
+import { useCreateBeehive, useGetBeehives } from '@/apis/beehive';
+import { useBeehivePosition } from '@/hooks/useBeehivePosition';
 
 // 로케이션 스테이트 타입
 type LocationStateType = {
@@ -45,6 +50,14 @@ const BeehiveListPage = () => {
 
   // API 뮤테이션 훅
   const createBeehiveMutation = useCreateBeehive();
+  const { data: beehives = [] } = useGetBeehives();
+
+  // 맵 컨테이너 참조
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  // 벌통 위치 관련 훅 사용
+  const { findOptimalPosition } = useBeehivePosition({ containerRef, scale });
 
   // Toast 표시 함수
   const showToastMessage = (
@@ -139,25 +152,26 @@ const BeehiveListPage = () => {
     }, 300); // 애니메이션을 위한 짧은 지연
   };
 
+  // 위치가 현재 화면 영역 내에 있는지 확인하는 함수
+  // const isPositionVisible = (x: number, y: number): boolean => {
+  //   if (!containerRef.current) return false
+
+  //   const visibleArea = getVisibleArea(containerRef.current, scale)
+
+  //   return x >= visibleArea.minX && x <= visibleArea.maxX && y >= visibleArea.minY && y <= visibleArea.maxY
+  // }
+
   // 장치 등록 여부를 파라미터로 받는 통합 함수
   const handleRegisterBeehive = async (withDevice = false) => {
     try {
-      // 현재 맵 중앙 위치 가져오기
-      let centerX = beehiveData.xDirection;
-      let centerY = beehiveData.yDirection;
-
-      // 맵 참조를 통해 중앙 좌표를 가져올 수 있다면 사용
-      if (mapRef.current && typeof mapRef.current.getMapCenter === 'function') {
-        const center = mapRef.current.getMapCenter();
-        centerX = center.x;
-        centerY = center.y;
-      }
+      // 최적의 벌통 위치 찾기 (다른 벌통과 충돌하지 않는 위치)
+      const optimalPosition = findOptimalPosition(beehives);
 
       // API 요청 데이터 구성
       const beehiveCreateData = {
         nickname: beehiveData.nickname,
-        xDirection: centerX,
-        yDirection: centerY,
+        xDirection: optimalPosition.xDirection,
+        yDirection: optimalPosition.yDirection,
       };
 
       // 장치 등록이 필요한 경우에만 장치 코드 추가
@@ -186,9 +200,17 @@ const BeehiveListPage = () => {
         yDirection: 1000,
       });
 
-      // 맵 새로고침 로직
+      // 맵 새로고침 후 새 벌통 위치로 스크롤
       if (mapRef.current && typeof mapRef.current.refreshMap === 'function') {
-        mapRef.current.refreshMap();
+        await mapRef.current.refreshMap();
+
+        // 새로고침 후 새 벌통 위치로 스크롤 (지연 시간 증가)
+        setTimeout(() => {
+          if (mapRef.current && typeof mapRef.current.scrollToPosition === 'function') {
+            // 항상 새 벌통 위치로 스크롤
+            mapRef.current.scrollToPosition(optimalPosition.xDirection, optimalPosition.yDirection);
+          }
+        }, 800); // 지연 시간 증가
       }
     } catch (error) {
       let errorMessage = '벌통 추가 중 오류가 발생했습니다.';
@@ -196,7 +218,7 @@ const BeehiveListPage = () => {
         errorMessage = error.message;
       }
 
-      showToastMessage(errorMessage, 'warning', 'middle');
+      showToastMessage(errorMessage, 'warning', 'top');
     }
   };
 
@@ -212,6 +234,11 @@ const BeehiveListPage = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location]);
+
+  // 맵 스케일 업데이트 함수 (BeehiveMap에서 전달받음)
+  const handleScaleChange = (newScale: number) => {
+    setScale(newScale);
+  };
 
   return (
     <>
@@ -237,21 +264,18 @@ const BeehiveListPage = () => {
 
         {/* 메인 컨텐츠 영역 */}
         <main className="flex flex-1 flex-col overflow-hidden px-4 lg:flex-row">
-          {/* 벌통 맵 영역 */}
-          {/* <section className={`lg:w-2/3 ${currentMode === 'normal' ? 'h-[80vh]' : 'h-[70vh]'}`}>
-            <div className="h-full w-full overflow-hidden rounded-lg bg-white">
-              <BeehiveMap ref={mapRef} />
-            </div>
-          </section> */}
-
           {/* 벌통 맵 영역 - 진단 모드일 때 하단 영역 공간 확보 */}
           <section
-            className={`transition-all duration-300 lg:w-2/3 ${
+            className={`transition-all duration-300 ${
               currentMode === 'normal' ? 'h-[calc(100vh-200px)]' : 'h-[calc(100vh-280px)]'
             }`}
           >
             <div className="h-full w-full overflow-hidden rounded-lg bg-white">
-              <BeehiveMap ref={mapRef} />
+              <BeehiveMap
+                ref={mapRef}
+                containerRef={containerRef}
+                onScaleChange={handleScaleChange}
+              />
             </div>
           </section>
 

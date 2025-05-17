@@ -12,6 +12,7 @@ type MapContainerPropsType = {
   handleDragStart: (id: number, e: React.MouseEvent | React.TouchEvent) => void;
   handleDragEnd: () => void;
   onOpenStatusPopup: (hive: BeehiveType) => void;
+  collisionDetected?: boolean;
 };
 
 const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
@@ -25,6 +26,7 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
       handleDragStart,
       handleDragEnd,
       onOpenStatusPopup,
+      collisionDetected = false,
     },
     ref,
   ) => {
@@ -38,11 +40,17 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
         className="map-container relative h-full w-full overflow-auto"
         style={{
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-x pan-y pinch-zoom',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          touchAction: 'auto',
+          scrollbarWidth: 'auto',
+          msOverflowStyle: 'auto',
+          overscrollBehavior: 'auto',
         }}
-        onMouseMove={handleDrag}
+        onMouseMove={(e) => {
+          // 드래그 중일 때만 이벤트 처리
+          if (draggingId !== null && isLongPress) {
+            handleDrag(e);
+          }
+        }}
         onMouseUp={handleDragEnd}
         onMouseLeave={handleDragEnd}
       >
@@ -56,6 +64,18 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
             backgroundSize: `${50 * scale}px ${50 * scale}px`,
           }}
         >
+          {/* 맵 경계 표시 */}
+          <div
+            className="pointer-events-none absolute border-2 border-dashed border-gray-400"
+            style={{
+              left: `${HIVE_SIZE * scale}px`,
+              top: `${HIVE_SIZE * scale}px`,
+              width: `${(MAP_WIDTH - HIVE_SIZE * 2) * scale}px`,
+              height: `${(MAP_HEIGHT - HIVE_SIZE * 2) * scale}px`,
+              opacity: 0.5,
+            }}
+          />
+
           {hives.map((hive) => (
             <DraggableHive
               key={hive.beehiveId}
@@ -67,6 +87,7 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onOpenStatusPopup={onOpenStatusPopup}
+              collisionDetected={draggingId === hive.beehiveId && collisionDetected}
             />
           ))}
         </div>
@@ -74,7 +95,5 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
     );
   },
 );
-
-MapContainer.displayName = 'MapContainer';
 
 export default MapContainer;
