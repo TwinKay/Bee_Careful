@@ -1,7 +1,4 @@
-'use client';
-
 import type React from 'react';
-
 import { useState, useRef, useEffect } from 'react';
 import BeehiveMap from '@/components/beehive/BeehiveMap';
 import { ROUTES } from '@/config/routes';
@@ -152,15 +149,6 @@ const BeehiveListPage = () => {
     }, 300); // 애니메이션을 위한 짧은 지연
   };
 
-  // 위치가 현재 화면 영역 내에 있는지 확인하는 함수
-  // const isPositionVisible = (x: number, y: number): boolean => {
-  //   if (!containerRef.current) return false
-
-  //   const visibleArea = getVisibleArea(containerRef.current, scale)
-
-  //   return x >= visibleArea.minX && x <= visibleArea.maxX && y >= visibleArea.minY && y <= visibleArea.maxY
-  // }
-
   // 장치 등록 여부를 파라미터로 받는 통합 함수
   const handleRegisterBeehive = async (withDevice = false) => {
     try {
@@ -209,6 +197,11 @@ const BeehiveListPage = () => {
           if (mapRef.current && typeof mapRef.current.scrollToPosition === 'function') {
             // 항상 새 벌통 위치로 스크롤
             mapRef.current.scrollToPosition(optimalPosition.xDirection, optimalPosition.yDirection);
+            showToastMessage(
+              `${beehiveData.nickname} 벌통이 추가된 위치로 이동했습니다.`,
+              'info',
+              'bottom',
+            );
           }
         }, 800); // 지연 시간 증가
       }
@@ -218,7 +211,7 @@ const BeehiveListPage = () => {
         errorMessage = error.message;
       }
 
-      showToastMessage(errorMessage, 'warning', 'top');
+      showToastMessage(errorMessage, 'warning', 'middle');
     }
   };
 
@@ -266,7 +259,7 @@ const BeehiveListPage = () => {
         <main className="flex flex-1 flex-col overflow-hidden px-4 lg:flex-row">
           {/* 벌통 맵 영역 - 진단 모드일 때 하단 영역 공간 확보 */}
           <section
-            className={`transition-all duration-300 ${
+            className={`transition-all duration-300 lg:w-2/3 ${
               currentMode === 'normal' ? 'h-[calc(100vh-200px)]' : 'h-[calc(100vh-280px)]'
             }`}
           >

@@ -15,6 +15,7 @@ type DraggableHivePropsType = {
   collisionDetected?: boolean;
 };
 
+// 드래그 중 상세보기 팝업 열림 문제 해결을 위한 코드 수정
 const DraggableHive: React.FC<DraggableHivePropsType> = ({
   hive,
   scale,
@@ -62,8 +63,8 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
       className={`absolute ${isDragging && isLongPress ? 'z-10 ring-2 ring-blue-300 ring-offset-2' : ''}`}
       style={{
         position: 'absolute',
-        left: `${hive.xDirection * scale}px`,
-        top: `${hive.yDirection * scale}px`,
+        left: `${(hive.xDirection - hiveSize / 2) * scale}px`,
+        top: `${(hive.yDirection - hiveSize / 2) * scale}px`,
         width: `${hiveSize}px`,
         height: `${hiveSize}px`,
         transform: `scale(${scale})`,

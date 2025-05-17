@@ -39,7 +39,7 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
     const internalContainerRef = useRef<HTMLDivElement>(null);
     const containerRef = externalContainerRef || internalContainerRef;
 
-    const { data: beehives, isLoading, isError, error, refetch } = useGetBeehives();
+    const { data: beehivesData, isLoading, isError, error, refetch } = useGetBeehives();
 
     const {
       scale,
@@ -64,27 +64,64 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
     // 특정 위치로 스크롤하는 함수
     const scrollToPosition = useCallback(
       (x: number, y: number) => {
-        if (!containerRef.current) return;
+        if (!containerRef.current) {
+          // 컨테이너 참조가 없는 경우 조용히 반환
+          return;
+        }
 
         // 화면 중앙에 위치하도록 스크롤 위치 계산
         const container = containerRef.current;
-        const scrollLeft = x * scale - container.clientWidth / 2;
-        const scrollTop = y * scale - container.clientHeight / 2;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+
+        // 스케일 값이 유효한지 확인
+        const currentScale = scale > 0 ? scale : 1;
+
+        // 정확한 스크롤 위치 계산
+        const scrollLeft = x * currentScale - containerWidth / 2;
+        const scrollTop = y * currentScale - containerHeight / 2;
+
+        // 계산된 값이 유효한지 확인
+        if (isNaN(scrollLeft) || isNaN(scrollTop)) {
+          return;
+        }
+
+        // 스크롤 값이 음수가 되지 않도록 조정
+        const finalScrollLeft = Math.max(0, scrollLeft);
+        const finalScrollTop = Math.max(0, scrollTop);
+
+        // 스크롤 위치가 예상과 크게 다른지 확인하고 필요시 재시도
+        setTimeout(() => {
+          const center = getMapCenter();
+          const distanceFromTarget = Math.sqrt(
+            Math.pow(center.x - x, 2) + Math.pow(center.y - y, 2),
+          );
+
+          if (distanceFromTarget > 100) {
+            // 직접 스크롤 위치 설정으로 재시도
+            container.scrollLeft = finalScrollLeft;
+            container.scrollTop = finalScrollTop;
+          }
+        }, 500);
 
         // 부드러운 스크롤 효과 적용
         try {
           container.scrollTo({
-            left: Math.max(0, scrollLeft),
-            top: Math.max(0, scrollTop),
+            left: finalScrollLeft,
+            top: finalScrollTop,
             behavior: 'smooth',
           });
-        } catch (error) {
-          console.error('스크롤 실패:', error);
-          container.scrollLeft = Math.max(0, scrollLeft);
-          container.scrollTop = Math.max(0, scrollTop);
+        } catch {
+          // scrollTo가 실패할 경우 대체 방법 사용
+          try {
+            container.scrollLeft = finalScrollLeft;
+            container.scrollTop = finalScrollTop;
+          } catch {
+            // 대체 스크롤 방법도 실패
+          }
         }
       },
-      [containerRef, scale],
+      [containerRef, scale, getMapCenter],
     );
 
     // 스케일 변경 시 외부로 알림
@@ -117,7 +154,7 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
       setShowToast(true);
     };
 
-    // 맵 새로고침 함수
+    // 맵 새로고침 함수 - 수정된 버전
     const refreshMap = async () => {
       try {
         // 수동 새로고침 플래그 설정
@@ -129,6 +166,7 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
         if (refreshError instanceof Error) {
           errorMessage = refreshError.message;
         }
+
         showToastMessage(errorMessage, 'warning', 'middle');
       } finally {
         // 새로고침 완료 후 플래그 초기화
@@ -145,10 +183,10 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
 
     // API 응답 데이터가 변경될 때 hives 상태 업데이트
     useEffect(() => {
-      if (beehives) {
-        setHives(beehives);
+      if (beehivesData) {
+        setHives(beehivesData);
       }
-    }, [beehives]);
+    }, [beehivesData]);
 
     // 초기 로딩 시 에러 처리
     useEffect(() => {
@@ -167,11 +205,14 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
     useEffect(() => {
       // 초기 로딩 시에만 centerToHives 실행
       // isManualRefresh가 true일 때는 벌통 위치로 중앙 이동하지 않음
-      if (beehives && beehives.length > 0 && !initialLoadComplete && !isManualRefresh) {
-        centerToHives();
-        setInitialLoadComplete(true);
+      if (beehivesData && !initialLoadComplete && !isManualRefresh) {
+        // 약간의 지연 후 중앙 정렬 (DOM이 완전히 렌더링된 후)
+        setTimeout(() => {
+          centerToHives();
+          setInitialLoadComplete(true);
+        }, 100);
       }
-    }, [beehives, centerToHives, initialLoadComplete, isManualRefresh]);
+    }, [beehivesData, centerToHives, initialLoadComplete, isManualRefresh]);
 
     // 로딩 상태 표시
     if (isLoading && !isManualRefresh) {
@@ -188,7 +229,7 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
           <div
             className="relative flex h-full w-full flex-col overflow-hidden"
             style={{
-              touchAction: 'auto',
+              touchAction: 'manipulation', // 터치 동작 최적화
               userSelect: 'none',
               WebkitUserSelect: 'none',
               MozUserSelect: 'none',
@@ -207,7 +248,12 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
             />
 
             {/* 맵 컨트롤 버튼 */}
-            <MapControls scale={scale} handleZoom={handleZoom} centerToHives={centerToHives} />
+            <MapControls
+              scale={scale}
+              handleZoom={handleZoom}
+              centerToHives={centerToHives}
+              getMapCenter={getMapCenter}
+            />
 
             {/* 맵 컨테이너 */}
             <MapContainer
@@ -237,5 +283,7 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
     );
   },
 );
+
+BeehiveMap.displayName = 'BeehiveMap';
 
 export default BeehiveMap;
