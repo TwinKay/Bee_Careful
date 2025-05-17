@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import type React from 'react';
+import { useRef } from 'react';
 import 'remixicon/fonts/remixicon.css';
 import beehiveNormal from '/icons/beehive-normal.png';
 import beehiveAlert from '/icons/beehive-alert.png';
@@ -7,11 +8,11 @@ import useAppStore from '@/store/beehiveStore';
 
 type HiveCellPropsType = {
   hive: BeehiveType;
-  onOpenStatusPopup?: (hive: BeehiveType) => void; // 팝업 열기 함수 추가
+  onOpenStatusPopup?: (hive: BeehiveType) => void;
 };
 
 const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) => {
-  // 앱 상태 스토어에서 현재 모드와 선택된 벌통 ID 가져오기
+  // 스토어에서 현재 모드와 선택된 벌통 ID 가져오기
   const { currentMode, selectedBeehive, setSelectedBeehive } = useAppStore();
 
   // 현재 벌통이 선택되었는지 확인
@@ -33,6 +34,10 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
   const longPressTimerRef = useRef<number | null>(null);
   // 롱프레스 여부 추적
   const isLongPress = useRef<boolean>(false);
+  // 드래그 시작 위치 추적
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+  // 드래그 중인지 여부 추적
+  const isDragging = useRef<boolean>(false);
 
   const svgStyle: React.CSSProperties = {
     // iOS Safari 최적화
@@ -58,6 +63,9 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
 
   // 모드에 따른 클릭 처리
   const handleCellAction = () => {
+    // 드래그 중이면 클릭 동작 무시
+    if (isDragging.current) return;
+
     if (currentMode === 'diagnosis') {
       // 진단 모드에서는 벌통 선택/해제
       if (isSelected) {
@@ -76,18 +84,36 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
   // 클릭/탭 이벤트 핸들러
   const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
+
+    // 드래그 중이면 클릭 동작 무시
+    if (isDragging.current) return;
+
     handleCellAction();
   };
 
   // 롱프레스 시작 핸들러
-  const handleLongPressStart = (_e: React.TouchEvent | React.MouseEvent) => {
+  const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
     // 진단 모드일 때는 롱프레스 기능 비활성화
     if (isDiagnosisMode) return;
 
     isLongPress.current = false;
+    isDragging.current = false;
+
+    // 터치 시작 위치 저장
+    if ('touches' in e && e.touches.length > 0) {
+      touchStartPos.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    } else if ('clientX' in e) {
+      touchStartPos.current = {
+        x: e.clientX,
+        y: e.clientY,
+      };
+    }
 
     // 기존 타이머가 있으면 제거
-    if (longPressTimerRef.current) {
+    if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
     }
 
@@ -96,7 +122,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
       triggerVibration();
       isLongPress.current = true;
       longPressTimerRef.current = null;
-    }, 1000);
+    }, 1000); // 1초 롱프레스
   };
 
   // 롱프레스 종료 핸들러
@@ -105,17 +131,60 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
     if (isDiagnosisMode) return;
 
     // 타이머 제거
-    if (longPressTimerRef.current) {
+    if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
 
       // 롱프레스가 아니라면 클릭으로 처리
-      if (!isLongPress.current) {
+      if (!isLongPress.current && !isDragging.current) {
         handleCellAction();
       }
-    } else if (!isLongPress.current) {
+    } else if (!isLongPress.current && !isDragging.current) {
       // 타이머가 실행 완료된 후 핸들러가 호출될 때도 처리
       handleCellAction();
+    }
+
+    // 상태 초기화
+    setTimeout(() => {
+      isDragging.current = false;
+      touchStartPos.current = null;
+    }, 50);
+  };
+
+  // 터치 이동 이벤트 처리 (드래그 감지)
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDiagnosisMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    // 드래그 감지 로직 추가
+    if (touchStartPos.current && e.touches.length > 0) {
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartPos.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartPos.current.y);
+
+      // 일정 거리 이상 이동했으면 드래그로 간주
+      if (deltaX > 5 || deltaY > 5) {
+        isDragging.current = true;
+      }
+    }
+  };
+
+  // 마우스 이동 이벤트 처리 (드래그 감지)
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDiagnosisMode) return;
+
+    // 드래그 감지 로직 추가
+    if (touchStartPos.current) {
+      const deltaX = Math.abs(e.clientX - touchStartPos.current.x);
+      const deltaY = Math.abs(e.clientY - touchStartPos.current.y);
+
+      // 일정 거리 이상 이동했으면 드래그로 간주
+      if (deltaX > 5 || deltaY > 5) {
+        isDragging.current = true;
+      }
     }
   };
 
@@ -124,14 +193,6 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
     if (isDiagnosisMode) {
       e.preventDefault();
       return false;
-    }
-  };
-
-  // 터치 이동 이벤트 처리 (진단 모드에서 스와이프 방지)
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (isDiagnosisMode) {
-      e.preventDefault();
-      e.stopPropagation();
     }
   };
 
@@ -221,65 +282,52 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
       onMouseDown={handleLongPressStart}
       onMouseUp={handleLongPressEnd}
       onMouseLeave={handleLongPressEnd}
+      // 드래그 감지를 위한 이벤트 추가
+      onTouchMove={handleTouchMove}
+      onMouseMove={handleMouseMove}
       // 드래그 방지
       onDragStart={handleDragStart}
       draggable={!isDiagnosisMode}
-      // 터치 이동 제한 (스와이프 방지)
-      onTouchMove={handleTouchMove}
     >
       <div
         className="relative flex w-full items-center justify-center"
         style={{
           WebkitTouchCallout: 'none',
-          // 진단 모드 추가 스타일
           ...diagnosisModeStyle,
         }}
-        // 내부 div에도 클릭 이벤트 추가
         onClick={handleClick}
-        // 드래그 방지
         onDragStart={handleDragStart}
         draggable={!isDiagnosisMode}
-        // 터치 이동 제한
         onTouchMove={handleTouchMove}
       >
         {/* 벌통 SVG */}
         <div
           className="relative flex w-full items-center justify-center"
-          // 이미지 컨테이너에도 클릭 이벤트 추가
           onClick={handleClick}
-          // 드래그 방지
           onDragStart={handleDragStart}
           draggable={!isDiagnosisMode}
-          // 터치 이동 제한
           onTouchMove={handleTouchMove}
         >
           <img
-            src={svgSrc}
+            src={svgSrc || '/placeholder.svg'}
             alt={`beehive ${hive.beehiveId}`}
             className="h-full w-full"
             style={{
               ...svgStyle,
-              // 진단 모드에서 드래그 방지
               pointerEvents: isDiagnosisMode ? 'auto' : 'auto',
             }}
-            // 이미지 저장 및 드래그 방지
             draggable={!isDiagnosisMode}
             onContextMenu={(e) => e.preventDefault()}
-            // 이미지 자체에도 클릭 이벤트 추가
             onClick={(e) => {
               e.stopPropagation();
               handleCellAction();
             }}
-            // 드래그 방지
             onDragStart={handleDragStart}
-            // 터치 이동 제한
             onTouchMove={handleTouchMove}
-            // 이미지 최적화를 위한 속성
             loading="lazy"
             decoding="async"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
-              // SVG 로드 실패 시 대체 텍스트 표시 등 처리 가능
             }}
           />
 
@@ -288,7 +336,6 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({ hive, onOpenStatusPopup }) =
             <span
               className="inline-block max-w-[80px] overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold text-black"
               style={{
-                // iOS에서 폰트 렌더링 최적화
                 WebkitFontSmoothing: 'antialiased',
                 MozOsxFontSmoothing: 'grayscale',
                 textRendering: 'optimizeLegibility',

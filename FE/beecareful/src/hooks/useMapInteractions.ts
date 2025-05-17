@@ -1,8 +1,9 @@
+import type React from 'react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { BeehiveType } from '@/types/beehive';
 
 type UseMapInteractionsPropsType = {
-  containerRef: React.RefObject<HTMLDivElement | null>; // null을 허용하도록 변경
+  containerRef: React.RefObject<HTMLDivElement | null>;
   hives: BeehiveType[];
   setHives: React.Dispatch<React.SetStateAction<BeehiveType[]>>;
   mapWidth: number;
@@ -24,9 +25,12 @@ const useMapInteractions = ({
   const [pinchStartDist, setPinchStartDist] = useState<number | null>(null);
   const [pinchStartScale, setPinchStartScale] = useState<number>(1);
   const [isLongPress, setIsLongPress] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // 드래그 중인지 여부를 추적하는 상태 추가
 
   const longPressTimeoutRef = useRef<number | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+  // isZoomingRef를 최상위 레벨로 이동
+  const isZoomingRef = useRef(false);
 
   const autoScrollThreshold = 50;
   const autoScrollSpeed = 10;
@@ -82,6 +86,7 @@ const useMapInteractions = ({
 
       // 롱프레스 상태 초기화
       setIsLongPress(false);
+      setIsDragging(true); // 드래그 시작 시 상태 업데이트
 
       const hive = hives.find((h) => h.beehiveId === id);
       if (!hive || !containerRef.current) return;
@@ -162,14 +167,14 @@ const useMapInteractions = ({
       const newX = (clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
       const newY = (clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
 
-      // 맵 경계 내로 제한만 수행
-      const clampedX = Math.max(hiveSize / 2, Math.min(newX, mapWidth - hiveSize / 2));
-      const clampedY = Math.max(hiveSize / 2, Math.min(newY, mapHeight - hiveSize / 2));
+      // 맵 경계 내로 제한, hiveSize의 절반이 아닌 전체 크기를 고려하여 경계 설정
+      const clampedX = Math.max(hiveSize, Math.min(newX, mapWidth - hiveSize));
+      const clampedY = Math.max(hiveSize, Math.min(newY, mapHeight - hiveSize));
 
       // xDirection, yDirection을 업데이트하도록 변경
       setHives((prev) =>
         prev.map((hive) =>
-          hive.beehiveId === draggingId || hive.beehiveId === draggingId
+          hive.beehiveId === draggingId
             ? {
                 ...hive,
                 xDirection: clampedX,
@@ -206,6 +211,11 @@ const useMapInteractions = ({
     setDraggingId(null);
     setIsLongPress(false);
     setAutoScroll({ x: 0, y: 0 });
+
+    // 드래그 종료 시 상태 업데이트 (약간의 지연을 두어 클릭 이벤트와 구분)
+    setTimeout(() => {
+      setIsDragging(false);
+    }, 50);
   }, []);
 
   // 개선된 줌 핸들러
@@ -328,8 +338,9 @@ const useMapInteractions = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // 터치 이벤트 처리를 위한 함수들
-    const handleTouchMoveInEffect = (e: TouchEvent) => {
+    // isZoomingRef를 여기서 선언하지 않고 최상위 레벨에서 선언한 것을 사용
+
+    const handleTouchMove = (e: TouchEvent) => {
       // 핀치 줌 처리 (가장 우선순위 높음)
       if (pinchStartDist !== null && e.touches.length === 2) {
         e.preventDefault();
@@ -341,13 +352,28 @@ const useMapInteractions = ({
 
         // 줌 비율 계산
         const scaleFactor = distance / pinchStartDist;
-        const newScale = pinchStartScale * scaleFactor;
+
+        // 급격한 변화 방지를 위한 스케일 제한
+        const maxScaleFactor = 1.2; // 한 번에 최대 20% 변화
+        const limitedScaleFactor = Math.max(
+          1 / maxScaleFactor,
+          Math.min(maxScaleFactor, scaleFactor),
+        );
+
+        const newScale = pinchStartScale * limitedScaleFactor;
 
         // 두 손가락의 중간점 계산
         const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
-        handleZoom(newScale, centerX, centerY);
+        // 부드러운 줌을 위해 requestAnimationFrame 사용
+        if (!isZoomingRef.current) {
+          isZoomingRef.current = true;
+          requestAnimationFrame(() => {
+            handleZoom(newScale, centerX, centerY);
+            isZoomingRef.current = false;
+          });
+        }
         return; // 핀치 줌 중에는 다른 처리 안 함
       }
 
@@ -373,13 +399,13 @@ const useMapInteractions = ({
           (touch.clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
 
         // 맵 경계 내로 제한
-        const clampedX = Math.max(hiveSize / 2, Math.min(newX, mapWidth - hiveSize / 2));
-        const clampedY = Math.max(hiveSize / 2, Math.min(newY, mapHeight - hiveSize / 2));
+        const clampedX = Math.max(hiveSize, Math.min(newX, mapWidth - hiveSize));
+        const clampedY = Math.max(hiveSize, Math.min(newY, mapHeight - hiveSize));
 
         // xDirection, yDirection을 업데이트하도록 변경
         setHives((prev) =>
           prev.map((hive) =>
-            hive.beehiveId === draggingId || hive.beehiveId === draggingId
+            hive.beehiveId === draggingId
               ? {
                   ...hive,
                   xDirection: clampedX,
@@ -394,8 +420,7 @@ const useMapInteractions = ({
       }
     };
 
-    // touchstart 이벤트 핸들러
-    const handleTouchStartInEffect = (e: TouchEvent) => {
+    const handleTouchStart = (e: TouchEvent) => {
       // 2개 손가락으로 터치했을 때 핀치 줌 시작
       if (e.touches.length === 2) {
         e.preventDefault(); // 핀치 줌 시에만 스크롤 방지
@@ -419,8 +444,7 @@ const useMapInteractions = ({
       }
     };
 
-    // touchend 이벤트 핸들러
-    const handleTouchEndInEffect = (e: TouchEvent) => {
+    const handleTouchEnd = (e: TouchEvent) => {
       // 핀치 줌 종료
       if (e.touches.length < 2) {
         setPinchStartDist(null);
@@ -442,17 +466,17 @@ const useMapInteractions = ({
 
     // passive 옵션에 따라 다르게 이벤트 리스너 등록
     // touchmove는 preventDefault를 사용해야 하므로 non-passive로 등록
-    container.addEventListener('touchmove', handleTouchMoveInEffect, { passive: false });
-    container.addEventListener('touchstart', handleTouchStartInEffect, { passive: false });
-    container.addEventListener('touchend', handleTouchEndInEffect);
-    container.addEventListener('touchcancel', handleTouchEndInEffect);
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener('touchcancel', handleTouchEnd);
 
     return () => {
       // 이벤트 리스너 제거
-      container.removeEventListener('touchmove', handleTouchMoveInEffect);
-      container.removeEventListener('touchstart', handleTouchStartInEffect);
-      container.removeEventListener('touchend', handleTouchEndInEffect);
-      container.removeEventListener('touchcancel', handleTouchEndInEffect);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [
     draggingId,
@@ -476,18 +500,26 @@ const useMapInteractions = ({
     const interval = setInterval(() => {
       if (draggingId !== null) {
         setHives((prev) =>
-          prev.map((hive) =>
-            hive.beehiveId === draggingId || hive.beehiveId === draggingId
-              ? {
-                  ...hive,
-                  xDirection: hive.xDirection + autoScroll.x / scale,
-                  yDirection: hive.yDirection + autoScroll.y / scale,
-                  // 호환성을 위해 x, y도 업데이트
-                  x: hive.xDirection + autoScroll.x / scale,
-                  y: hive.yDirection + autoScroll.y / scale,
-                }
-              : hive,
-          ),
+          prev.map((hive) => {
+            if (hive.beehiveId !== draggingId) return hive;
+
+            // 새 위치 계산
+            const newX = hive.xDirection + autoScroll.x / scale;
+            const newY = hive.yDirection + autoScroll.y / scale;
+
+            // 더 엄격한 경계 체크 적용
+            const clampedX = Math.max(hiveSize, Math.min(newX, mapWidth - hiveSize));
+            const clampedY = Math.max(hiveSize, Math.min(newY, mapHeight - hiveSize));
+
+            return {
+              ...hive,
+              xDirection: clampedX,
+              yDirection: clampedY,
+              // 호환성을 위해 x, y도 업데이트
+              x: clampedX,
+              y: clampedY,
+            };
+          }),
         );
       }
 
@@ -498,12 +530,13 @@ const useMapInteractions = ({
     }, 16);
 
     return () => clearInterval(interval);
-  }, [autoScroll, draggingId, scale, setHives, containerRef]);
+  }, [autoScroll, draggingId, scale, setHives, containerRef, mapWidth, mapHeight, hiveSize]);
 
   return {
     scale,
     draggingId,
     isLongPress,
+    isDragging,
     autoScroll,
     handleZoom,
     handleDragStart,
