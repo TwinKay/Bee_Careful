@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { Button } from '@/components/common/Button';
 import { useLogin } from '@/apis/auth';
+import { useGetFCMToken } from '@/apis/notification';
+import type { LoginRequestType } from '@/types/auth';
 
 type LoginFormType = {
   username: string;
@@ -13,6 +15,7 @@ type LoginFormType = {
 const LoginForm = () => {
   const navigate = useNavigate();
   const [loginError, setLoginError] = useState<string | null>(null);
+  const { data: fcmToken } = useGetFCMToken();
 
   const {
     register,
@@ -27,9 +30,10 @@ const LoginForm = () => {
     // 에러 상태 초기화
     setLoginError(null);
 
-    const requestData = {
+    const requestData: LoginRequestType = {
       memberLoginId: data.username,
       password: data.password,
+      fcmToken: fcmToken || '',
     };
 
     // mutate 함수에 직접 콜백 전달

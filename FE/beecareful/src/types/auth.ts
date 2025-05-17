@@ -8,4 +8,5 @@ export type SignupRequestType = {
 export type LoginRequestType = {
   memberLoginId: string;
   password: string;
+  fcmToken: string;
 };

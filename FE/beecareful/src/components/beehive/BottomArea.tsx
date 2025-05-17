@@ -1,10 +1,9 @@
-// BottomArea.tsx 수정
-
 import { Link } from 'react-router-dom';
 import Button from '@/components/common/Button';
 import { ROUTES } from '@/config/routes';
 import BottomSheet from '@/components/common/BottomSheet';
 import type { BeehiveType } from '@/types/beehive';
+import useBeehiveStore from '@/store/beehiveStore';
 
 type BottomAreaPropsType = {
   mode: 'normal' | 'diagnosis';
@@ -46,6 +45,8 @@ const BottomArea = ({
   onRegisterBeehive,
   onInputChange,
 }: BottomAreaPropsType) => {
+  const { setMode } = useBeehiveStore();
+
   // 진단 모드일 때 UI
   const renderDiagnosisMode = () => (
     <div className="safe-area-bottom w-full px-4 pb-10 pt-4 shadow-lg">
@@ -71,6 +72,7 @@ const BottomArea = ({
               if (!onCompleteDiagnosis()) {
                 e.preventDefault();
               }
+              setMode('normal');
             }}
             className="w-full"
           >

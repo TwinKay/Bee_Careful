@@ -64,18 +64,6 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
             backgroundSize: `${50 * scale}px ${50 * scale}px`,
           }}
         >
-          {/* 맵 경계 표시 */}
-          <div
-            className="pointer-events-none absolute border-2 border-dashed border-gray-400"
-            style={{
-              left: `${HIVE_SIZE * scale}px`,
-              top: `${HIVE_SIZE * scale}px`,
-              width: `${(MAP_WIDTH - HIVE_SIZE * 2) * scale}px`,
-              height: `${(MAP_HEIGHT - HIVE_SIZE * 2) * scale}px`,
-              opacity: 0.5,
-            }}
-          />
-
           {hives.map((hive) => (
             <DraggableHive
               key={hive.beehiveId}
