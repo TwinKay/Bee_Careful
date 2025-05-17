@@ -1,3 +1,6 @@
+/**
+ * 벌통 위치 계산 및 충돌 감지 관련 유틸리티 함수
+ */
 import type { BeehiveType } from '@/types/beehive';
 
 // 벌통 간 최소 거리 (픽셀 단위)
@@ -43,7 +46,7 @@ export const findEmptyPosition = (
     return { x: startX, y: startY };
   }
 
-  // 나선형으로 탐색
+  // 나선형으로 탐색 (중앙에서 시작하여 바깥쪽으로)
   const step = MIN_DISTANCE * 1.2; // 탐색 간격을 더 크게 설정 (1.2배)
   let x = startX;
   let y = startY;
@@ -93,18 +96,26 @@ export const findEmptyPosition = (
     }
   }
 
-  // 기본값 반환 (최악의 경우) - 맵 가장자리 쪽으로 설정
-  return { x: 200 + Math.random() * 1600, y: 200 + Math.random() * 1600 };
+  // 기본값 반환 (최악의 경우) - 맵 중앙 근처로 설정
+  const result = { x: 1000 + Math.random() * 200 - 100, y: 1000 + Math.random() * 200 - 100 };
+  return result;
 };
 
 // findVisibleEmptyPosition 함수를 다음과 같이 수정합니다.
 export const findVisibleEmptyPosition = (
   hives: BeehiveType[],
-  visibleArea: { minX: number; maxX: number; minY: number; maxY: number },
+  visibleArea: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+    centerX?: number;
+    centerY?: number;
+  },
 ): { x: number; y: number } => {
-  // 화면 중앙 좌표 계산
-  const centerX = (visibleArea.minX + visibleArea.maxX) / 2;
-  const centerY = (visibleArea.minY + visibleArea.maxY) / 2;
+  // 화면 중앙 좌표 계산 (전달된 값이 있으면 사용, 없으면 계산)
+  const centerX = visibleArea.centerX || (visibleArea.minX + visibleArea.maxX) / 2;
+  const centerY = visibleArea.centerY || (visibleArea.minY + visibleArea.maxY) / 2;
 
   // 화면 영역 내에서 격자 탐색
   const gridSize = MIN_DISTANCE * 1.2; // 격자 크기
@@ -122,10 +133,16 @@ export const findVisibleEmptyPosition = (
   const startY = visibleArea.minY + gridSize;
   const endY = visibleArea.maxY - gridSize;
 
-  // 중앙에서 시작하여 바깥쪽으로 나선형 탐���
-  for (let radius = 0; radius <= Math.max(width, height) / 2; radius += gridSize) {
-    // 원 둘레를 따라 여러 지점 확인
-    for (let angle = 0; angle < 360; angle += 30) {
+  // 중앙에서 시작하여 바깥쪽으로 나선형 탐색
+  // 먼저 중앙 위치가 비어있는지 확인
+  if (!isPositionOccupied(centerX, centerY, hives)) {
+    return { x: centerX, y: centerY };
+  }
+
+  // 나선형 탐색 (중앙에서 시작하여 바깥쪽으로)
+  for (let radius = gridSize; radius <= Math.max(width, height) / 2; radius += gridSize) {
+    // 원 둘레를 따라 여러 지점 확인 (각도 간격을 줄여 더 많은 지점 확인)
+    for (let angle = 0; angle < 360; angle += 20) {
       const radian = (angle * Math.PI) / 180;
       const x = centerX + radius * Math.cos(radian);
       const y = centerY + radius * Math.sin(radian);
@@ -174,10 +191,12 @@ export const getVisibleArea = (
   const width = container.clientWidth;
   const height = container.clientHeight;
 
-  return {
+  const result = {
     minX: scrollLeft / scale,
     maxX: (scrollLeft + width) / scale,
     minY: scrollTop / scale,
     maxY: (scrollTop + height) / scale,
   };
+
+  return result;
 };

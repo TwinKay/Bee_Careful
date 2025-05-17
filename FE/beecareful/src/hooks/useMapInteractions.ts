@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { BeehiveType } from '@/types/beehive';
 
-// 벌통 간 충돌 감지
+// 벌통 간 충돌 감지 함수 추가
 const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
@@ -90,16 +90,56 @@ const useMapInteractions = ({
 
   // 맵 중앙에 있는 벌통 위치로 스크롤
   const centerToHives = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      console.error('centerToHives: 컨테이너 참조가 없습니다');
+      return;
+    }
 
-    const centerX = 900;
-    const centerY = 900;
+    // 맵의 실제 중앙 좌표 사용 (2000x2000 맵의 중앙은 1000, 1000)
+    const centerX = 1000;
+    const centerY = 1000;
 
-    const scrollLeft = centerX * scale - containerRef.current.clientWidth / 2;
-    const scrollTop = centerY * scale - containerRef.current.clientHeight / 2;
+    // 컨테이너의 크기를 가져옵니다
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
 
-    containerRef.current.scrollLeft = Math.max(0, scrollLeft);
-    containerRef.current.scrollTop = Math.max(0, scrollTop);
+    // 스크롤 위치를 정확히 계산합니다
+    // 스케일 값이 유효한지 확인
+    const currentScale = scale > 0 ? scale : 1;
+
+    const scrollLeft = centerX * currentScale - containerWidth / 2;
+    const scrollTop = centerY * currentScale - containerHeight / 2;
+
+    // 계산된 값이 유효한지 확인
+    if (isNaN(scrollLeft) || isNaN(scrollTop)) {
+      console.error('centerToHives: 스크롤 위치 계산 오류');
+      return;
+    }
+
+    // 스크롤 값이 음수가 되지 않도록 조정
+    const finalScrollLeft = Math.max(0, scrollLeft);
+    const finalScrollTop = Math.max(0, scrollTop);
+
+    // scrollTo 메서드 사용 전 컨테이너가 여전히 유효한지 확인
+    if (containerRef.current) {
+      try {
+        containerRef.current.scrollTo({
+          left: finalScrollLeft,
+          top: finalScrollTop,
+          behavior: 'smooth',
+        });
+      } catch (error) {
+        console.error('centerToHives: scrollTo 실패', error);
+
+        // 대체 방법으로 직접 스크롤 위치 설정
+        try {
+          containerRef.current.scrollLeft = finalScrollLeft;
+          containerRef.current.scrollTop = finalScrollTop;
+        } catch (fallbackError) {
+          console.error('centerToHives: 대체 스크롤 방법도 실패', fallbackError);
+        }
+      }
+    }
   }, [scale, containerRef]);
 
   // 자동 스크롤 체크 함수
@@ -153,8 +193,9 @@ const useMapInteractions = ({
         setDraggingId(id);
 
         if ('clientX' in e) {
-          const hiveScreenX = hive.xDirection * scale - scrollLeft;
-          const hiveScreenY = hive.yDirection * scale - scrollTop;
+          // 셀 중앙 기준으로 좌표 계산 수정
+          const hiveScreenX = (hive.xDirection - hiveSize / 2) * scale - scrollLeft;
+          const hiveScreenY = (hive.yDirection - hiveSize / 2) * scale - scrollTop;
 
           dragOffsetRef.current = {
             x: e.clientX - hiveScreenX - containerRect.left,
@@ -162,8 +203,9 @@ const useMapInteractions = ({
           };
         } else if (e.touches && e.touches.length > 0) {
           const touch = e.touches[0];
-          const hiveScreenX = hive.xDirection * scale - scrollLeft;
-          const hiveScreenY = hive.yDirection * scale - scrollTop;
+          // 셀 중앙 기준으로 좌표 계산 수정
+          const hiveScreenX = (hive.xDirection - hiveSize / 2) * scale - scrollLeft;
+          const hiveScreenY = (hive.yDirection - hiveSize / 2) * scale - scrollTop;
 
           dragOffsetRef.current = {
             x: touch.clientX - hiveScreenX - containerRect.left,
@@ -174,7 +216,7 @@ const useMapInteractions = ({
         longPressTimeoutRef.current = null;
       }, 1000);
     },
-    [hives, scale, containerRef],
+    [hives, scale, containerRef, hiveSize],
   );
 
   // 드래그 핸들러
@@ -210,8 +252,13 @@ const useMapInteractions = ({
       const scrollLeft = containerRef.current.scrollLeft;
       const scrollTop = containerRef.current.scrollTop;
 
-      const newX = (clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
-      const newY = (clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
+      // 셀 중앙 기준으로 좌표 계산 수정
+      // 드래그 시 마우스/터치 위치에서 셀 중앙으로 좌표 계산
+      const newX =
+        (clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale +
+        hiveSize / 2;
+      const newY =
+        (clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale + hiveSize / 2;
 
       const clampedX = Math.max(hiveSize, Math.min(newX, mapWidth - hiveSize));
       const clampedY = Math.max(hiveSize, Math.min(newY, mapHeight - hiveSize));
@@ -306,15 +353,17 @@ const useMapInteractions = ({
 
   // 맵 중앙 좌표를 가져오는 함수
   const getMapCenter = useCallback(() => {
-    if (!containerRef.current) return { x: 10, y: 10 };
+    if (!containerRef.current) return { x: 1000, y: 1000 }; // 기본값을 맵 중앙으로 변경
 
     const container = containerRef.current;
     const viewportWidth = container.clientWidth;
     const viewportHeight = container.clientHeight;
 
+    // 뷰포트 중앙의 스크롤 위치
     const centerScrollX = container.scrollLeft + viewportWidth / 2;
     const centerScrollY = container.scrollTop + viewportHeight / 2;
 
+    // 스크롤 위치를 맵 좌표로 변환 (스케일 고려)
     const mapX = centerScrollX / scale;
     const mapY = centerScrollY / scale;
 
@@ -330,35 +379,32 @@ const useMapInteractions = ({
     let zoomTimeout: number | null = null;
 
     const handleWheelEvent = (e: WheelEvent) => {
-      // Ctrl 키가 눌려있을 때만 줌 동작 수행
-      if (e.ctrlKey) {
-        e.preventDefault();
+      e.preventDefault();
 
-        if (isZooming) {
-          if (zoomTimeout !== null) {
-            window.clearTimeout(zoomTimeout);
-          }
-
-          zoomTimeout = window.setTimeout(() => {
-            isZooming = false;
-            zoomTimeout = null;
-          }, 50);
-
-          return;
+      if (isZooming) {
+        if (zoomTimeout !== null) {
+          window.clearTimeout(zoomTimeout);
         }
-
-        isZooming = true;
-
-        const delta = -e.deltaY * 0.0005;
-        const newScale = scale * (1 + delta * 7);
-
-        handleZoom(newScale, e.clientX, e.clientY);
 
         zoomTimeout = window.setTimeout(() => {
           isZooming = false;
           zoomTimeout = null;
         }, 50);
+
+        return;
       }
+
+      isZooming = true;
+
+      const delta = -e.deltaY * 0.0005;
+      const newScale = scale * (1 + delta * 7);
+
+      handleZoom(newScale, e.clientX, e.clientY);
+
+      zoomTimeout = window.setTimeout(() => {
+        isZooming = false;
+        zoomTimeout = null;
+      }, 50);
     };
 
     container.addEventListener('wheel', handleWheelEvent, { passive: false });
@@ -371,7 +417,7 @@ const useMapInteractions = ({
     };
   }, [scale, handleZoom, containerRef]);
 
-  // 터치 이벤트 처리
+  // 터치 이벤트 처리 - 완전히 재작성
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -459,10 +505,13 @@ const useMapInteractions = ({
         const scrollLeft = containerRef.current.scrollLeft;
         const scrollTop = containerRef.current.scrollTop;
 
+        // 셀 중앙 기준으로 좌표 계산 수정
         const newX =
-          (touch.clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale;
+          (touch.clientX - containerRect.left - dragOffsetRef.current.x + scrollLeft) / scale +
+          hiveSize / 2;
         const newY =
-          (touch.clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale;
+          (touch.clientY - containerRect.top - dragOffsetRef.current.y + scrollTop) / scale +
+          hiveSize / 2;
 
         const clampedX = Math.max(hiveSize, Math.min(newX, mapWidth - hiveSize));
         const clampedY = Math.max(hiveSize, Math.min(newY, mapHeight - hiveSize));

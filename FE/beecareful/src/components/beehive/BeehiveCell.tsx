@@ -253,11 +253,6 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     </>
   );
 
-  // 충돌 표시 아이콘 (충돌이 감지된 경우에만 표시)
-  const collisionIcon = collisionDetected && (
-    <div className="pointer-events-none absolute inset-0 z-10 rounded-xl border-2 border-red-500 bg-red-500/10" />
-  );
-
   // 진단 모드일 때 추가 스타일 (움직임 방지)
   const diagnosisModeStyle: React.CSSProperties = isDiagnosisMode
     ? {
@@ -380,9 +375,6 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
 
         {/* 선택 상태 아이콘 (진단 모드에서만 표시) */}
         {selectionIcon}
-
-        {/* 충돌 표시 아이콘 (충돌이 감지된 경우에만 표시) */}
-        {collisionIcon}
       </div>
     </div>
   );

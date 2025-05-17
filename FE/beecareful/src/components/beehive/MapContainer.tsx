@@ -40,7 +40,7 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
         className="map-container relative h-full w-full overflow-auto"
         style={{
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'auto',
+          touchAction: 'pan-x pan-y pinch-zoom', // 모든 방향 스크롤 및 핀치 줌 허용
           scrollbarWidth: 'auto',
           msOverflowStyle: 'auto',
           overscrollBehavior: 'auto',
