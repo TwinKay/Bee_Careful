@@ -1,4 +1,5 @@
-import React, { forwardRef } from 'react';
+import type React from 'react';
+import { forwardRef } from 'react';
 import DraggableHive from './DraggableHive';
 import type { BeehiveType } from '@/types/beehive';
 
@@ -10,7 +11,7 @@ type MapContainerPropsType = {
   handleDrag: (e: React.MouseEvent | React.TouchEvent) => void;
   handleDragStart: (id: number, e: React.MouseEvent | React.TouchEvent) => void;
   handleDragEnd: () => void;
-  onOpenStatusPopup: (hive: BeehiveType) => void; // 팝업 열기 함수 추가
+  onOpenStatusPopup: (hive: BeehiveType) => void;
 };
 
 const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
@@ -65,7 +66,7 @@ const MapContainer = forwardRef<HTMLDivElement, MapContainerPropsType>(
               hiveSize={HIVE_SIZE}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
-              onOpenStatusPopup={onOpenStatusPopup} // 팝업 열기 함수 전달
+              onOpenStatusPopup={onOpenStatusPopup}
             />
           ))}
         </div>
