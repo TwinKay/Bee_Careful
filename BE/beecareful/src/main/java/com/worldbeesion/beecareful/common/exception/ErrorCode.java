@@ -29,6 +29,9 @@ public enum ErrorCode {
     DIRECTION_NULL(HttpStatus.BAD_REQUEST, "벌통의 위치가 NULL 입니다. "),
     DUPLICATE_DIRECTION(HttpStatus.BAD_REQUEST, "벌통의 위치가 중복입니다. "),
 
+    // Device
+    DEVICE_NOT_FOUND(HttpStatus.BAD_REQUEST, "기기가 존재하지 않습니다."),
+
     // Auth
     COOKIE_NOT_FOUND(HttpStatus.UNAUTHORIZED, "쿠키가 존재하지 않습니다"),
     JWT_NOT_FOUND(HttpStatus.UNAUTHORIZED, "토큰이 존재하지 않습니다. "),
