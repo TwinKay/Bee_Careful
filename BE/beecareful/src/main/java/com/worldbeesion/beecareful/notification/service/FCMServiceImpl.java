@@ -20,9 +20,9 @@ import java.util.Map;
 @Service
 @AllArgsConstructor
 public class FCMServiceImpl implements FCMService {
-    private static final String NOTIFICATION = "[⚠ 알림]";
-    private static final String BEE_HIVE = "벌통의 ";
-    private static final String NOTIFICATION_END = " 상태가 발견되었습니다.";
+    private static final String NOTIFICATION_COMMON_TITLE = "[⚠ 알림]";
+    private static final String NOTIFICATION_COMMON_BEEHIVE = "벌통의 ";
+    private static final String NOTIFICATION_COMMON_STATUS = " 상태가 발견되었습니다.";
     private final MembersRepository membersRepository;
     private final MemberDeviceRepository memberDeviceRepository;
 
@@ -33,9 +33,9 @@ public class FCMServiceImpl implements FCMService {
         MemberDevice memberDevice = memberDeviceRepository.findByMembers(member).orElseThrow(DeviceNotFoundException::new);
 
 
-        String body = BEE_HIVE + notificationRequestDto.status() + NOTIFICATION_END;
+        String body = NOTIFICATION_COMMON_BEEHIVE + notificationRequestDto.status() + NOTIFICATION_COMMON_STATUS;
 
-        sendMessage(memberDevice.getFcmToken(), NOTIFICATION ,body, notificationRequestDto);
+        sendMessage(memberDevice.getFcmToken(), NOTIFICATION_COMMON_TITLE ,body, notificationRequestDto);
 
     }
 
