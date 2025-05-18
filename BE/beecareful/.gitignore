@@ -29,13 +29,13 @@ out/
 /db/master/data/
 /redis/data/
 /grafana
-src/main/resources/firebase
+/src/main/resources/beecareful-firebase.json
 
 ### docker-compose ###
 .env
 
 ### FCM ###
-/beecareful-firebase.json
+src/main/resources/beecareful-firebase.json
 
 ### NetBeans ###
 /nbproject/private/
