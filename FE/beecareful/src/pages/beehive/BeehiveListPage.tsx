@@ -192,18 +192,13 @@ const BeehiveListPage = () => {
       if (mapRef.current && typeof mapRef.current.refreshMap === 'function') {
         await mapRef.current.refreshMap();
 
-        // 새로고침 후 새 벌통 위치로 스크롤 (지연 시간 증가)
+        // 새로고침 후 새 벌통 위치로 스크롤
         setTimeout(() => {
           if (mapRef.current && typeof mapRef.current.scrollToPosition === 'function') {
             // 항상 새 벌통 위치로 스크롤
             mapRef.current.scrollToPosition(optimalPosition.xDirection, optimalPosition.yDirection);
-            showToastMessage(
-              `${beehiveData.nickname} 벌통이 추가된 위치로 이동했습니다.`,
-              'info',
-              'bottom',
-            );
           }
-        }, 800); // 지연 시간 증가
+        }, 800);
       }
     } catch (error) {
       let errorMessage = '벌통 추가 중 오류가 발생했습니다.';

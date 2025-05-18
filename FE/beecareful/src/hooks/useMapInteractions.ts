@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { BeehiveType } from '@/types/beehive';
+import { useUpdateBeehive } from '@/apis/beehive';
 
 // 벌통 간 충돌 감지 함수 추가
 const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
@@ -24,19 +25,27 @@ const useMapInteractions = ({
   mapHeight,
   hiveSize,
 }: UseMapInteractionsPropsType) => {
+  // 모든 useState 훅을 최상위 레벨에 배치
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [autoScroll, setAutoScroll] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
-  const [pinchStartDist, setPinchStartDist] = useState<number | null>(null);
-  const [pinchStartScale, setPinchStartScale] = useState<number>(1);
   const [isLongPress, setIsLongPress] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [collisionDetected, setCollisionDetected] = useState(false);
 
+  // 벌통 위치 업데이트를 위한 mutation 훅 추가
+  const updateBeehiveMutation = useUpdateBeehive();
+
+  // 마지막으로 드래그한 벌통의 위치 저장
+  const lastDraggedHiveRef = useRef<{ id: number; x: number; y: number } | null>(null);
+  // 드래그 종료 시 상태를 저장하기 위한 ref 추가
+  const dragEndStateRef = useRef<{ id: number | null; isLongPress: boolean }>({
+    id: null,
+    isLongPress: false,
+  });
+
   const longPressTimeoutRef = useRef<number | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
-  const isZoomingRef = useRef(false);
-
   const autoScrollThreshold = 50;
   const autoScrollSpeed = 10;
   const MIN_SCALE = 0.5;
@@ -91,7 +100,6 @@ const useMapInteractions = ({
   // 맵 중앙에 있는 벌통 위치로 스크롤
   const centerToHives = useCallback(() => {
     if (!containerRef.current) {
-      console.error('centerToHives: 컨테이너 참조가 없습니다');
       return;
     }
 
@@ -112,7 +120,6 @@ const useMapInteractions = ({
 
     // 계산된 값이 유효한지 확인
     if (isNaN(scrollLeft) || isNaN(scrollTop)) {
-      console.error('centerToHives: 스크롤 위치 계산 오류');
       return;
     }
 
@@ -128,15 +135,13 @@ const useMapInteractions = ({
           top: finalScrollTop,
           behavior: 'smooth',
         });
-      } catch (error) {
-        console.error('centerToHives: scrollTo 실패', error);
-
+      } catch {
         // 대체 방법으로 직접 스크롤 위치 설정
         try {
           containerRef.current.scrollLeft = finalScrollLeft;
           containerRef.current.scrollTop = finalScrollTop;
-        } catch (fallbackError) {
-          console.error('centerToHives: 대체 스크롤 방법도 실패', fallbackError);
+        } catch {
+          // 대체 스크롤 방법도 실패
         }
       }
     }
@@ -191,6 +196,8 @@ const useMapInteractions = ({
       longPressTimeoutRef.current = window.setTimeout(() => {
         setIsLongPress(true);
         setDraggingId(id);
+        // 드래그 상태 ref 업데이트
+        dragEndStateRef.current = { id, isLongPress: true };
 
         if ('clientX' in e) {
           // 셀 중앙 기준으로 좌표 계산 수정
@@ -281,6 +288,9 @@ const useMapInteractions = ({
             : hive,
         ),
       );
+
+      // 드래그 상태 ref 업데이트
+      dragEndStateRef.current = { id: draggingId, isLongPress };
     },
     [
       draggingId,
@@ -297,6 +307,64 @@ const useMapInteractions = ({
     ],
   );
 
+  // 벌통 위치 업데이트 함수 - 드래그 종료 핸들러와 분리
+  const updateBeehivePosition = useCallback(
+    (id: number) => {
+      const draggedHive = hives.find((h) => h.beehiveId === id);
+
+      if (draggedHive) {
+        // 업데이트 전에 현재 위치 저장 (실패 시 복원용)
+        lastDraggedHiveRef.current = {
+          id: draggedHive.beehiveId,
+          x: draggedHive.xDirection,
+          y: draggedHive.yDirection,
+        };
+        try {
+          // 서버에 위치 업데이트 요청
+          updateBeehiveMutation.mutate(
+            {
+              beeHiveId: draggedHive.beehiveId,
+              nickname: draggedHive.nickname,
+              xDirection: draggedHive.xDirection,
+              yDirection: draggedHive.yDirection,
+            },
+            {
+              onSuccess: (data) => {
+                console.log('벌통 위치 업데이트 성공:', data);
+                // 성공 시 참조 초기화
+                lastDraggedHiveRef.current = null;
+              },
+              onError: (error) => {
+                console.error('벌통 위치 업데이트 실패:', error);
+
+                // 실패 시 UI 상의 위치를 원래대로 되돌림
+                setHives((prev) =>
+                  prev.map((hive) =>
+                    hive.beehiveId === lastDraggedHiveRef.current?.id
+                      ? {
+                          ...hive,
+                          xDirection: lastDraggedHiveRef.current.x,
+                          yDirection: lastDraggedHiveRef.current.y,
+                          x: lastDraggedHiveRef.current.x,
+                          y: lastDraggedHiveRef.current.y,
+                        }
+                      : hive,
+                  ),
+                );
+              },
+            },
+          );
+          console.log('updateBeehiveMutation 호출 완료');
+        } catch (error) {
+          console.error('updateBeehiveMutation 호출 중 예외 발생:', error);
+        }
+      } else {
+        console.warn('드래그된 벌통을 찾을 수 없음:', id);
+      }
+    },
+    [hives, updateBeehiveMutation, setHives],
+  );
+
   // 드래그 종료 핸들러
   const handleDragEnd = useCallback(() => {
     if (longPressTimeoutRef.current !== null) {
@@ -304,17 +372,27 @@ const useMapInteractions = ({
       longPressTimeoutRef.current = null;
     }
 
+    // 저장된 드래그 상태 가져오기
+    const { id, isLongPress: wasLongPress } = dragEndStateRef.current;
+
+    // 드래그 중이던 벌통이 있고 실제로 위치가 변경되었다면 서버에 업데이트
+    if (id !== null && wasLongPress) {
+      updateBeehivePosition(id);
+    }
+
+    // 상태 초기화 (이제 API 호출 후에 초기화)
     setDraggingId(null);
     setIsLongPress(false);
     setAutoScroll({ x: 0, y: 0 });
     setCollisionDetected(false);
+    dragEndStateRef.current = { id: null, isLongPress: false };
 
     setTimeout(() => {
       setIsDragging(false);
     }, 50);
-  }, []);
+  }, [updateBeehivePosition]);
 
-  // 개선된 줌 핸들러
+  // 개선된 줌 핸들러 - 정적 줌으로 변경
   const handleZoom = useCallback(
     (newScale: number, clientX?: number, clientY?: number) => {
       if (!containerRef.current) return;
@@ -322,24 +400,32 @@ const useMapInteractions = ({
       const container = containerRef.current;
       const rect = container.getBoundingClientRect();
 
+      // 이전 스케일 및 스크롤 위치 저장
       const oldScale = scale;
       const oldScrollLeft = container.scrollLeft;
       const oldScrollTop = container.scrollTop;
 
+      // 줌 중심점 계산 (마우스 위치 또는 화면 중앙)
       const pointX = clientX !== undefined ? clientX - rect.left : container.clientWidth / 2;
       const pointY = clientY !== undefined ? clientY - rect.top : container.clientHeight / 2;
 
+      // 줌 중심점의 맵 좌표 계산 (이전 스케일 기준)
       const mapX = (oldScrollLeft + pointX) / oldScale;
       const mapY = (oldScrollTop + pointY) / oldScale;
 
+      // 스케일 적용 (제한된 범위 내에서)
       const clampedScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
 
+      // 새 스케일로 스크롤 위치 계산
       const newScrollLeft = mapX * clampedScale - pointX;
       const newScrollTop = mapY * clampedScale - pointY;
 
+      // DOM 업데이트를 한 번만 수행하기 위해 requestAnimationFrame 사용
       requestAnimationFrame(() => {
+        // 스케일과 스크롤 위치를 동시에 업데이트
         setScale(clampedScale);
 
+        // 약간의 지연 후 스크롤 위치 조정 (스케일 변경이 반영된 후)
         requestAnimationFrame(() => {
           if (containerRef.current) {
             containerRef.current.scrollLeft = newScrollLeft;
@@ -370,7 +456,7 @@ const useMapInteractions = ({
     return { x: mapX, y: mapY };
   }, [scale, containerRef]);
 
-  // 마우스 휠 이벤트 핸들러
+  // 마우스 휠 이벤트 핸들러 - 정적 줌으로 변경
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -381,30 +467,31 @@ const useMapInteractions = ({
     const handleWheelEvent = (e: WheelEvent) => {
       e.preventDefault();
 
+      // 디바운스 처리
       if (isZooming) {
         if (zoomTimeout !== null) {
           window.clearTimeout(zoomTimeout);
         }
-
         zoomTimeout = window.setTimeout(() => {
           isZooming = false;
-          zoomTimeout = null;
-        }, 50);
-
+        }, 200);
         return;
       }
 
       isZooming = true;
 
-      const delta = -e.deltaY * 0.0005;
-      const newScale = scale * (1 + delta * 7);
-
-      handleZoom(newScale, e.clientX, e.clientY);
+      // 휠 방향에 따라 줌 인/아웃
+      if (e.deltaY < 0) {
+        // 줌 인 (20% 증가)
+        handleZoom(scale * 1.2, e.clientX, e.clientY);
+      } else {
+        // 줌 아웃 (20% 감소)
+        handleZoom(scale / 1.2, e.clientX, e.clientY);
+      }
 
       zoomTimeout = window.setTimeout(() => {
         isZooming = false;
-        zoomTimeout = null;
-      }, 50);
+      }, 200);
     };
 
     container.addEventListener('wheel', handleWheelEvent, { passive: false });
@@ -417,86 +504,76 @@ const useMapInteractions = ({
     };
   }, [scale, handleZoom, containerRef]);
 
-  // 터치 이벤트 처리 - 완전히 재작성
+  // 터치 이벤트 처리 - 핀치 줌을 고정 스케일로 변경
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // 핀치 줌 상태
+    // 핀치 줌 상태 관리 변수
     let isPinching = false;
-    // 마지막 터치 위치 저장
-    let lastTouchX = 0;
-    let lastTouchY = 0;
-    // 터치 시작 위치 저장
-    let startTouchX = 0;
-    let startTouchY = 0;
-    // 터치 이동 거리 임계값 (이 값보다 작으면 클릭으로 간주)
-    const TOUCH_MOVE_THRESHOLD = 10;
+    let lastPinchDistance = 0;
+    let lastPinchTime = 0;
+    let lastZoomDirection: 'in' | 'out' | null = null;
 
-    const handleTouchStart = (e: TouchEvent) => {
-      // 2개 손가락으로 터치했을 때 핀치 줌 시작
+    // 터치 이벤트 처리를 위한 함수들
+    const handleTouchMoveInEffect = (e: TouchEvent) => {
+      // 핀치 줌 처리 (2개 손가락)
       if (e.touches.length === 2) {
-        isPinching = true;
+        // 핀치 줌 중에는 스크롤 방지
+        e.preventDefault();
 
-        // 기존 벌통 드래그 취소
-        if (draggingId !== null) {
-          setDraggingId(null);
-          setIsLongPress(false);
-          if (longPressTimeoutRef.current !== null) {
-            window.clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-          }
-        }
-
+        // 두 손가락 사이의 거리 계산
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        setPinchStartDist(distance);
-        setPinchStartScale(scale);
-      } else if (e.touches.length === 1) {
-        // 단일 터치 시작 위치 저장
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
-        startTouchX = e.touches[0].clientX;
-        startTouchY = e.touches[0].clientY;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      // 핀치 줌 처리
-      if (isPinching && e.touches.length === 2 && pinchStartDist !== null) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        const scaleFactor = distance / pinchStartDist;
-        const maxScaleFactor = 1.2;
-        const limitedScaleFactor = Math.max(
-          1 / maxScaleFactor,
-          Math.min(maxScaleFactor, scaleFactor),
-        );
-        const newScale = pinchStartScale * limitedScaleFactor;
-
+        // 두 손가락의 중간점 계산
         const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
-        if (!isZoomingRef.current) {
-          isZoomingRef.current = true;
-          requestAnimationFrame(() => {
-            handleZoom(newScale, centerX, centerY);
-            isZoomingRef.current = false;
-          });
+        // 처음 핀치 시작할 때
+        if (!isPinching) {
+          isPinching = true;
+          lastPinchDistance = distance;
+          lastPinchTime = Date.now();
+          return;
+        }
+
+        // 너무 빠른 연속 줌 방지 (100ms 간격)
+        const now = Date.now();
+        if (now - lastPinchTime < 100) return;
+
+        // 핀치 거리 변화가 충분히 클 때만 줌 처리 (10px 이상)
+        const pinchDelta = distance - lastPinchDistance;
+        if (Math.abs(pinchDelta) < 10) return;
+
+        // 핀치 방향 감지
+        const zoomDirection = pinchDelta > 0 ? 'in' : 'out';
+
+        // 방향이 바뀌었거나 마지막 줌으로부터 충분한 시간이 지났을 때만 줌 실행
+        if (zoomDirection !== lastZoomDirection || now - lastPinchTime > 300) {
+          if (zoomDirection === 'in') {
+            // 줌 인 (20% 증가)
+            handleZoom(scale * 1.2, centerX, centerY);
+          } else {
+            // 줌 아웃 (20% 감소)
+            handleZoom(scale / 1.2, centerX, centerY);
+          }
+
+          lastZoomDirection = zoomDirection;
+          lastPinchTime = now;
+          lastPinchDistance = distance;
         }
         return;
       }
 
       // 롱프레스 후 벌통 드래그 처리
       if (draggingId !== null && isLongPress && e.touches.length === 1) {
-        // 롱프레스 벌통 드래그 중일 때만 preventDefault 호출
-        e.preventDefault();
+        e.preventDefault(); // 롱프레스 벌통 드래그 중일 때 스크롤 방지
+        e.stopPropagation();
 
         const touch = e.touches[0];
+
         if (!containerRef.current) return;
 
         checkAutoScroll(touch.clientX, touch.clientY);
@@ -534,71 +611,67 @@ const useMapInteractions = ({
               : hive,
           ),
         );
-        return;
+
+        // 드래그 상태 ref 업데이트
+        dragEndStateRef.current = { id: draggingId, isLongPress };
       }
+      // 일반 터치 스크롤은 브라우저의 기본 동작에 맡김 (preventDefault 호출 안 함)
+    };
 
-      // 일반 터치 스크롤 처리 (단일 터치)
-      if (e.touches.length === 1 && !isLongPress && !draggingId) {
-        const touch = e.touches[0];
-        const deltaX = lastTouchX - touch.clientX;
-        const deltaY = lastTouchY - touch.clientY;
+    // touchstart 이벤트 핸들러
+    const handleTouchStartInEffect = (e: TouchEvent) => {
+      // 핀치 줌 상태 초기화
+      isPinching = false;
+      lastZoomDirection = null;
 
-        // 이동 거리가 임계값보다 크면 스크롤로 간주
-        const totalDeltaX = startTouchX - touch.clientX;
-        const totalDeltaY = startTouchY - touch.clientY;
-        const totalDelta = Math.sqrt(totalDeltaX * totalDeltaX + totalDeltaY * totalDeltaY);
+      // 2개 손가락으로 터치했을 때 핀치 줌 시작
+      if (e.touches.length === 2) {
+        // 기존 벌통 드래그 취소
+        if (draggingId !== null) {
+          // 드래그 상태 ref 초기화
+          dragEndStateRef.current = { id: null, isLongPress: false };
 
-        if (totalDelta > TOUCH_MOVE_THRESHOLD) {
-          // 스크롤 처리
-          if (containerRef.current) {
-            containerRef.current.scrollLeft += deltaX;
-            containerRef.current.scrollTop += deltaY;
+          setDraggingId(null);
+          setIsLongPress(false);
+          if (longPressTimeoutRef.current !== null) {
+            window.clearTimeout(longPressTimeoutRef.current);
+            longPressTimeoutRef.current = null;
           }
         }
-
-        // 마지막 터치 위치 업데이트
-        lastTouchX = touch.clientX;
-        lastTouchY = touch.clientY;
       }
     };
 
-    const handleTouchEnd = (e: TouchEvent) => {
+    // touchend 이벤트 핸들러
+    const handleTouchEndInEffect = (e: TouchEvent) => {
       // 핀치 줌 종료
       if (e.touches.length < 2) {
         isPinching = false;
-        setPinchStartDist(null);
+        lastZoomDirection = null;
       }
 
-      // 드래그 종료
+      // 드래그 종료 - 상태를 초기화하지 않고 handleDragEnd 함수를 호출
       if (e.touches.length === 0) {
-        setDraggingId(null);
-        setAutoScroll({ x: 0, y: 0 });
-        setIsLongPress(false);
-        setCollisionDetected(false);
-
-        if (longPressTimeoutRef.current !== null) {
-          window.clearTimeout(longPressTimeoutRef.current);
-          longPressTimeoutRef.current = null;
-        }
+        // 여기서 상태를 초기화하지 않고 handleDragEnd 함수에서 처리
+        handleDragEnd();
       }
     };
 
-    // 이벤트 리스너 등록 - touchmove만 non-passive로 설정
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    // passive 옵션에 따라 다르게 이벤트 리스너 등록
+    // touchmove는 preventDefault를 사용해야 하므로 non-passive로 등록
+    container.addEventListener('touchmove', handleTouchMoveInEffect, { passive: false });
+    container.addEventListener('touchstart', handleTouchStartInEffect, { passive: true });
+    container.addEventListener('touchend', handleTouchEndInEffect, { passive: true });
+    container.addEventListener('touchcancel', handleTouchEndInEffect, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-      container.removeEventListener('touchcancel', handleTouchEnd);
+      // 이벤트 리스너 제거
+      container.removeEventListener('touchmove', handleTouchMoveInEffect);
+      container.removeEventListener('touchstart', handleTouchStartInEffect);
+      container.removeEventListener('touchend', handleTouchEndInEffect);
+      container.removeEventListener('touchcancel', handleTouchEndInEffect);
     };
   }, [
     draggingId,
-    pinchStartDist,
-    pinchStartScale,
     scale,
     handleZoom,
     checkAutoScroll,
@@ -610,6 +683,7 @@ const useMapInteractions = ({
     setHives,
     detectCollision,
     checkCollisionAndAdjust,
+    handleDragEnd,
   ]);
 
   // 자동 스크롤 효과
@@ -630,6 +704,9 @@ const useMapInteractions = ({
 
           const hasCollision = detectCollision(draggingId, clampedX, clampedY);
           setCollisionDetected(hasCollision);
+
+          // 드래그 상태 ref 업데이트
+          dragEndStateRef.current = { id: draggingId, isLongPress: true };
 
           return prev.map((hive) => {
             if (hive.beehiveId !== draggingId) return hive;
