@@ -214,9 +214,10 @@ public class BeehiveServiceImpl implements BeehiveService {
         Apiary apiary = apiaryRepository.findByMembers(members);
 
         boolean isLocated = beehiveRepository.existsByApiaryAndDirection(
-            apiary,
-            beehiveUpdateDto.xDirection(),
-            beehiveUpdateDto.yDirection()
+                apiary,
+                beehiveUpdateDto.xDirection(),
+                beehiveUpdateDto.yDirection(),
+                beehiveId
         );
 
         if (isLocated) {

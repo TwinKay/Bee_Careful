@@ -50,10 +50,12 @@ public interface BeehiveRepository extends JpaRepository<Beehive, Long> {
     WHERE b.apiary = :apiary 
     AND b.xDirection = :xDirection 
     AND b.yDirection = :yDirection
+    AND b.id <> :beehiveId
 """)
     Boolean existsByApiaryAndDirection(@Param("apiary") Apiary apiary,
                                        @Param("xDirection") Long xDirection,
-                                       @Param("yDirection") Long yDirection);
+                                       @Param("yDirection") Long yDirection,
+                                       @Param("beehiveId") Long beehiveId);
 
 
     boolean existsByIdAndApiary(Long id, Apiary apiary);
