@@ -23,7 +23,6 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.data.alertBody,
     icon: '/icons/beecareful-192x192.png', // PWA 아이콘 경로
     tag: payload.messageId || 'fcm-notification',
-    badge: '/icons/beehive-badge.png',
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

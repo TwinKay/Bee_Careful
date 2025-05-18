@@ -1,10 +1,138 @@
+'use client';
+
+import type React from 'react';
+
 import { useEffect } from 'react';
 import type { MessagePayload } from 'firebase/messaging';
 import { useGetFCMToken, useSaveFCMToken, setupMessageListener } from '@/apis/notification';
+import useNotificationStore from '@/store/notificationStore';
+import type { NotificationType, NotificationDataType } from '@/store/notificationStore';
+
+// FCM 메시지를 NotificationType으로 변환하는 함수
+const convertMessageToNotification = (payload: MessagePayload): NotificationType => {
+  // FCM 페이로드 구조에 따라 데이터 추출
+  const title = payload.notification?.title || payload.data?.alertTitle || '새 알림';
+  const body = payload.notification?.body || payload.data?.alertBody || '';
+
+  // 데이터 필드 파싱
+  let dataField: NotificationDataType | undefined;
+  try {
+    // data 필드가 문자열인 경우 파싱 시도
+    if (payload.data && typeof payload.data.beehiveId === 'string') {
+      dataField = {
+        beehiveId: payload.data.beehiveId,
+        message: payload.data.message || body,
+        status: (payload.data.status as 'warning' | 'success' | 'danger') || 'warning',
+      };
+    }
+  } catch (error) {
+    console.error('알림 데이터 파싱 실패:', error);
+  }
+
+  return {
+    id: payload.messageId || `notification_${Date.now()}`,
+    title,
+    body,
+    data: dataField,
+    read: false, // 새 알림은 항상 읽지 않음 상태로 설정
+    createdAt: new Date().toISOString(),
+  };
+};
+
+// IndexedDB에 알림 저장 함수
+const saveNotificationToDB = async (notification: NotificationType): Promise<boolean> => {
+  return new Promise((resolve, reject) => {
+    try {
+      const request = indexedDB.open('notifications-db', 1);
+
+      // DB 처음 열 때 스토어 생성
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+
+        // 스토어가 없으면 생성
+        if (!db.objectStoreNames.contains('notifications')) {
+          const store = db.createObjectStore('notifications', { keyPath: 'id' });
+          store.createIndex('createdAt', 'createdAt', { unique: false });
+          store.createIndex('read', 'read', { unique: false });
+          console.log('Notifications store created');
+        }
+      };
+
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        const transaction = db.transaction(['notifications'], 'readwrite');
+        const store = transaction.objectStore('notifications');
+
+        // ID가 없으면 생성
+        if (!notification.id) {
+          notification.id = `notification_${Date.now()}`;
+        }
+
+        // 명시적으로 read 속성이 없으면 false로 설정
+        if (notification.read === undefined) {
+          notification.read = false;
+        }
+
+        const putRequest = store.put(notification);
+
+        putRequest.onsuccess = () => {
+          console.log('알림 저장 성공:', notification);
+          resolve(true);
+        };
+
+        putRequest.onerror = (error) => {
+          console.error('알림 저장 실패:', error);
+          reject(error);
+        };
+
+        transaction.oncomplete = () => {
+          db.close();
+        };
+      };
+
+      request.onerror = (event) => {
+        console.error('IndexedDB 열기 실패:', event);
+        reject(event);
+      };
+    } catch (error) {
+      console.error('알림 저장 중 오류:', error);
+      reject(error);
+    }
+  });
+};
 
 const NotificationManager: React.FC = () => {
   const { data: fcmToken } = useGetFCMToken();
   const { mutate: saveFCMToken } = useSaveFCMToken();
+  const { fetchNotifications } = useNotificationStore();
+
+  // IndexedDB 초기화
+  useEffect(() => {
+    const initializeDB = async () => {
+      try {
+        const request = indexedDB.open('notifications-db', 1);
+
+        request.onupgradeneeded = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+
+          if (!db.objectStoreNames.contains('notifications')) {
+            const store = db.createObjectStore('notifications', { keyPath: 'id' });
+            store.createIndex('createdAt', 'createdAt', { unique: false });
+            store.createIndex('read', 'read', { unique: false });
+            console.log('Notifications store created');
+          }
+        };
+
+        request.onerror = (event) => {
+          console.error('IndexedDB 초기화 오류:', event);
+        };
+      } catch (error) {
+        console.error('IndexedDB 초기화 중 오류:', error);
+      }
+    };
+
+    initializeDB();
+  }, []);
 
   // 알림 권한 요청
   useEffect(() => {
@@ -35,54 +163,55 @@ const NotificationManager: React.FC = () => {
 
   // 포그라운드 메시지 리스너 설정
   useEffect(() => {
-    const unsubscribe = setupMessageListener((payload: MessagePayload) => {
+    const unsubscribe = setupMessageListener(async (payload: MessagePayload) => {
       console.log('포그라운드 메시지 수신:', payload);
 
-      // 알림 표시 (브라우저 알림)
-      try {
-        if (
-          payload.notification &&
-          'Notification' in window &&
-          Notification.permission === 'granted'
-        ) {
-          // 브라우저 환경인지 확인
-          if (typeof window !== 'undefined' && window.document) {
-            // 안전하게 알림 생성
-            const notification = new Notification(payload.notification.title || '새 알림', {
-              body: payload.notification.body || '',
-              icon: '/icons/beecareful-192x192.png', // 아이콘 경로 지정
-            });
+      // 알림 객체 생성 및 IndexedDB에 저장
+      const notification = convertMessageToNotification(payload);
 
-            // 알림 클릭 이벤트 처리 (선택 사항)
-            notification.onclick = (event) => {
-              event.preventDefault();
-              // 알림 클릭 시 특정 페이지로 이동하려면 추가
-              if (payload.data?.link) {
-                window.open(payload.data.link, '_blank');
-              } else {
-                window.focus();
-              }
-              notification.close();
-            };
-          }
+      // 명시적으로 read: false 설정 (이미 convertMessageToNotification에서 설정되어 있지만 확실히 하기 위해)
+      notification.read = false;
+
+      try {
+        // IndexedDB에 저장
+        await saveNotificationToDB(notification);
+
+        // Zustand 스토어 갱신
+        fetchNotifications();
+
+        // 브라우저 알림 표시 (옵션)
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // 안전하게 알림 생성
+          const browserNotification = new Notification(notification.title, {
+            body: notification.body,
+            icon: '/icons/beecareful-192x192.png',
+          });
+
+          // 알림 클릭 이벤트 처리
+          browserNotification.onclick = (event) => {
+            event.preventDefault();
+            window.focus();
+            browserNotification.close();
+          };
         }
       } catch (error) {
-        console.error('알림 표시 중 오류 발생:', error);
-        if (payload.notification) {
-          // 여기서 토스트 알림 등 인앱 알림을 대신 표시
-          console.log('대체 인앱 알림:', payload.notification.title);
-        }
+        console.error('알림 처리 중 오류:', error);
       }
     });
 
-    // 백그라운드에서 포그라운드로 전환 시 이벤트 처리
+    // 백그라운드에서 포그라운드로 전환 시 알림 갱신
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         console.log('앱이 포그라운드로 전환됨');
+        // IndexedDB에서 알림 불러오기
+        fetchNotifications();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 앱 시작 시 알림 목록 로드
+    fetchNotifications();
 
     // 컴포넌트가 언마운트될 때 리스너 해제
     return () => {
@@ -91,7 +220,7 @@ const NotificationManager: React.FC = () => {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [fetchNotifications]); // notifications 의존성 제거
 
   return null;
 };
