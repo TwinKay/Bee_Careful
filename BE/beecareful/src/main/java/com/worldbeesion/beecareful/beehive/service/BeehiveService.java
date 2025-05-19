@@ -12,6 +12,8 @@ public interface BeehiveService {
 
     BeehiveDetailResponseDto getBeehiveDetails(Long beehiveId, int month, UserDetailsImpl userDetails);
 
+    AnnotatedImagesDto getAnnotatedImages(Long beehiveId, Long diagnosisId);
+
     void addTurret(Long beehiveId, TurretRequestDto turretRequestDto);
 
     void updateBeehive(Long beehiveId, BeehiveUpdateDto beehiveUpdateDto, UserDetailsImpl userDetails);

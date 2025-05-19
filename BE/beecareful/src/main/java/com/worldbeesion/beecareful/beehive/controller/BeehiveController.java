@@ -69,6 +69,12 @@ public class BeehiveController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/{beeHiveId}")
+    public ResponseEntity<?> deleteBeehive(@PathVariable(name = "beeHiveId") Long beeHiveId,
+        @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        beehiveService.deleteBeehive(beeHiveId, userDetails);
+        return ResponseEntity.ok().build();
+    }
 
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){
@@ -80,11 +86,16 @@ public class BeehiveController {
                 .body(response);
     }
 
-    @DeleteMapping("/{beeHiveId}")
-    public ResponseEntity<?> deleteBeehive(@PathVariable(name = "beeHiveId") Long beeHiveId,
-                                           @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        beehiveService.deleteBeehive(beeHiveId, userDetails);
-        return ResponseEntity.ok().build();
+    @GetMapping("/{beeHiveId}/diagnosis/{diagnosisId}/annotated-images")
+    public ResponseEntity<?> getAnnotatedImages(
+        @PathVariable(name = "beeHiveId") Long beeHiveId,
+        @PathVariable(name = "diagnosisId") Long diagnosisId
+    ) {
+        AnnotatedImagesDto response = beehiveService.getAnnotatedImages(beeHiveId, diagnosisId);
+
+        return ResponseEntity
+            .ok()
+            .body(null);
     }
 
     @PostMapping("/hornet/notification")
