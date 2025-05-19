@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const DURATION = 0.2;
+
 type BeehiveStatusPopupPropsType = {
   isOpen: boolean;
   onClose: () => void;
@@ -108,7 +110,7 @@ const BeehiveStatusPopup: React.FC<BeehiveStatusPopupPropsType> = ({ isOpen, onC
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: DURATION }}
         >
           <div
             className="mx-4 w-full max-w-md overflow-hidden rounded-xl bg-white"

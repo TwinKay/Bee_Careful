@@ -143,16 +143,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     if (longPressTimerRef.current !== null) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
-
-      // 롱프레스가 아니라면 클릭으로 처리
-      if (!isLongPress.current && !isDragging.current) {
-        handleCellAction();
-      }
-    } else if (!isLongPress.current && !isDragging.current) {
-      // 타이머가 실행 완료된 후 핸들러가 호출될 때도 처리
-      handleCellAction();
     }
-
     // 상태 초기화
     setTimeout(() => {
       isDragging.current = false;
