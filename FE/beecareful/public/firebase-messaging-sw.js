@@ -153,3 +153,14 @@ self.addEventListener('activate', (event) => {
   console.log('[firebase-messaging-sw.js] Service Worker 활성화됨');
   event.waitUntil(clients.claim());
 });
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, options } = event.data.payload;
+
+    console.log('[SW] 포그라운드 알림 표시 요청 수신:', title, options);
+
+    // 알림 표시
+    self.registration.showNotification(title, options);
+  }
+});

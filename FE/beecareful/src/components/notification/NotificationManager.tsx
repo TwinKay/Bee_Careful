@@ -22,7 +22,7 @@ const convertMessageToNotification = (payload: MessagePayload): NotificationType
       dataField = {
         beehiveId: payload.data.beehiveId,
         message: payload.data.message || body,
-        status: (payload.data.status as 'warning' | 'success' | 'danger') || 'warning',
+        status: (payload.data.status as 'WARNING' | 'SUCCESS' | 'DANGER') || 'WARNING',
       };
     }
   } catch (error) {
