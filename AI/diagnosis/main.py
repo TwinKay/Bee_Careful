@@ -40,6 +40,7 @@ class DiagnosisResponse(BaseModel):
 
 # --- Configuration for Annotated Images ---
 ANNOTATED_IMAGE_S3_PREFIX = "BEEHIVE/ANNOTATED/" # Define a prefix for annotated images
+ENCODE_PARAM = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
 
 # --- API Endpoints ---
 @app.post("/beehives/diagnosis", response_model=DiagnosisResponse)
@@ -96,8 +97,7 @@ async def diagnose_beehive(body: DiagnosisRequest = Body(...)):
         raise HTTPException(status_code=500, detail="An internal error occurred during image analysis.")
 
     # 4. Encode the annotated image to JPEG bytes
-    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
-    ok, annotated_img_buf = cv2.imencode(".jpg", annotated_img_np, encode_param)
+    ok, annotated_img_buf = cv2.imencode(".jpg", annotated_img_np, ENCODE_PARAM)
     if not ok:
         print(f"Failed to encode annotated image to JPEG (original key: {original_s3_key}).")
         raise HTTPException(status_code=500, detail="Failed to encode annotated image to JPEG.")

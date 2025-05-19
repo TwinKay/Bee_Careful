@@ -104,6 +104,7 @@ def analyze_bee_image(model: YOLO, img_np: np.ndarray) -> Tuple[Dict[str, Dict[s
         # Depending on the error, you might return or raise
         return diagnosis, annotated_img
 
+    print(f"Detected Counts: {pred.boxes.length}")
 
     for xyxy, cls_id in zip(xyxy_coords, class_ids):
         if cls_id < 0 or cls_id >= len(CLASS_NAMES):
