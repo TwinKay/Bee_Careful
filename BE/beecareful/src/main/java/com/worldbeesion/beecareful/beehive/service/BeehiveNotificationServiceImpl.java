@@ -12,6 +12,7 @@ import com.worldbeesion.beecareful.notification.model.dto.NotificationRequestDto
 import com.worldbeesion.beecareful.notification.service.FCMService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,12 +25,18 @@ public class BeehiveNotificationServiceImpl implements BeehiveNotificationServic
 
 
     @Override
+    @Transactional
     public void sendBeehiveNotification(BeehiveNotificationDto beehiveNotificationDto, UserDetailsImpl userDetails) {
         Turret turret = turretRepository.findBySerial(beehiveNotificationDto.serial()).orElseThrow(TurretNotFoundException::new);
-        Beehive beehive = turretRepository.findBeehiveByTurretId(turret.getId()).orElseThrow(BeehiveNotFoundException::new);
+        Beehive beehive = turret.getBeehive();
+
+        if(beehive == null) {
+            throw new BeehiveNotFoundException();
+        }
+
+        beehive.upHornetAppearedAt();
 
         NotificationRequestDto notificationRequestDto = new NotificationRequestDto(beehive.getId(), HORNET_APPEAR_MESSAGE, NotificationType.WARNING);
-
         fcmService.alertNotificationByFCM(userDetails, notificationRequestDto);
     }
 }
