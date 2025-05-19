@@ -91,7 +91,7 @@ public class BeehiveController {
         @PathVariable(name = "beeHiveId") Long beeHiveId,
         @PathVariable(name = "diagnosisId") Long diagnosisId
     ) {
-
+        AnnotatedImagesDto response = beehiveService.getAnnotatedImages(beeHiveId, diagnosisId);
 
         return ResponseEntity
             .ok()
