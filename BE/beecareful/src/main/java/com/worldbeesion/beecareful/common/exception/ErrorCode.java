@@ -32,6 +32,10 @@ public enum ErrorCode {
     // Device
     DEVICE_NOT_FOUND(HttpStatus.BAD_REQUEST, "기기가 존재하지 않습니다."),
 
+    // Turret
+    ALREADY_EXIST_SERIAL(HttpStatus.BAD_REQUEST, "이미 존재하는 serial 번호 입니다."),
+
+
     // Auth
     COOKIE_NOT_FOUND(HttpStatus.UNAUTHORIZED, "쿠키가 존재하지 않습니다"),
     JWT_NOT_FOUND(HttpStatus.UNAUTHORIZED, "토큰이 존재하지 않습니다. "),

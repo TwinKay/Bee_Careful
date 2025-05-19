@@ -1,5 +1,6 @@
 package com.worldbeesion.beecareful.beehive.service;
 
+import com.worldbeesion.beecareful.beehive.exception.AlreadyExistTurretSerialNumException;
 import com.worldbeesion.beecareful.beehive.exception.BeehiveNotFoundException;
 import com.worldbeesion.beecareful.beehive.exception.DirectionDuplicateException;
 import com.worldbeesion.beecareful.beehive.exception.DirectionNullException;
@@ -185,6 +186,12 @@ public class BeehiveServiceImpl implements BeehiveService {
     @Transactional
     public void addTurret(Long beehiveId, TurretRequestDto turretRequestDto) {
         Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
+
+        boolean alreadyExist = turretRepository.existsTurretBySerial(turretRequestDto.serial().trim());
+
+        if(alreadyExist) {
+            throw new AlreadyExistTurretSerialNumException();
+        }
 
         Turret turret = turretRepository.findByBeehive(beehive).orElse(null);
 
