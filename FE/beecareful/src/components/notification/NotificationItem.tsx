@@ -38,7 +38,7 @@ const NotificationItem = ({ notification }: NotificationItemPropsType) => {
       <div className="flex-1">
         <div className="flex items-center justify-between">
           <span className="font-bold text-bc-brown-100">
-            {notification.data?.beehiveId ? `${notification.data.beehiveId} 벌통` : '벌통'}
+            {notification.data?.nickname ? `${notification.data.nickname}` : '벌통'}
           </span>
           <span className="text-sm text-gray-400">{formatTimeAgo(notification.createdAt)}</span>
         </div>

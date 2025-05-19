@@ -2,10 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import RemixIcon from '@/components/common/RemixIcon';
 import { formatTimeAgo } from '@/utils/format';
 import useNotificationStore from '@/store/notificationStore';
+import useBeehiveStore from '@/store/beehiveStore';
 import type { NotificationType } from '@/store/notificationStore';
 
 const NotificationBanner = () => {
   const { notifications, fetchNotifications } = useNotificationStore();
+  const getBeehiveNicknameById = useBeehiveStore((state) => state.getBeehiveNicknameById);
+  const beehives = useBeehiveStore((state) => state.beehives);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showNotification, setShowNotification] = useState(true);
   const [slideIn, setSlideIn] = useState(false);
@@ -73,6 +77,20 @@ const NotificationBanner = () => {
   // 현재 표시할 알림
   const currentNotification = notifications[currentIndex];
 
+  // 벌통 ID로 별명 가져오기
+  const getBeehiveNickname = (beehiveId?: string) => {
+    if (!beehiveId) return undefined;
+
+    // 벌통 데이터가 로드되지 않았으면 기본값 반환
+    if (beehives.length === 0) return '로딩 중...';
+
+    const id = parseInt(beehiveId, 10);
+    if (isNaN(id)) return undefined;
+
+    const nickname = getBeehiveNicknameById(id);
+    return nickname || '알림';
+  };
+
   // 알림 상태에 따른 아이콘과 색상 설정
   const getStatusIcon = (notification: NotificationType): { icon: string; color: string } => {
     switch (notification?.data?.status) {
@@ -89,6 +107,9 @@ const NotificationBanner = () => {
 
   const { icon, color } = getStatusIcon(currentNotification);
 
+  // 현재 알림의 벌통 별명 가져오기
+  const beehiveNickname = getBeehiveNickname(currentNotification.data?.beehiveId);
+
   return (
     <div className="h-11 w-80 overflow-hidden rounded-full bg-gray-100 px-4 py-2">
       <div className="relative h-full w-full overflow-hidden">
@@ -103,7 +124,7 @@ const NotificationBanner = () => {
           <RemixIcon name={icon} className={`${color} text-md`} />
           <p className="ml-2 flex-1 truncate text-left font-bold text-gray-600">
             {currentNotification.data
-              ? `${currentNotification.data.beehiveId}벌통: ${currentNotification.data?.message}`
+              ? `${beehiveNickname || '알림'}: ${currentNotification.data?.message}`
               : `${currentNotification.title}`}
           </p>
           <span className="ml-2 whitespace-nowrap text-sm text-gray-400">

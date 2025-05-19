@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import useBeehiveStore from './beehiveStore'; // 벌통 스토어 임포트
 
 // 알림 타입 정의
 export type NotificationDataType = {
   beehiveId: string;
   message: string;
   status: 'WARNING' | 'SUCCESS' | 'DANGER';
+  nickname?: string;
 };
 
 export type NotificationType = {
@@ -26,6 +28,7 @@ type NotificationStateType = {
   deleteNotification: (id: string) => Promise<boolean>;
   markAllAsRead: () => Promise<boolean>;
   getUnreadCount: () => number;
+  enrichNotificationsWithBeehiveNames: () => void;
 };
 
 // IndexedDB에서 알림을 가져오는 함수
@@ -166,10 +169,44 @@ const useNotificationStore = create<NotificationStateType>((set, get) => ({
     try {
       const notifications = await fetchNotificationsFromDB();
       set({ notifications, loading: false });
+
+      // 알림 데이터를 가져온 후 벌통 별명 정보 추가
+      setTimeout(() => {
+        get().enrichNotificationsWithBeehiveNames();
+      }, 0);
     } catch (error) {
       console.error('알림 가져오기 실패:', error);
       set({ error: '알림을 불러오는 중 오류가 발생했습니다.', loading: false });
     }
+  },
+
+  // 벌통 별명을 알림 데이터에 추가하는 함수
+  enrichNotificationsWithBeehiveNames: () => {
+    const { notifications } = get();
+    const getBeehiveNicknameById = useBeehiveStore.getState().getBeehiveNicknameById;
+
+    // 각 알림 데이터에 벌통 별명 추가
+    const enrichedNotifications = notifications.map((notification) => {
+      if (notification.data?.beehiveId) {
+        // 문자열 ID를 숫자로 변환 (필요한 경우)
+        const beehiveId = parseInt(notification.data.beehiveId, 10);
+        if (!isNaN(beehiveId)) {
+          const nickname = getBeehiveNicknameById(beehiveId);
+          if (nickname) {
+            return {
+              ...notification,
+              data: {
+                ...notification.data,
+                nickname,
+              },
+            };
+          }
+        }
+      }
+      return notification;
+    });
+
+    set({ notifications: enrichedNotifications });
   },
 
   markAsRead: async (id: string) => {
