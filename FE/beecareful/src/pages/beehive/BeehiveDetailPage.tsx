@@ -25,7 +25,7 @@ import { useQueryClient } from '@tanstack/react-query';
 const BeehiveDetailPage = () => {
   const param = useParams();
   const beehiveId = param.id;
-  const navigate = useNavigate();
+  const route = useNavigate();
 
   const [isToggleLeft, setIsToggleLeft] = useState(true);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
@@ -75,7 +75,7 @@ const BeehiveDetailPage = () => {
   const handleDeleteHive = () => {
     deleteBeehive(Number(beehiveId), {
       onSuccess: () => {
-        navigate(ROUTES.BEEHIVES, {
+        route(ROUTES.BEEHIVES, {
           state: {
             showToast: true,
             toastMessage: '벌통이 삭제되었습니다.',
@@ -134,17 +134,16 @@ const BeehiveDetailPage = () => {
 
   const recentData = useMemo(
     () =>
-      beehiveData
-        ? beehiveData.diagnoses.filter(
-            ({ createdAt }: DiagnosisDataType) =>
-              new Date(createdAt).getTime() >
-              new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
-          )
-        : TMP_DIAGNOSIS_API_DATA.diagnoses.filter(
-            ({ createdAt }: DiagnosisDataType) =>
-              new Date(createdAt).getTime() >
-              new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
-          ),
+      beehiveData?.diagnoses.filter(
+        ({ createdAt }: DiagnosisDataType) =>
+          new Date(createdAt).getTime() >
+          new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
+      ),
+    // : TMP_DIAGNOSIS_API_DATA.diagnoses.filter(
+    //     ({ createdAt }: DiagnosisDataType) =>
+    //       new Date(createdAt).getTime() >
+    //       new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
+    //   ),
     [isToggleLeft, beehiveData],
   );
 
@@ -165,12 +164,8 @@ const BeehiveDetailPage = () => {
     setIsEditNameOpen(true);
   };
 
-  if (!beehiveData || isError || !beehiveId) {
-    return <div className="flex h-full w-full items-center justify-center">Error...</div>;
-  }
-
-  if (isPending) {
-    return <div className="flex h-full w-full items-center justify-center">Loading...</div>;
+  if (!beehiveId) {
+    route(ROUTES.BEEHIVES);
   }
 
   const openLinkTurret = () => {
@@ -178,6 +173,7 @@ const BeehiveDetailPage = () => {
   };
 
   const linkTurret = () => {
+    if (!beehiveId) return;
     mutateTurret(
       {
         beehiveId: beehiveId,
@@ -210,10 +206,10 @@ const BeehiveDetailPage = () => {
       />
       <div className="flex w-full items-center justify-between p-4">
         <div className="flex flex-col items-start">
-          <p className="text-lg font-bold">{beehiveData.nickname}</p>
+          <p className="text-lg font-bold">{beehiveData?.nickname}</p>
           <p className="font-semibold text-bc-yellow-100">벌통</p>
         </div>
-        {beehiveData.turretId ? (
+        {beehiveData?.turretId ? (
           <Button onClick={openLinkTurret} variant="success" className="py-2">
             <p className="text-brown-100 font-bold">장치 연동 중</p>
           </Button>
@@ -237,12 +233,33 @@ const BeehiveDetailPage = () => {
           leftLabel="6개월"
           rightLabel="1년"
         />
-        <DiagnosisLineChart data={recentData} />
+        {!(recentData?.length > 0) ? (
+          <div className="flex h-24 flex-col items-center justify-center gap-6 p-20">
+            <p className="text-gray-500">검사 내역이 없어요.</p>
+            <Button
+              variant="success"
+              onClick={() => {
+                route(ROUTES.DIAGNOSIS_CREATE(Number(beehiveId)));
+              }}
+            >
+              질병 검사하러 가기
+            </Button>
+          </div>
+        ) : (
+          <DiagnosisLineChart data={recentData} />
+        )}
       </Card>
       <Card>
         <CardTitle>질병 검사 결과</CardTitle>
-        <DiagnosisList data={recentData} />
+        {!(recentData?.length > 0) ? (
+          <div className="flex h-24 items-center justify-center">
+            <p className="text-gray-500">검사 결과가 없어요. 🥲</p>
+          </div>
+        ) : (
+          <DiagnosisList data={recentData} />
+        )}
       </Card>
+
       <BottomSheet
         isOpen={isBottomSheetOpen}
         onClose={() => setIsBottomSheetOpen(false)}
