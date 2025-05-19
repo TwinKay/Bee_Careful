@@ -9,6 +9,7 @@ export type NotificationType = {
 
 export type NotificationDataType = {
   beehiveId: string;
+  nickname?: string;
   message: string;
   status: 'WARNING' | 'SUCCESS' | 'DANGER';
 };

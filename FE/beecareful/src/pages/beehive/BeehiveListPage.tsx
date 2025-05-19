@@ -12,6 +12,7 @@ import BottomArea from '@/components/beehive/BottomArea';
 import { useCreateBeehive, useGetBeehives } from '@/apis/beehive';
 import { useBeehivePosition } from '@/hooks/useBeehivePosition';
 import NotificationBanner from '@/components/notification/NotificationBanner';
+import useNotificationStore from '@/store/notificationStore';
 
 // 로케이션 스테이트 타입
 type LocationStateType = {
@@ -23,6 +24,10 @@ type LocationStateType = {
 const BeehiveListPage = () => {
   const mapRef = useRef<BeehiveMapRefType>(null);
   const { currentMode, setMode, setSelectedBeehive, selectedBeehive } = useBeehiveStore();
+
+  // 알림 스토어에서 notifications 상태 구독
+  const notifications = useNotificationStore((state) => state.notifications);
+  const notificationsLengthRef = useRef(notifications.length);
 
   // 바텀시트 상태 관리
   const [isNicknameBottomSheetOpen, setIsNicknameBottomSheetOpen] = useState(false);
@@ -48,14 +53,30 @@ const BeehiveListPage = () => {
 
   // API 뮤테이션 훅
   const createBeehiveMutation = useCreateBeehive();
-  const { data: beehives = [] } = useGetBeehives();
-
+  const { data: beehives = [], refetch: refetchBeehives } = useGetBeehives();
   // 맵 컨테이너 참조
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
   // 벌통 위치 관련 훅 사용
   const { findOptimalPosition } = useBeehivePosition({ containerRef, scale });
+
+  // 알림 데이터가 변경될 때 벌통 데이터 새로고침
+  useEffect(() => {
+    // 알림이 새로 추가된 경우에만 벌통 데이터 새로고침
+    if (notifications.length > notificationsLengthRef.current) {
+      // 벌통 데이터 새로고침
+      refetchBeehives();
+
+      // 맵 새로고침
+      if (mapRef.current?.refreshMap) {
+        mapRef.current.refreshMap();
+      }
+    }
+
+    // 현재 알림 개수 저장
+    notificationsLengthRef.current = notifications.length;
+  }, [notifications.length, refetchBeehives]);
 
   // Toast 표시 함수
   const showToastMessage = (
