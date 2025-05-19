@@ -22,12 +22,12 @@ export const uploadImages = async (
     const promises = imageUrls.urls.map(({ filename, status, preSignedUrl }) => {
       if (status > 0) throw new Error(`Error uploading image ${filename}: ${status}`);
 
-      const formData = new FormData();
-      formData.append('file', imageMap[filename], filename);
+      // const formData = new FormData();
+      // formData.append('file', imageMap[filename], filename);
 
       return fetch(preSignedUrl, {
         method: 'PUT',
-        body: formData,
+        body: imageMap[filename],
         headers: {
           'Content-Type': imageMap[filename].type,
         },
