@@ -15,7 +15,6 @@ import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.repository.S3FileMetadataRepository;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -91,12 +90,12 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                     return Mono.error(new RuntimeException("AI API returned null diagnosis result"));
                 }
 
-                if (response.analyzedImageS3Key() == null || response.analyzedImageS3Key().isEmpty()) {
+                if (response.annotatedImageS3Key() == null || response.annotatedImageS3Key().isEmpty()) {
                     log.error("AI API returned null or empty analyzed image S3 key");
                     return Mono.error(new RuntimeException("AI API returned null or empty analyzed image S3 key"));
                 }
 
-                log.debug("Received diagnosis result and analyzed image S3 key: {}", response.analyzedImageS3Key());
+                log.debug("Received diagnosis result and analyzed image S3 key: {}", response.annotatedImageS3Key());
                 return Mono.just(response);
             })
             .onErrorResume(e -> {
@@ -175,7 +174,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             }
 
             DiagnosisApiResponse.DiagnosisResult diagResult = diagnosisApiResponse.diagnosis();
-            String analyzedImageS3Key = diagnosisApiResponse.analyzedImageS3Key();
+            String analyzedImageS3Key = diagnosisApiResponse.annotatedImageS3Key();
 
             if (diagResult == null) {
                 log.error("[DiagnosisId: {}, PhotoId: {}] DiagnosisResult from AI analysis is null.", diagnosis.getId(), photoId);
