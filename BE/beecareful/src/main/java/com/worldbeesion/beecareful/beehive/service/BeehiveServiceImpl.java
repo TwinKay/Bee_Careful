@@ -40,7 +40,7 @@ public class BeehiveServiceImpl implements BeehiveService {
 
     @Override
     @Transactional
-    public void addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails) {
+    public BeehiveResponseDto addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails) {
         String nickname = beehiveRequestDto.nickname();
         Long xDirection = beehiveRequestDto.xDirection();
         Long yDirection = beehiveRequestDto.yDirection();
@@ -61,6 +61,8 @@ public class BeehiveServiceImpl implements BeehiveService {
 
         beehiveRepository.save(beehive);
         log.info("Added new beehive '{}' with ID: {} for member ID: {}", nickname, beehive.getId(), memberId);
+
+        return new BeehiveResponseDto(beehive.getId());
     }
 
     @Override

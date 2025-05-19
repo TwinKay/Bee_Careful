@@ -27,10 +27,10 @@ public class BeehiveController {
     private final BeehiveNotificationService beehiveNotificationService;
 
     @PostMapping("")
-    public ResponseEntity<?> createBeehive(@RequestBody BeehiveRequestDto beehiveRequestDto,
+    public ResponseEntity<BeehiveResponseDto> createBeehive(@RequestBody BeehiveRequestDto beehiveRequestDto,
                                            @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        beehiveService.addBeehive(beehiveRequestDto, userDetails);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        BeehiveResponseDto beehiveResponseDto = beehiveService.addBeehive(beehiveRequestDto, userDetails);
+        return ResponseEntity.status(HttpStatus.CREATED).body(beehiveResponseDto);
     }
 
     @GetMapping("")

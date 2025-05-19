@@ -6,7 +6,7 @@ import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import java.util.List;
 
 public interface BeehiveService {
-    void addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails);
+    BeehiveResponseDto addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails);
 
     List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails);
 
