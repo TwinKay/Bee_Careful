@@ -402,11 +402,15 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         diagnosisRepository.save(diagnosis);
 
-        List<Photo> photos = dto.photos();
+        List<Photo> photoMetadataList = dto.photos();
         List<DiagnosisResponseDto> response = new ArrayList<>();
 
-        for (Photo photo : photos) {
-            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutOriginPhotoUrl(photo.filename(), photo.contentType(), photo.expectedSize());
+        for (Photo photoMetadata : photoMetadataList) {
+            GeneratePutUrlResponse putUrlDto = s3PresignService.generatePutOriginPhotoUrl(
+                photoMetadata.filename(),
+                photoMetadata.contentType(),
+                photoMetadata.expectedSize()
+            );
             S3FileMetadata s3FileMetadata = putUrlDto.s3FileMetadata();
             String putUrl = putUrlDto.preSignedUrl();
 
@@ -424,7 +428,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             }
 
             DiagnosisResponseDto build = DiagnosisResponseDto.builder()
-                .filename(photo.filename())
+                .filename(photoMetadata.filename())
                 .status(status)
                 .preSignedUrl(putUrl)
                 .build();
