@@ -8,6 +8,7 @@ import BeehiveListPage from '@/pages/beehive/BeehiveListPage';
 import BeehiveDetailPage from '@/pages/beehive/BeehiveDetailPage';
 import AuthGuardLayout from '@/layouts/AuthGuardLayout';
 import NotificationPage from '@/pages/notification/NotificationPage';
+import NotificationLayout from '@/layouts/NotificationLayout';
 
 const router = createBrowserRouter([
   {
@@ -55,7 +56,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.NOTIFICATIONS,
-        Component: () => MainLayout(),
+        Component: () => NotificationLayout(),
         children: [
           {
             index: true,
