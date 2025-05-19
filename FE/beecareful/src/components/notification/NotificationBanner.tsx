@@ -76,11 +76,11 @@ const NotificationBanner = () => {
   // 알림 상태에 따른 아이콘과 색상 설정
   const getStatusIcon = (notification: NotificationType): { icon: string; color: string } => {
     switch (notification?.data?.status) {
-      case 'warning':
+      case 'WARNING':
         return { icon: 'ri-alert-fill', color: 'text-yellow-500' };
-      case 'danger':
+      case 'DANGER':
         return { icon: 'ri-error-warning-fill', color: 'text-red-500' };
-      case 'success':
+      case 'SUCCESS':
         return { icon: 'ri-checkbox-circle-fill', color: 'text-green-500' };
       default:
         return { icon: 'ri-checkbox-circle-fill', color: 'text-blue-500' };
@@ -90,7 +90,7 @@ const NotificationBanner = () => {
   const { icon, color } = getStatusIcon(currentNotification);
 
   return (
-    <div className="h-11 w-64 overflow-hidden rounded-full bg-gray-100 px-4 py-2">
+    <div className="h-11 w-80 overflow-hidden rounded-full bg-gray-100 px-4 py-2">
       <div className="relative h-full w-full overflow-hidden">
         <div
           className={`
@@ -102,7 +102,9 @@ const NotificationBanner = () => {
         >
           <RemixIcon name={icon} className={`${color} text-md`} />
           <p className="ml-2 flex-1 truncate text-left font-bold text-gray-600">
-            {currentNotification.title}
+            {currentNotification.data
+              ? `${currentNotification.data.beehiveId}벌통: ${currentNotification.data?.message}`
+              : `${currentNotification.title}`}
           </p>
           <span className="ml-2 whitespace-nowrap text-sm text-gray-400">
             {formatTimeAgo(currentNotification.createdAt)}

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 export type NotificationDataType = {
   beehiveId: string;
   message: string;
-  status: 'warning' | 'success' | 'danger';
+  status: 'WARNING' | 'SUCCESS' | 'DANGER';
 };
 
 export type NotificationType = {
