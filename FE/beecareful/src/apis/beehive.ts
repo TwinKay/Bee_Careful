@@ -74,5 +74,7 @@ export function useGetDiagnosisImages(beeHiveId: number, recordId: number) {
     queryKey: ['diagnosisImages', beeHiveId, recordId],
     queryFn: () =>
       api.get(`/api/v1/beehives/${beeHiveId}/records/${recordId}`).then((res) => res.data),
+    staleTime: 1000 * 60 * 60 * 24, // 1일
+    gcTime: 1000 * 60 * 60 * 24 * 30, // 30일
   });
 }
