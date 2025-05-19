@@ -540,9 +540,9 @@ const useMapInteractions = ({
           return;
         }
 
-        // 너무 빠른 연속 줌 방지 (100ms 간격)
+        // // 너무 빠른 연속 줌 방지 (5ms 간격)
         const now = Date.now();
-        if (now - lastPinchTime < 10) return;
+        // if (now - lastPinchTime < 5) return;
 
         // 핀치 거리 변화가 충분히 클 때만 줌 처리 (10px 이상)
         const pinchDelta = distance - lastPinchDistance;
@@ -555,10 +555,10 @@ const useMapInteractions = ({
         if (zoomDirection !== lastZoomDirection || now - lastPinchTime > 300) {
           if (zoomDirection === 'in') {
             // 줌 인 (20% 증가)
-            handleZoom(scale * 1.15, centerX, centerY);
+            handleZoom(scale * 1.09, centerX, centerY);
           } else {
             // 줌 아웃 (20% 감소)
-            handleZoom(scale / 1.15, centerX, centerY);
+            handleZoom(scale / 1.09, centerX, centerY);
           }
 
           lastZoomDirection = zoomDirection;
