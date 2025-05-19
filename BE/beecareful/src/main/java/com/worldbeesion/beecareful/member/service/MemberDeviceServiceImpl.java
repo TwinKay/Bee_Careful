@@ -34,7 +34,7 @@ public class MemberDeviceServiceImpl implements MemberDeviceService {
         // 이거 안되어야함.
         // 현재 접속한 사용자로 FCM 토큰을 조회했을때 기기를 삭제하고, 현재 FCM 토큰을 DB에 등록
         Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        MemberDevice existingByMember = memberDeviceRepository.findByMembers(member).orElse(null);
+        MemberDevice existingByMember = memberDeviceRepository.findByMember(member).orElse(null);
         if (existingByMember != null) {
             memberDeviceRepository.delete(existingByMember);
         }
