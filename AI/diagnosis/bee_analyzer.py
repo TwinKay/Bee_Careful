@@ -90,6 +90,7 @@ def analyze_bee_image(model: YOLO, img_np: np.ndarray) -> Tuple[Dict[str, Dict[s
 
     diagnosis = get_empty_diagnosis()
     annotated_img = img_np.copy()  # Work on a copy to keep the original intact
+    height, width = annotated_img.shape[:2]
 
     # Ensure predictions.boxes.xyxy and predictions.boxes.cls are available and not None
     if pred.boxes is None or pred.boxes.xyxy is None or pred.boxes.cls is None:
@@ -137,6 +138,9 @@ def analyze_bee_image(model: YOLO, img_np: np.ndarray) -> Tuple[Dict[str, Dict[s
             continue
 
         x1, y1, x2, y2 = xyxy
+        if (x1 < 0 or x2 >= width or y1 < 0 or y2 >= height):
+            print(f"Box out of bounds: ({x1}, {y1}, {x2}, {y2}) for image size {width}x{height}")
+
         color = COLOR_MAP.get(cls_name, (255, 255, 255))  # Default to white if color not mapped
         cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, 2)
         # Optionally, add text (label) - uncomment if needed
@@ -152,8 +156,9 @@ if __name__ == '__main__':
     try:
         test_model = load_model()
         # Create a dummy image for testing if you don't have one readily available
-        # For a real test, replace with: test_image_np = cv2.imread("path/to/your/test_image.jpg")
-        test_image_np = np.zeros((640, 640, 3), dtype=np.uint8) # Example: 640x640 black image
+        # For a real test, replace with: 
+        test_image_np = cv2.imread("test.jpg")
+        # test_image_np = np.zeros((640, 640, 3), dtype=np.uint8) # Example: 640x640 black image
         if test_image_np is None or test_image_np.size == 0:
              print("Failed to load or create a test image.")
         else:
