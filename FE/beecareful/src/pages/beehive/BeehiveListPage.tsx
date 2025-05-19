@@ -2,7 +2,7 @@ import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import BeehiveMap from '@/components/beehive/BeehiveMap';
 import { ROUTES } from '@/config/routes';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import Toast from '@/components/common/Toast';
 import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
@@ -11,6 +11,7 @@ import useBeehiveStore from '@/store/beehiveStore';
 import BottomArea from '@/components/beehive/BottomArea';
 import { useCreateBeehive, useGetBeehives } from '@/apis/beehive';
 import { useBeehivePosition } from '@/hooks/useBeehivePosition';
+import NotificationBanner from '@/components/notification/NotificationBanner';
 
 // 로케이션 스테이트 타입
 type LocationStateType = {
@@ -212,6 +213,13 @@ const BeehiveListPage = () => {
 
   const location = useLocation();
 
+  const navigate = useNavigate();
+
+  // 알림 페이지로 이동
+  const handleViewAllNotifications = () => {
+    navigate(ROUTES.NOTIFICATIONS);
+  };
+
   // 페이지 로드 시 location.state에서 토스트 정보 확인
   useEffect(() => {
     const state = location.state as LocationStateType;
@@ -240,14 +248,18 @@ const BeehiveListPage = () => {
 
       <div className="flex h-screen w-full flex-col justify-around overflow-hidden bg-gray-50">
         <header className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-3">
-            <RemixIcon name="ri-alert-fill" className="text-bc-yellow-90" />
-            <p className="font-bold text-gray-600">1번 벌통 말벌 출몰</p>
-            <span className="text-sm text-gray-400">17:53</span>
+          {/* 알림 배너 */}
+          <div className="flex-1">
+            <NotificationBanner />
           </div>
-          <Link to={ROUTES.NOTIFICATIONS}>
-            <RemixIcon name="ri-notification-2-fill" className="text-2xl text-gray-500" />
-          </Link>
+
+          {/* 알림 아이콘 버튼 */}
+          <button
+            onClick={handleViewAllNotifications}
+            className="ml-2 flex items-center justify-center rounded-full p-2 text-gray-500 hover:bg-gray-100"
+          >
+            <RemixIcon name="ri-notification-2-fill" className="text-2xl" />
+          </button>
         </header>
 
         {/* 메인 컨텐츠 영역 */}
