@@ -158,10 +158,10 @@ const BottomArea = ({
         buttons={[
           {
             id: 'register',
-            label: isPendingCreate ? '등록 중...' : '등록하기',
+            label: '등록하기',
             variant: 'success',
             onClick: () => onRegisterBeehive(true),
-            disabled: isPendingCreate,
+            disabled: isPendingCreate || !beehiveData.deviceCode.trim(), // 장치 코드가 비어있으면 버튼 비활성화
           },
           {
             id: 'registerLater',

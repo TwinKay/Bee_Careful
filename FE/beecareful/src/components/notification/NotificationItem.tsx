@@ -23,13 +23,6 @@ const NotificationItem = ({ notification }: NotificationItemPropsType) => {
 
   const { icon, color } = getStatusIcon();
 
-  // 결과 텍스트 색상 설정
-  const getResultTextColor = (): string => {
-    if (notification?.data?.status === 'DANGER') return 'text-red-500';
-    if (notification?.data?.status === 'SUCCESS') return 'text-green-500';
-    return 'text-blue-500';
-  };
-
   return (
     <>
       <div className={`${color}`}>
@@ -42,16 +35,11 @@ const NotificationItem = ({ notification }: NotificationItemPropsType) => {
           </span>
           <span className="text-sm text-gray-400">{formatTimeAgo(notification.createdAt)}</span>
         </div>
-        <p className="mt-1 text-left font-medium text-gray-700">{notification.data?.message}</p>
-
-        {notification.data && notification.data.status != 'WARNING' && (
-          <p className="mt-1 text-left text-sm">
-            검사 결과 :{' '}
-            <span className={getResultTextColor()}>
-              {notification.data.message} || {notification.body}
-            </span>
-          </p>
-        )}
+        <p className="mt-1 text-left font-medium text-gray-700">
+          {notification.data?.status != 'WARNING' ? '질병 검사를 ' : ''}
+          {notification.data?.message}
+          {notification.data?.status != 'WARNING' ? '하였습니다.' : ''}
+        </p>
       </div>
     </>
   );

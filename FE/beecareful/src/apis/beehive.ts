@@ -18,11 +18,14 @@ export function useGetBeehives() {
     },
   });
 }
+
 // 벌통 추가
 export function useCreateBeehive() {
   return useMutation({
     mutationFn: ({ nickname, xDirection, yDirection }: CreateBeehiveRequestType) =>
-      api.post('/api/v1/beehives', { nickname, xDirection, yDirection }).then((res) => res.data),
+      api.post('/api/v1/beehives', { nickname, xDirection, yDirection }).then((res) => {
+        return { beehiveId: res.data.beehiveId };
+      }),
   });
 }
 

@@ -9,7 +9,7 @@ import type { BeehiveMapRefType } from '@/components/beehive/BeehiveMap';
 import RemixIcon from '@/components/common/RemixIcon';
 import useBeehiveStore from '@/store/beehiveStore';
 import BottomArea from '@/components/beehive/BottomArea';
-import { useCreateBeehive, useGetBeehives } from '@/apis/beehive';
+import { useCreateBeehive, useGetBeehives, useLinkTurret } from '@/apis/beehive';
 import { useBeehivePosition } from '@/hooks/useBeehivePosition';
 import NotificationBanner from '@/components/notification/NotificationBanner';
 import useNotificationStore from '@/store/notificationStore';
@@ -23,6 +23,9 @@ type LocationStateType = {
 
 const BeehiveListPage = () => {
   const mapRef = useRef<BeehiveMapRefType>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const { currentMode, setMode, setSelectedBeehive, selectedBeehive } = useBeehiveStore();
 
   // 알림 스토어에서 notifications 상태 구독
@@ -53,7 +56,9 @@ const BeehiveListPage = () => {
 
   // API 뮤테이션 훅
   const createBeehiveMutation = useCreateBeehive();
+  const linkTurretMutation = useLinkTurret();
   const { data: beehives = [], refetch: refetchBeehives } = useGetBeehives();
+
   // 맵 컨테이너 참조
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -74,7 +79,6 @@ const BeehiveListPage = () => {
       }
     }
 
-    // 현재 알림 개수 저장
     notificationsLengthRef.current = notifications.length;
   }, [notifications.length, refetchBeehives]);
 
@@ -171,70 +175,94 @@ const BeehiveListPage = () => {
     }, 300); // 애니메이션을 위한 짧은 지연
   };
 
-  // 장치 등록 여부를 파라미터로 받는 통합 함수
-  const handleRegisterBeehive = async (withDevice = false) => {
-    try {
-      // 최적의 벌통 위치 찾기 (다른 벌통과 충돌하지 않는 위치)
-      const optimalPosition = findOptimalPosition(beehives);
+  // 벌통 등록 완료 후 공통 처리 함수
+  const finishBeehiveRegistration = async (position: {
+    xDirection: number;
+    yDirection: number;
+  }) => {
+    // 바텀시트 닫기
+    closeDeviceBottomSheet();
 
-      // API 요청 데이터 구성
-      const beehiveCreateData = {
-        nickname: beehiveData.nickname,
-        xDirection: optimalPosition.xDirection,
-        yDirection: optimalPosition.yDirection,
-      };
+    // 폼 데이터 초기화
+    setBeehiveData({
+      nickname: '',
+      deviceCode: '',
+      xDirection: 1000,
+      yDirection: 1000,
+    });
 
-      // 장치 등록이 필요한 경우에만 장치 코드 추가
-      if (withDevice && beehiveData.deviceCode) {
-        Object.assign(beehiveCreateData, { deviceCode: beehiveData.deviceCode });
-      }
+    // 맵 새로고침 후 새 벌통 위치로 스크롤
+    if (mapRef.current && typeof mapRef.current.refreshMap === 'function') {
+      await mapRef.current.refreshMap();
 
-      // 벌통 생성 API 호출
-      await createBeehiveMutation.mutateAsync(beehiveCreateData);
-
-      // 성공 메시지 표시 (장치 등록 여부에 따라 다른 메시지)
-      const successMessage = withDevice
-        ? '벌통이 성공적으로 추가되었습니다.'
-        : '벌통이 성공적으로 추가되었습니다. 장치는 나중에 연동할 수 있습니다.';
-
-      showToastMessage(successMessage, 'success', 'middle');
-
-      // 바텀시트 닫기
-      closeDeviceBottomSheet();
-
-      // 폼 데이터 초기화
-      setBeehiveData({
-        nickname: '',
-        deviceCode: '',
-        xDirection: 1000,
-        yDirection: 1000,
-      });
-
-      // 맵 새로고침 후 새 벌통 위치로 스크롤
-      if (mapRef.current && typeof mapRef.current.refreshMap === 'function') {
-        await mapRef.current.refreshMap();
-
-        // 새로고침 후 새 벌통 위치로 스크롤
-        setTimeout(() => {
-          if (mapRef.current && typeof mapRef.current.scrollToPosition === 'function') {
-            // 항상 새 벌통 위치로 스크롤
-            mapRef.current.scrollToPosition(optimalPosition.xDirection, optimalPosition.yDirection);
-          }
-        }, 800);
-      }
-    } catch (error) {
-      let errorMessage = '벌통 추가 중 오류가 발생했습니다.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      showToastMessage(errorMessage, 'warning', 'middle');
+      // 새로고침 후 새 벌통 위치로 스크롤
+      setTimeout(() => {
+        if (mapRef.current && typeof mapRef.current.scrollToPosition === 'function') {
+          // 새 벌통 위치로 스크롤
+          mapRef.current.scrollToPosition(position.xDirection, position.yDirection);
+        }
+      }, 800);
     }
   };
 
-  const location = useLocation();
+  // 장치 등록 여부를 파라미터로 받는 통합 함수
+  const handleRegisterBeehive = (withDevice = false) => {
+    // 최적의 벌통 위치 찾기 (다른 벌통과 충돌하지 않는 위치)
+    const optimalPosition = findOptimalPosition(beehives);
 
-  const navigate = useNavigate();
+    // API 요청 데이터 구성
+    const beehiveCreateData = {
+      nickname: beehiveData.nickname,
+      xDirection: optimalPosition.xDirection,
+      yDirection: optimalPosition.yDirection,
+    };
+
+    // 벌통 생성 API 호출 (mutate와 콜백 사용)
+    createBeehiveMutation.mutate(beehiveCreateData, {
+      onSuccess: (result) => {
+        // 장치 등록이 필요하고 장치 코드가 있는 경우 연동 API 호출
+        if (withDevice && beehiveData.deviceCode && result.beehiveId) {
+          linkTurretMutation.mutate(
+            {
+              beehiveId: result.beehiveId,
+              serial: beehiveData.deviceCode,
+            },
+            {
+              onSuccess: () => {
+                showToastMessage('벌통과 장치가 성공적으로 등록되었습니다.', 'success', 'middle');
+              },
+              onError: () => {
+                showToastMessage(
+                  '벌통은 등록되었으나 장치 연동에 실패했습니다.',
+                  'warning',
+                  'middle',
+                );
+              },
+              onSettled: () => {
+                // 작업 완료 후 공통 처리 (성공/실패 모두)
+                finishBeehiveRegistration(optimalPosition);
+              },
+            },
+          );
+        } else {
+          // 장치 등록 없이 벌통만 생성한 경우
+          showToastMessage(
+            '벌통이 성공적으로 추가되었습니다. 장치는 나중에 연동할 수 있습니다.',
+            'success',
+            'middle',
+          );
+          finishBeehiveRegistration(optimalPosition);
+        }
+      },
+      onError: (error) => {
+        let errorMessage = '벌통 추가 중 오류가 발생했습니다.';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        showToastMessage(errorMessage, 'warning', 'middle');
+      },
+    });
+  };
 
   // 알림 페이지로 이동
   const handleViewAllNotifications = () => {
