@@ -2,9 +2,11 @@ package com.worldbeesion.beecareful.beehive.controller;
 
 
 import com.worldbeesion.beecareful.beehive.model.dto.*;
+import com.worldbeesion.beecareful.beehive.service.BeehiveNotificationService;
 import com.worldbeesion.beecareful.beehive.service.BeehiveService;
 import com.worldbeesion.beecareful.beehive.service.DiagnosisService;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
+import com.worldbeesion.beecareful.notification.model.dto.NotificationRequestDto;
 import jakarta.websocket.server.PathParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,7 @@ public class BeehiveController {
 
     private final BeehiveService beehiveService;
     private final DiagnosisService diagnosisService;
+    private final BeehiveNotificationService beehiveNotificationService;
 
     @PostMapping("")
     public ResponseEntity<?> createBeehive(@RequestBody BeehiveRequestDto beehiveRequestDto,
@@ -69,8 +72,6 @@ public class BeehiveController {
 
     @PostMapping("/{beeHiveId}/diagnosis")
     public ResponseEntity<?> diagnosisRequest(@PathVariable(name = "beeHiveId") Long beeHiveId, @RequestBody DiagnosisRequestDto request){
-        System.out.println("beeHiveId = " + beeHiveId);
-        System.out.println("request = " + request);
 
         DiagnosisDto diagnosisDto = new DiagnosisDto(beeHiveId, request.photos());
         List<DiagnosisResponseDto> response = diagnosisService.generateDiagnosisPresignedUrls(diagnosisDto);
@@ -83,6 +84,13 @@ public class BeehiveController {
     public ResponseEntity<?> deleteBeehive(@PathVariable(name = "beeHiveId") Long beeHiveId,
                                            @AuthenticationPrincipal UserDetailsImpl userDetails) {
         beehiveService.deleteBeehive(beeHiveId, userDetails);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/hornet/notification")
+    public ResponseEntity<?> postNotification(@RequestBody BeehiveNotificationDto beehiveNotificationDto,
+                                              @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        beehiveNotificationService.sendBeehiveNotification(beehiveNotificationDto, userDetails);
         return ResponseEntity.ok().build();
     }
 }
