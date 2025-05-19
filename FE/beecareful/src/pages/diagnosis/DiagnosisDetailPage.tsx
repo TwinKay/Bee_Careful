@@ -126,7 +126,7 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
                     <span
                       className={`text-lg font-extrabold ${item.name == '정상' ? 'text-gray-600' : 'text-red-500'}`}
                     >
-                      {item.ratio}%
+                      {Number(item.ratio).toFixed(3)}%
                     </span>
                   </p>
                   <p className="font-bold text-gray-400">
