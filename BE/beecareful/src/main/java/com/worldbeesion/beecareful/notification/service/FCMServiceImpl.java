@@ -13,12 +13,15 @@ import com.worldbeesion.beecareful.member.repository.MembersRepository;
 import com.worldbeesion.beecareful.notification.exception.DeviceNotFoundException;
 import com.worldbeesion.beecareful.notification.model.dto.NotificationRequestDto;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class FCMServiceImpl implements FCMService {
     private static final String NOTIFICATION_COMMON_TITLE = "[⚠ 알림]";
     private static final String NOTIFICATION_COMMON_BEEHIVE = "벌통의 ";
@@ -59,9 +62,9 @@ public class FCMServiceImpl implements FCMService {
 
         try {
             String response = FirebaseMessaging.getInstance().send(message);
-            System.out.println("✅ FCM 메시지 전송 성공: " + response);
+            log.debug("✅ FCM 메시지 전송 성공: {response}");
         } catch (FirebaseMessagingException e) {
-            System.err.println("❌ FCM 메시지 전송 실패: " + e.getMessage());
+            log.debug("❌ FCM 메시지 전송 실패: {e.getMessage()}");
         }
 
     }
