@@ -11,6 +11,8 @@ import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
 import com.worldbeesion.beecareful.member.model.Members;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
+import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
+import com.worldbeesion.beecareful.s3.service.S3PresignService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class BeehiveServiceImpl implements BeehiveService {
     private final AnalyzedPhotoRepository analyzedPhotoRepository;
     private final AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository;
     private final TurretRepository turretRepository;
+    private final S3PresignService s3PresignService;
 
     @Override
     @Transactional
@@ -180,6 +183,18 @@ public class BeehiveServiceImpl implements BeehiveService {
             beehive.getNickname(),
             turretId
         );
+    }
+
+    @Override
+    public AnnotatedImagesDto getAnnotatedImages(Long beehiveId, Long diagnosisId) {
+        List<String> urls = new ArrayList<>();
+        diagnosisRepository.findById(diagnosisId).orElseThrow(BeehiveNotFoundException::new);
+        List<AnalyzedPhoto> analyzedPhotoList = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisId(diagnosisId);
+        for (AnalyzedPhoto analyzedPhoto : analyzedPhotoList) {
+            S3FileMetadata metadata = analyzedPhoto.getS3FileMetadata();
+            urls.add(s3PresignService.generateGetUrl(metadata));
+        }
+        return new AnnotatedImagesDto(urls);
     }
 
     @Override

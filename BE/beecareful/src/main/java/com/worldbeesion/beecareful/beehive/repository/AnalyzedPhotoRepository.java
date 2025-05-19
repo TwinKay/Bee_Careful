@@ -31,4 +31,6 @@ public interface AnalyzedPhotoRepository extends JpaRepository<AnalyzedPhoto, Lo
     WHERE ap.diagnosis.id = :diagnosisId
 """)
     TotalCountImagoLarvaProjection getTotalCountByDiagnosis(@Param("diagnosisId") Long diagnosisId);
+
+    List<AnalyzedPhoto> getAnalyzedPhotosByDiagnosisId(Long diagnosisId);
 }
