@@ -1,10 +1,18 @@
 import type React from 'react';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import 'remixicon/fonts/remixicon.css';
 import beehiveNormal from '/icons/beehive-normal.png';
 import beehiveAlert from '/icons/beehive-alert.png';
 import type { BeehiveType } from '@/types/beehive';
 import useAppStore from '@/store/beehiveStore';
+
+// CSS 타입에 웹킷 접두사 속성 선언
+type ExtendedCSSPropertiesType = {
+  WebkitUserDrag?: string;
+  MozUserDrag?: string;
+  userDrag?: string;
+  WebkitTouchCallout?: string;
+} & React.CSSProperties;
 
 type HiveCellPropsType = {
   hive: BeehiveType;
@@ -43,8 +51,10 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
   // 드래그 중인지 여부 추적
   const isDragging = useRef<boolean>(false);
+  // 이미지 요소 ref 추가
+  const imageRef = useRef<HTMLImageElement>(null);
 
-  const svgStyle: React.CSSProperties = {
+  const svgStyle: ExtendedCSSPropertiesType = {
     // iOS Safari 최적화
     backfaceVisibility: 'hidden',
     WebkitBackfaceVisibility: 'hidden',
@@ -52,7 +62,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     ...(needsDimmedSvg && {
       WebkitFilter: 'opacity(0.3) grayscale(20%)',
     }),
-    pointerEvents: 'auto',
+    pointerEvents: isDiagnosisMode ? 'auto' : 'none', // 진단 모드에서만 직접 클릭 가능
     // 충돌 시 시각적 피드백
     ...(collisionDetected && {
       filter: 'drop-shadow(0 0 5px rgba(255, 0, 0, 0.8))',
@@ -64,7 +74,6 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
   const triggerVibration = () => {
     // 진동 지원 확인
     if ('vibrate' in navigator) {
-      // 50ms 진동 - 짧고 부드러운 햅틱 피드백
       navigator.vibrate(50);
     }
   };
@@ -104,6 +113,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     // 진단 모드일 때는 롱프레스 기능 비활성화
     if (isDiagnosisMode) return;
 
+    // 이전 상태 초기화
     isLongPress.current = false;
     isDragging.current = false;
 
@@ -125,12 +135,13 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       clearTimeout(longPressTimerRef.current);
     }
 
-    // 1초 후 진동 발생
+    // 롱프레스 시간을 500ms로 단축
     longPressTimerRef.current = window.setTimeout(() => {
+      console.log('BeehiveCell: 롱프레스 감지');
       triggerVibration();
       isLongPress.current = true;
       longPressTimerRef.current = null;
-    }, 1000); // 1초 롱프레스
+    }, 1000);
   };
 
   // 롱프레스 종료 핸들러
@@ -143,11 +154,11 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-    // 상태 초기화
-    setTimeout(() => {
-      isDragging.current = false;
-      touchStartPos.current = null;
-    }, 50);
+
+    // 상태 즉시 초기화
+    isDragging.current = false;
+    isLongPress.current = false;
+    touchStartPos.current = null;
   };
 
   // 터치 이동 이벤트 처리 (드래그 감지)
@@ -189,11 +200,51 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
 
   // 드래그 이벤트 처리 (진단 모드에서 드래그 방지)
   const handleDragStart = (e: React.DragEvent) => {
-    if (isDiagnosisMode) {
-      e.preventDefault();
-      return false;
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
   };
+
+  // 이미지 보호를 위한 effect 추가
+  useEffect(() => {
+    const imgElement = imageRef.current;
+    if (!imgElement) return;
+
+    // 이미지 요소에 추가 보호 적용
+    const applyImageProtection = () => {
+      // CSS 프로퍼티를 직접 문자열로 설정 (TypeScript 타입 오류 방지)
+      imgElement.style.setProperty('-webkit-user-drag', 'none');
+      imgElement.style.setProperty('-webkit-touch-callout', 'none');
+      imgElement.draggable = false;
+
+      // 특정 브라우저에서 작동하는 추가 속성
+      imgElement.setAttribute('unselectable', 'on');
+
+      // 모바일 롱프레스 메뉴 방지
+      imgElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        return false;
+      });
+
+      // 이미지 선택 방지
+      imgElement.addEventListener('selectstart', (e) => {
+        e.preventDefault();
+        return false;
+      });
+    };
+
+    applyImageProtection();
+
+    return () => {
+      // 클린업: 이벤트 리스너 제거
+      imgElement.removeEventListener('contextmenu', (e) => {
+        e.preventDefault();
+      });
+      imgElement.removeEventListener('selectstart', (e) => {
+        e.preventDefault();
+      });
+    };
+  }, []);
 
   // 진단 상태에 따른 아이콘 결정
   let statusIcon = null;
@@ -244,31 +295,39 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
   );
 
   // 진단 모드일 때 추가 스타일 (움직임 방지)
-  const diagnosisModeStyle: React.CSSProperties = isDiagnosisMode
+  const diagnosisModeStyle: ExtendedCSSPropertiesType = isDiagnosisMode
     ? {
         // 터치 동작 제한
         touchAction: 'none',
-        // 드래그 불가능
-        WebkitUserDrag: 'none',
         // 컴포넌트 고정
         position: 'relative',
         cursor: 'pointer',
       }
     : {};
 
+  // 진단 모드일 때 추가 스타일에 웹킷 드래그 방지 추가
+  if (isDiagnosisMode && diagnosisModeStyle) {
+    // TypeScript 오류 방지를 위해 별도로 설정
+    Object.assign(diagnosisModeStyle, {
+      userSelect: 'none',
+      WebkitUserSelect: 'none',
+    });
+  }
+
   return (
     <div
       className="relative flex h-full w-full flex-col items-center justify-center"
-      style={{
-        // 이미지 저장/드래그 방지를 위한 스타일
-        WebkitTouchCallout: 'none',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        MozUserSelect: 'none',
-        msUserSelect: 'none',
-        // 진단 모드 추가 스타일
-        ...diagnosisModeStyle,
-      }}
+      style={
+        {
+          // 이미지 저장/드래그 방지를 위한 스타일
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
+          // 진단 모드 추가 스타일
+          ...diagnosisModeStyle,
+        } as React.CSSProperties
+      }
       onContextMenu={(e) => e.preventDefault()} // 컨텍스트 메뉴 방지
       // 클릭/탭 이벤트 추가
       onClick={handleClick}
@@ -284,20 +343,23 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       onMouseMove={handleMouseMove}
       // 드래그 방지
       onDragStart={handleDragStart}
-      draggable={!isDiagnosisMode}
+      draggable={false}
     >
       <div
         className="relative flex w-full items-center justify-center"
-        style={{
-          WebkitTouchCallout: 'none',
-          // 진단 모드 추가 스타일
-          ...diagnosisModeStyle,
-        }}
+        style={
+          {
+            userSelect: 'none',
+            pointerEvents: 'auto', // 상위 요소의 이벤트 전파 허용
+            // 진단 모드 추가 스타일
+            ...diagnosisModeStyle,
+          } as React.CSSProperties
+        }
         // 내부 div에도 클릭 이벤트 추가
         onClick={handleClick}
         // 드래그 방지
         onDragStart={handleDragStart}
-        draggable={!isDiagnosisMode}
+        draggable={false}
         // 터치 이동 제한
         onTouchMove={handleTouchMove}
       >
@@ -308,31 +370,48 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
           onClick={handleClick}
           // 드래그 방지
           onDragStart={handleDragStart}
-          draggable={!isDiagnosisMode}
+          draggable={false}
           // 터치 이동 제한
           onTouchMove={handleTouchMove}
         >
           <img
+            ref={imageRef}
             src={svgSrc || '/placeholder.svg'}
             alt={`beehive ${hive.beehiveId}`}
-            className="h-full w-full"
-            style={{
-              ...svgStyle,
-              // 진단 모드에서 드래그 방지
-              pointerEvents: isDiagnosisMode ? 'auto' : 'auto',
-            }}
+            className="h-full w-full select-none"
+            style={
+              {
+                ...svgStyle,
+                // 드래그 방지 - TypeScript로 인한 오류를 피하기 위해 as 사용
+              } as React.CSSProperties
+            }
             // 이미지 저장 및 드래그 방지
-            draggable={!isDiagnosisMode}
+            draggable={false}
             onContextMenu={(e) => e.preventDefault()}
             // 이미지 자체에도 클릭 이벤트 추가
             onClick={(e) => {
               e.stopPropagation();
               handleCellAction();
             }}
-            // 드래그 방지
-            onDragStart={handleDragStart}
+            // 드래그 방지 - 명시적 추가
+            onDragStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }}
+            // 이미지 선택 방지
+            onMouseDown={(e) => {
+              // 진단 모드가 아닐 때 이미지 선택 방지
+              if (!isDiagnosisMode) {
+                e.preventDefault();
+              }
+            }}
             // 터치 이동 제한
-            onTouchMove={handleTouchMove}
+            onTouchMove={(e) => {
+              if (!isDiagnosisMode) {
+                handleTouchMove(e);
+              }
+            }}
             // 이미지 최적화를 위한 속성
             loading="lazy"
             decoding="async"

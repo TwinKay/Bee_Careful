@@ -18,7 +18,6 @@ export function useGetBeehives() {
     },
   });
 }
-
 // 벌통 추가
 export function useCreateBeehive() {
   return useMutation({
