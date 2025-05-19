@@ -270,11 +270,11 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
             />
 
             {/* 벌통 상태 팝업 */}
-            {selectedHive && isPopupOpen && (
+            {selectedHive && (
               <BeehiveStatusPopup
-                isOpen={isPopupOpen}
                 onClose={handleCloseStatusPopup}
                 hive={selectedHive}
+                isOpen={isPopupOpen}
               />
             )}
           </div>

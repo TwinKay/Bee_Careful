@@ -4,6 +4,7 @@ import Button from '@/components/common/Button';
 import { formatTimeAgo } from '@/utils/format';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type BeehiveStatusPopupPropsType = {
   isOpen: boolean;
@@ -59,8 +60,6 @@ const getDaysDifference = (dateString?: string | null): number => {
 };
 
 const BeehiveStatusPopup: React.FC<BeehiveStatusPopupPropsType> = ({ isOpen, onClose, hive }) => {
-  if (!isOpen) return null;
-
   // 말벌 출현: hornetAppearedAt가 있어도 하루가 지나면 비활성화
   const hornetDaysDiff = getDaysDifference(hive.hornetAppearedAt);
   const hasHornetAppeared = !!hive.hornetAppearedAt && hornetDaysDiff < 1;
@@ -101,48 +100,56 @@ const BeehiveStatusPopup: React.FC<BeehiveStatusPopupPropsType> = ({ isOpen, onC
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-      onClick={onClose}
-    >
-      <div
-        className="mx-4 w-full max-w-md overflow-hidden rounded-xl bg-white"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 팝업 헤더 */}
-        <div className="flex items-center justify-between p-4 px-6">
-          <h2 className="text-xl font-bold text-bc-brown-100">{hive.nickname} 벌통</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <i className="ri-close-line text-2xl"></i>
-          </button>
-        </div>
+    <AnimatePresence mode="wait">
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div
+            className="mx-4 w-full max-w-md overflow-hidden rounded-xl bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 팝업 헤더 */}
+            <div className="flex items-center justify-between p-4 px-6">
+              <h2 className="text-xl font-bold text-bc-brown-100">{hive.nickname} 벌통</h2>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+                <i className="ri-close-line text-2xl"></i>
+              </button>
+            </div>
 
-        {/* 팝업 본문 */}
-        <div className="px-4 py-10">
-          <div className="flex justify-around">
-            {statusItems.map((item) => (
-              <StatusItem
-                key={item.id}
-                active={item.active}
-                title={item.title}
-                time={item.time}
-                activeColor={item.activeColor}
-                activeIconClass={item.activeIconClass}
-              />
-            ))}
+            {/* 팝업 본문 */}
+            <div className="px-4 py-10">
+              <div className="flex justify-around">
+                {statusItems.map((item) => (
+                  <StatusItem
+                    key={item.id}
+                    active={item.active}
+                    title={item.title}
+                    time={item.time}
+                    activeColor={item.activeColor}
+                    activeIconClass={item.activeIconClass}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* 팝업 푸터 - 버튼 */}
+            <div className="p-4 pb-6">
+              <Link to={ROUTES.BEEHIVE_DETAIL(hive.beehiveId)}>
+                <Button variant="success" size="lg" className="w-full">
+                  벌통 정보 상세보기
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
-
-        {/* 팝업 푸터 - 버튼 */}
-        <div className="p-4 pb-6">
-          <Link to={ROUTES.BEEHIVE_DETAIL(hive.beehiveId)}>
-            <Button variant="success" size="lg" className="w-full">
-              벌통 정보 상세보기
-            </Button>
-          </Link>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
