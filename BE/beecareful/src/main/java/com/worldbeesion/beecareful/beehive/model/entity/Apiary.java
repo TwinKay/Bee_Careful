@@ -1,7 +1,7 @@
 package com.worldbeesion.beecareful.beehive.model.entity;
 
 
-import com.worldbeesion.beecareful.member.model.Members;
+import com.worldbeesion.beecareful.member.model.Member;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +26,6 @@ public class Apiary {
 
     @OneToOne
     @JoinColumn(name = "member_id", nullable = false)
-    private Members members;
+    private Member member;
 
 }

@@ -3,9 +3,9 @@ package com.worldbeesion.beecareful.member.service;
 import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
 import com.worldbeesion.beecareful.beehive.repository.ApiaryRepository;
 import com.worldbeesion.beecareful.member.exception.AlreadyExistMemberName;
-import com.worldbeesion.beecareful.member.model.AuthMembers;
+import com.worldbeesion.beecareful.member.model.AuthMember;
+import com.worldbeesion.beecareful.member.model.Member;
 import com.worldbeesion.beecareful.member.model.MemberSignUpRequestDto;
-import com.worldbeesion.beecareful.member.model.Members;
 import com.worldbeesion.beecareful.member.repository.AuthMembersRepository;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
 import jakarta.transaction.Transactional;
@@ -35,13 +35,13 @@ public class MemberServiceImpl implements MemberService {
             throw new AlreadyExistMemberName();
         }
 
-        Members member = new Members(memberName, phone);
+        Member member = new Member(memberName, phone);
         membersRepository.save(member);
-        AuthMembers authMember = new AuthMembers(member, memberLoginId, passwordEncoder.encode(password));
+        AuthMember authMember = new AuthMember(member, memberLoginId, passwordEncoder.encode(password));
         authMembersRepository.save(authMember);
 
         Apiary apiary = Apiary.builder()
-                .members(member)
+                .member(member)
                 .build();
 
         apiaryRepository.save(apiary);

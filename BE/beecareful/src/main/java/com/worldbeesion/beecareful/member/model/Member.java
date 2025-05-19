@@ -1,6 +1,5 @@
 package com.worldbeesion.beecareful.member.model;
 
-import com.worldbeesion.beecareful.beehive.model.entity.Apiary;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,7 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @Getter
-public class Members {
+public class Member {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,7 +39,7 @@ public class Members {
     private LocalDateTime deletedAt;
 
 
-    public Members(String memberName, String phone) {
+    public Member(String memberName, String phone) {
         this.memberName = memberName;
         this.phone = phone;
     }
