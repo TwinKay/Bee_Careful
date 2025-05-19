@@ -21,6 +21,7 @@ import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import { ROUTES } from '@/config/routes';
 import Toast from '@/components/common/Toast';
 import { useQueryClient } from '@tanstack/react-query';
+import useBeehiveStore from '@/store/beehiveStore';
 
 const BeehiveDetailPage = () => {
   const param = useParams();
@@ -42,6 +43,8 @@ const BeehiveDetailPage = () => {
   const [toastType, setToastType] = useState<ToastType>('info');
   const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
   const [showToast, setShowToast] = useState(false);
+
+  const { selectedBeehive } = useBeehiveStore();
 
   const { mutate: mutateTurret } = useLinkTurret();
 
@@ -97,8 +100,9 @@ const BeehiveDetailPage = () => {
       return;
     }
     // 현재 위치 정보 유지
-    const xDirection = beehiveData?.xDirection || 0;
-    const yDirection = beehiveData?.yDirection || 0;
+    const xDirection = selectedBeehive?.xDirection || 0;
+    const yDirection = selectedBeehive?.yDirection || 0;
+
     updateBeehive(
       {
         beeHiveId: Number(beehiveId),
@@ -112,6 +116,11 @@ const BeehiveDetailPage = () => {
           setIsEditNameOpen(false);
           // 변경 감지 상태 리셋
           setIsNicknameChanged(false);
+
+          // 데이터 갱신을 위해 쿼리 무효화
+          queryClient.invalidateQueries({
+            queryKey: ['beehiveRecords', Number(beehiveId), isToggleLeft ? 6 : 12],
+          });
         },
         onError: (error) => {
           console.log(error);
