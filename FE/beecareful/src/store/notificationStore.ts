@@ -1,4 +1,3 @@
-// src/store/notificationStore.ts
 import { create } from 'zustand';
 
 // 알림 타입 정의
@@ -18,7 +17,7 @@ export type NotificationType = {
 };
 
 // 스토어 상태 타입 정의
-type NotificationState = {
+type NotificationStateType = {
   notifications: NotificationType[];
   loading: boolean;
   error: string | null;
@@ -155,7 +154,7 @@ const deleteNotificationFromDB = async (id: string): Promise<boolean> => {
 };
 
 // Zustand 스토어 생성
-const useNotificationStore = create<NotificationState>((set, get) => ({
+const useNotificationStore = create<NotificationStateType>((set, get) => ({
   // 상태
   notifications: [],
   loading: false,

@@ -1,5 +1,3 @@
-'use client';
-
 import { useHeaderIcon } from '@/hooks/useHeaderIcon';
 import type { HeaderIconOptionType } from '@/layouts/MainLayout';
 import { useRef, useEffect, useState } from 'react';

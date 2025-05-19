@@ -1,5 +1,3 @@
-'use client';
-
 import RemixIcon from '@/components/common/RemixIcon';
 import type { NotificationType } from '@/store/notificationStore';
 import { formatTimeAgo } from '@/utils/format';
