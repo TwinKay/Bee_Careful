@@ -60,7 +60,8 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
 
   return (
     <div
-      className={`absolute ${isDragging && isLongPress ? 'z-10 ring-2 ring-blue-300 ring-offset-2' : ''}`}
+      className={`absolute overflow-hidden rounded-2xl border-2 border-gray-100
+         ${isDragging && isLongPress ? 'z-10 ring-2 ring-blue-300 ring-offset-2' : ''}`}
       style={{
         position: 'absolute',
         left: `${(hive.xDirection - hiveSize / 2) * scale}px`,
