@@ -13,5 +13,5 @@ import java.util.Optional;
 public interface MemberDeviceRepository extends JpaRepository<MemberDevice, Long> {
     Boolean existsByFcmToken(String fcmToken);
     Optional<MemberDevice> findByFcmToken(String fcmToken);
-    Optional<MemberDevice> findByMembers(Member member);
+    Optional<MemberDevice> findByMember(Member member);
 }

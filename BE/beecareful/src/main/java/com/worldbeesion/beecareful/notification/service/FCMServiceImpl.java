@@ -30,7 +30,7 @@ public class FCMServiceImpl implements FCMService {
     @Override
     public void alertNotificationByFCM(UserDetailsImpl userDetails, NotificationRequestDto notificationRequestDto) {
         Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        MemberDevice memberDevice = memberDeviceRepository.findByMembers(member).orElseThrow(DeviceNotFoundException::new);
+        MemberDevice memberDevice = memberDeviceRepository.findByMember(member).orElseThrow(DeviceNotFoundException::new);
 
 
         String body = NOTIFICATION_COMMON_BEEHIVE + notificationRequestDto.status() + NOTIFICATION_COMMON_STATUS;
@@ -68,7 +68,7 @@ public class FCMServiceImpl implements FCMService {
 
     @Override
     public void alertNotificationByFCM(Member member, NotificationRequestDto notificationRequestDto) {
-        MemberDevice memberDevice = memberDeviceRepository.findByMembers(member).orElseThrow(DeviceNotFoundException::new);
+        MemberDevice memberDevice = memberDeviceRepository.findByMember(member).orElseThrow(DeviceNotFoundException::new);
 
         String body = NOTIFICATION_COMMON_BEEHIVE + notificationRequestDto.status() + NOTIFICATION_COMMON_STATUS;
 
