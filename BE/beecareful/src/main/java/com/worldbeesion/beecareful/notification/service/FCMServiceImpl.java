@@ -43,6 +43,7 @@ public class FCMServiceImpl implements FCMService {
     }
 
     private void sendMessage(String token, String title, String body, NotificationRequestDto dto) {
+        log.debug("Start sending message: {} {}", title, body);
         Notification notification = Notification.builder()
                 .setTitle(title)
                 .setBody(body)
@@ -62,9 +63,9 @@ public class FCMServiceImpl implements FCMService {
 
         try {
             String response = FirebaseMessaging.getInstance().send(message);
-            log.debug("✅ FCM 메시지 전송 성공: {response}");
+            log.debug("✅ FCM 메시지 전송 성공: {}", response);
         } catch (FirebaseMessagingException e) {
-            log.debug("❌ FCM 메시지 전송 실패: {e.getMessage()}");
+            log.debug("❌ FCM 메시지 전송 실패: {}", e.getMessage());
         }
 
     }
