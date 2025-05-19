@@ -466,6 +466,7 @@ const useMapInteractions = ({
 
     const handleWheelEvent = (e: WheelEvent) => {
       e.preventDefault();
+      console.log('handleWheelEvent called');
 
       // 디바운스 처리
       if (isZooming) {
@@ -541,7 +542,7 @@ const useMapInteractions = ({
 
         // 너무 빠른 연속 줌 방지 (100ms 간격)
         const now = Date.now();
-        if (now - lastPinchTime < 100) return;
+        if (now - lastPinchTime < 10) return;
 
         // 핀치 거리 변화가 충분히 클 때만 줌 처리 (10px 이상)
         const pinchDelta = distance - lastPinchDistance;
@@ -554,10 +555,10 @@ const useMapInteractions = ({
         if (zoomDirection !== lastZoomDirection || now - lastPinchTime > 300) {
           if (zoomDirection === 'in') {
             // 줌 인 (20% 증가)
-            handleZoom(scale * 1.2, centerX, centerY);
+            handleZoom(scale * 1.15, centerX, centerY);
           } else {
             // 줌 아웃 (20% 감소)
-            handleZoom(scale / 1.2, centerX, centerY);
+            handleZoom(scale / 1.15, centerX, centerY);
           }
 
           lastZoomDirection = zoomDirection;
