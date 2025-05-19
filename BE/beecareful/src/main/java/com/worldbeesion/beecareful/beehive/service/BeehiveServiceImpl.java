@@ -9,7 +9,7 @@ import com.worldbeesion.beecareful.beehive.model.entity.*;
 import com.worldbeesion.beecareful.beehive.repository.*;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
-import com.worldbeesion.beecareful.member.model.Members;
+import com.worldbeesion.beecareful.member.model.Member;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
 import com.worldbeesion.beecareful.s3.service.S3PresignService;
@@ -46,10 +46,10 @@ public class BeehiveServiceImpl implements BeehiveService {
         Long yDirection = beehiveRequestDto.yDirection();
 
         Long memberId = userDetails.getMemberId();
-        Members members = membersRepository.findById(memberId)
+        Member member = membersRepository.findById(memberId)
             .orElseThrow(MemberNotFoundException::new);
 
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Apiary apiary = apiaryRepository.findByMember(member);
 
         Beehive beehive = Beehive.builder()
             .apiary(apiary)
@@ -66,8 +66,8 @@ public class BeehiveServiceImpl implements BeehiveService {
     @Override
     public List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails) {
         Long memberId = userDetails.getMemberId();
-        Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
 
         List<BeehiveDiagnosisProjection> beehiveList = beehiveRepository.findAllBeehiveDto(apiary.getId());
 
@@ -103,8 +103,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             throw new BeehiveNotFoundException();
         }
 
-        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
         boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
         if (!isExist) {
@@ -232,8 +232,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             throw new DirectionNullException();
         }
 
-        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
 
         boolean isLocated = beehiveRepository.existsByApiaryAndDirection(
                 apiary,
@@ -258,8 +258,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             throw new BeehiveNotFoundException();
         }
 
-        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
         boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
         if (!isExist) {

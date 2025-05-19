@@ -7,7 +7,7 @@ import com.google.firebase.messaging.Notification;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
 import com.worldbeesion.beecareful.member.model.MemberDevice;
-import com.worldbeesion.beecareful.member.model.Members;
+import com.worldbeesion.beecareful.member.model.Member;
 import com.worldbeesion.beecareful.member.repository.MemberDeviceRepository;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
 import com.worldbeesion.beecareful.notification.exception.DeviceNotFoundException;
@@ -29,7 +29,7 @@ public class FCMServiceImpl implements FCMService {
 
     @Override
     public void alertNotificationByFCM(UserDetailsImpl userDetails, NotificationRequestDto notificationRequestDto) {
-        Members member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
         MemberDevice memberDevice = memberDeviceRepository.findByMembers(member).orElseThrow(DeviceNotFoundException::new);
 
 
@@ -63,6 +63,16 @@ public class FCMServiceImpl implements FCMService {
         } catch (FirebaseMessagingException e) {
             System.err.println("❌ FCM 메시지 전송 실패: " + e.getMessage());
         }
+
+    }
+
+    @Override
+    public void alertNotificationByFCM(Member member, NotificationRequestDto notificationRequestDto) {
+        MemberDevice memberDevice = memberDeviceRepository.findByMembers(member).orElseThrow(DeviceNotFoundException::new);
+
+        String body = NOTIFICATION_COMMON_BEEHIVE + notificationRequestDto.status() + NOTIFICATION_COMMON_STATUS;
+
+        sendMessage(memberDevice.getFcmToken(), NOTIFICATION_COMMON_TITLE ,body, notificationRequestDto);
 
     }
 }
