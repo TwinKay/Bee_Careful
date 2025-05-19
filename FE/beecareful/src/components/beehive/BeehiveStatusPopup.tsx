@@ -101,8 +101,14 @@ const BeehiveStatusPopup: React.FC<BeehiveStatusPopupPropsType> = ({ isOpen, onC
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="mx-4 w-full max-w-md overflow-hidden rounded-xl bg-white">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      onClick={onClose}
+    >
+      <div
+        className="mx-4 w-full max-w-md overflow-hidden rounded-xl bg-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* 팝업 헤더 */}
         <div className="flex items-center justify-between p-4 px-6">
           <h2 className="text-xl font-bold text-bc-brown-100">{hive.nickname} 벌통</h2>
