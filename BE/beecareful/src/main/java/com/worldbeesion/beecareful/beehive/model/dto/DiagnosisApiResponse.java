@@ -3,7 +3,7 @@ package com.worldbeesion.beecareful.beehive.model.dto;
 import lombok.Builder;
 
 @Builder
-public record DiagnosisApiResponse(DiagnosisResult diagnosis, String analyzedImageS3Key) {
+public record DiagnosisApiResponse(DiagnosisResult diagnosis, String annotatedImageS3Key) {
 
     @Builder
     public record DiagnosisResult(LarvaResult larva, ImagoResult imago) {
