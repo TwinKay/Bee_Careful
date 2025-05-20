@@ -11,6 +11,7 @@ export type DiagnosisPieChartPropType = {
 };
 
 const DiagnosisPieChart: React.FC<DiagnosisPieChartPropType> = ({ data }) => {
+  console.log('DiagnosisPieChart rendered');
   return (
     <PieChart width={730} height={250}>
       <Pie

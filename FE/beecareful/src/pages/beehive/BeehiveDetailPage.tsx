@@ -195,14 +195,6 @@ const BeehiveDetailPage = () => {
 
   return (
     <>
-      {/* Toast 컴포넌트 */}
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        position={toastPosition}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-      />
       <div className="flex w-full items-center justify-between p-4">
         <div className="flex flex-col items-start">
           <p className="text-lg font-bold">{beehiveData?.nickname}</p>
@@ -389,6 +381,14 @@ const BeehiveDetailPage = () => {
             },
           },
         ]}
+      />
+      {/* Toast 컴포넌트 */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        position={toastPosition}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
       />
     </>
   );

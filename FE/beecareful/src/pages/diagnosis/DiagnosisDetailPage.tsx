@@ -1,23 +1,18 @@
-import { useGetDiagnosisImages } from '@/apis/beehive';
 import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import CardTitle from '@/components/common/CardTitle';
 import RemixIcon from '@/components/common/RemixIcon';
 import DiagnosisPieChart from '@/components/diagnosis/DiagnosisPieChart';
+import ResultImageModal from '@/components/diagnosis/ResultImageModal';
 import type { DiagnosisDataType } from '@/types/diagnosis';
 import { getLocaleDateString } from '@/utils/getLocaleDateString';
 import { parseDiagnosisData } from '@/utils/parseDiagnosisData';
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
 
 const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
-  const beehiveId = useParams().id;
+  const parsedData = useMemo(() => parseDiagnosisData(data), [data]);
 
   const [imageModalOpen, setImageModalOpen] = useState(false);
-  const [imageIndex, setImageIndex] = useState(0);
-
-  const { data: images } = useGetDiagnosisImages(Number(beehiveId) || 0, data.diagnosisId);
-  const parsedData = useMemo(() => parseDiagnosisData(data), [data]);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-start gap-4">
@@ -102,8 +97,8 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
 
         <div className="flex w-full flex-col gap-2.5">
           {parsedData.larvaDisease.map((item, index) => (
-            <>
-              <div key={item.name} className="flex justify-between p-2">
+            <div key={item.name}>
+              <div className="flex justify-between p-2">
                 <p className="text-lg font-bold text-gray-500">{item.name}</p>
                 <div className="flex flex-col items-end">
                   <p>
@@ -122,31 +117,12 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
               {index !== parsedData.larvaDisease.length - 1 && (
                 <div className="h-[1px] w-full bg-gray-200"></div>
               )}
-            </>
+            </div>
           ))}
         </div>
       </Card>
       {imageModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex h-full w-full flex-col items-center justify-center bg-black bg-opacity-50"
-          onClick={() => setImageModalOpen(false)}
-        >
-          <div className="h-1/2 w-96 bg-white" onClick={(e) => e.stopPropagation()}>
-            <div className="snap-x snap-mandatory overflow-x-auto">
-              {images?.urls?.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Diagnosis Image ${index}`}
-                  className="h-full w-full snap-center object-cover"
-                  onClick={() => {
-                    setImageIndex(index);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        <ResultImageModal diagnosisId={data.diagnosisId} onClose={() => setImageModalOpen(false)} />
       )}
     </div>
   );
