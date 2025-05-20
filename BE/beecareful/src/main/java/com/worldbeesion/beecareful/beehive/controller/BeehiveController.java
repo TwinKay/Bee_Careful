@@ -99,9 +99,8 @@ public class BeehiveController {
     }
 
     @PostMapping("/hornet/notification")
-    public ResponseEntity<?> postNotification(@RequestBody BeehiveNotificationDto beehiveNotificationDto,
-                                              @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        beehiveNotificationService.sendBeehiveNotification(beehiveNotificationDto, userDetails);
+    public ResponseEntity<?> postNotification(@RequestBody BeehiveNotificationDto beehiveNotificationDto) {
+        beehiveNotificationService.sendBeehiveNotification(beehiveNotificationDto);
         return ResponseEntity.ok().build();
     }
 }

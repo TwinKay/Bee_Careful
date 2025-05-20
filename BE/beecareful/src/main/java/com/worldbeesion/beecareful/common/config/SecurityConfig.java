@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/members").permitAll()
                         .requestMatchers("/api/v1/s3").permitAll()
+                        .requestMatchers("/api/v1/beehives/hornet/notification").permitAll()
                         .anyRequest().authenticated());
         http
                 .httpBasic(AbstractHttpConfigurer::disable);
