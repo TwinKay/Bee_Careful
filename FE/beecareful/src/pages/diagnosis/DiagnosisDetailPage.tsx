@@ -17,7 +17,6 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
   const [imageIndex, setImageIndex] = useState(0);
 
   const { data: images } = useGetDiagnosisImages(Number(beehiveId) || 0, data.diagnosisId);
-
   const parsedData = useMemo(() => parseDiagnosisData(data), [data]);
 
   return (
@@ -72,7 +71,7 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
         <div className="flex w-full flex-col gap-2.5">
           {parsedData.imagoDisease.map((item, index) => (
             <div key={item.name}>
-              <div key={item.name} className="flex justify-between p-2">
+              <div className="flex justify-between p-2">
                 <p className="text-lg font-bold text-gray-500">{item.name}</p>
                 <div className="flex flex-col items-end">
                   <p>
