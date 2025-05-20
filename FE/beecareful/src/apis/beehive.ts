@@ -79,10 +79,14 @@ export function useRequestDiagnosis() {
 }
 
 // 진단 결과 이미지 조회
-export function useGetDiagnosisImages(beeHiveId: number, recordId: number) {
+export function useGetDiagnosisImages(beeHiveId: number, diagnosisId: number) {
   return useQuery({
-    queryKey: ['diagnosisImages', beeHiveId, recordId],
+    queryKey: ['diagnosisImages', beeHiveId, diagnosisId],
     queryFn: () =>
-      api.get(`/api/v1/beehives/${beeHiveId}/records/${recordId}`).then((res) => res.data),
+      api
+        .get(`/api/v1/beehives/${beeHiveId}/diagnosis/${diagnosisId}/annotated-images`)
+        .then((res) => res.data),
+    staleTime: 1000 * 60 * 60 * 24, // 1일
+    gcTime: 1000 * 60 * 60 * 24 * 30, // 30일
   });
 }
