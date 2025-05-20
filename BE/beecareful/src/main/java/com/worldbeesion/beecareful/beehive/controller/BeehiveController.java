@@ -95,7 +95,7 @@ public class BeehiveController {
 
         return ResponseEntity
             .ok()
-            .body(null);
+            .body(response);
     }
 
     @PostMapping("/hornet/notification")
