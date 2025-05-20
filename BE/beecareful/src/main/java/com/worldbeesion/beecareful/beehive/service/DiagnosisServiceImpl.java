@@ -299,7 +299,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
     @Override
     public void saveAnalyzedPhotoDisease(AnalyzedPhoto analyzedPhoto, BeeStage beeStage, DiseaseName diseaseName, Long count) {
-        if (count != null && count > 0) {
+        if (count != null && count >= 0) {
             if (analyzedPhoto != null) {
                 Disease disease = diseaseRepository.findByNameAndStage(diseaseName, beeStage);
 
