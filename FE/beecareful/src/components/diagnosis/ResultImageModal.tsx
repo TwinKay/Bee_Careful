@@ -17,7 +17,7 @@ const ResultImageModal = ({
       onClick={onClose}
     >
       <div className="h-1/2 w-96 bg-white" onClick={(e) => e.stopPropagation()}>
-        <div className="h-full snap-x snap-mandatory overflow-x-auto">
+        <div className="flex h-full snap-x snap-mandatory overflow-x-auto">
           {isLoading || !images ? (
             <div className="flex h-full w-full items-center justify-center">
               <p>{isLoading ? '이미지 불러오는 중...' : '이미지 오류'}</p>
