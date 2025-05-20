@@ -20,7 +20,7 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="flex flex-col gap-1 rounded-lg bg-white p-4 shadow-lg">
+        <div className="flex flex-col gap-3 rounded-lg bg-white p-4 shadow-lg">
           <p className="label">{`${label}`}</p>
 
           {payload.map((entry, index) => {
@@ -35,7 +35,15 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
                     marginBottom: 3,
                   }}
                 ></div>
-                <span className="text-sm font-bold text-gray-600">{`${entry.name} : ${entry.value}%`}</span>
+                <div className="flex w-full flex-row items-center justify-between gap-4">
+                  <span className="text-sm font-bold text-gray-600">{entry.name}</span>
+                  <span className="text-sm font-bold text-gray-600">
+                    {Number(entry.value) % 1 == 0
+                      ? Number(entry.value)
+                      : Number(entry.value).toFixed(3)}
+                    %
+                  </span>
+                </div>
               </div>
             );
           })}
@@ -46,20 +54,26 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
     return null;
   };
 
-  const parsedData = useMemo(() => {
-    return data.map((item) => {
-      const date = new Date(item.createdAt);
-      const monthDate = date.toLocaleString('ko-kr', { month: 'long', day: 'numeric' });
+  const parsedData = useMemo(
+    () =>
+      data.map((item) => {
+        const date = new Date(item.createdAt);
+        const monthDate = date.toLocaleString('ko-kr', { month: 'long', day: 'numeric' });
 
-      return {
-        name: `${monthDate}`,
-        '진드기(응애)': item.result.larva.varroaRatio,
-        부저병: item.result.larva.foulBroodRatio,
-        석고병: item.result.larva.chalkBroodRatio,
-        날개바이러스: item.result.imago.dwvRatio,
-      };
-    });
-  }, [data]);
+        return {
+          name: `${monthDate}`,
+          '진드기(응애)':
+            (item.result.larva.varroaCount + item.result.imago.varroaCount) /
+            (item.larvaCount + item.imagoCount),
+          부저병:
+            (item.result.larva.foulBroodCount + item.result.imago.dwvCount) /
+            (item.larvaCount + item.imagoCount),
+          석고병: item.result.larva.chalkBroodRatio,
+          날개바이러스: item.result.imago.dwvRatio,
+        };
+      }),
+    [data],
+  );
 
   return (
     <ResponsiveContainer width="100%" height={320}>
