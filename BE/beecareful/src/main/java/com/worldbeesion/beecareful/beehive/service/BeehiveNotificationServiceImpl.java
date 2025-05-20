@@ -7,6 +7,7 @@ import com.worldbeesion.beecareful.beehive.model.entity.Beehive;
 import com.worldbeesion.beecareful.beehive.model.entity.Turret;
 import com.worldbeesion.beecareful.beehive.repository.TurretRepository;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
+import com.worldbeesion.beecareful.member.model.Member;
 import com.worldbeesion.beecareful.notification.constant.NotificationType;
 import com.worldbeesion.beecareful.notification.model.dto.NotificationRequestDto;
 import com.worldbeesion.beecareful.notification.service.FCMService;
@@ -26,7 +27,7 @@ public class BeehiveNotificationServiceImpl implements BeehiveNotificationServic
 
     @Override
     @Transactional
-    public void sendBeehiveNotification(BeehiveNotificationDto beehiveNotificationDto, UserDetailsImpl userDetails) {
+    public void sendBeehiveNotification(BeehiveNotificationDto beehiveNotificationDto) {
         Turret turret = turretRepository.findBySerial(beehiveNotificationDto.serial()).orElseThrow(TurretNotFoundException::new);
         Beehive beehive = turret.getBeehive();
 
@@ -35,8 +36,8 @@ public class BeehiveNotificationServiceImpl implements BeehiveNotificationServic
         }
 
         beehive.upHornetAppearedAt();
-
+        Member member = beehive.getApiary().getMember();
         NotificationRequestDto notificationRequestDto = new NotificationRequestDto(beehive.getId(), HORNET_APPEAR_MESSAGE, NotificationType.WARNING);
-        fcmService.alertNotificationByFCM(userDetails, notificationRequestDto);
+        fcmService.alertNotificationByFCM(member, notificationRequestDto);
     }
 }
