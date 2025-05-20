@@ -193,7 +193,7 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
         >
           <div className="h-1/2 w-96 bg-white" onClick={(e) => e.stopPropagation()}>
             <div className="snap-x snap-mandatory overflow-x-auto">
-              {images?.map((image, index) => (
+              {images?.urls?.map((image, index) => (
                 <img
                   key={index}
                   src={image}
