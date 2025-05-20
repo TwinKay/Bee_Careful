@@ -9,8 +9,10 @@ import com.worldbeesion.beecareful.beehive.model.entity.*;
 import com.worldbeesion.beecareful.beehive.repository.*;
 import com.worldbeesion.beecareful.common.auth.principal.UserDetailsImpl;
 import com.worldbeesion.beecareful.member.exception.MemberNotFoundException;
-import com.worldbeesion.beecareful.member.model.Members;
+import com.worldbeesion.beecareful.member.model.Member;
 import com.worldbeesion.beecareful.member.repository.MembersRepository;
+import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
+import com.worldbeesion.beecareful.s3.service.S3PresignService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,19 +36,20 @@ public class BeehiveServiceImpl implements BeehiveService {
     private final AnalyzedPhotoRepository analyzedPhotoRepository;
     private final AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository;
     private final TurretRepository turretRepository;
+    private final S3PresignService s3PresignService;
 
     @Override
     @Transactional
-    public void addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails) {
+    public BeehiveResponseDto addBeehive(BeehiveRequestDto beehiveRequestDto, UserDetailsImpl userDetails) {
         String nickname = beehiveRequestDto.nickname();
         Long xDirection = beehiveRequestDto.xDirection();
         Long yDirection = beehiveRequestDto.yDirection();
 
         Long memberId = userDetails.getMemberId();
-        Members members = membersRepository.findById(memberId)
+        Member member = membersRepository.findById(memberId)
             .orElseThrow(MemberNotFoundException::new);
 
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Apiary apiary = apiaryRepository.findByMember(member);
 
         Beehive beehive = Beehive.builder()
             .apiary(apiary)
@@ -58,13 +61,15 @@ public class BeehiveServiceImpl implements BeehiveService {
 
         beehiveRepository.save(beehive);
         log.info("Added new beehive '{}' with ID: {} for member ID: {}", nickname, beehive.getId(), memberId);
+
+        return new BeehiveResponseDto(beehive.getId());
     }
 
     @Override
     public List<AllBeehiveResponseDto> getAllBeehives(UserDetailsImpl userDetails) {
         Long memberId = userDetails.getMemberId();
-        Members members = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(memberId).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
 
         List<BeehiveDiagnosisProjection> beehiveList = beehiveRepository.findAllBeehiveDto(apiary.getId());
 
@@ -100,8 +105,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             throw new BeehiveNotFoundException();
         }
 
-        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
         boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
         if (!isExist) {
@@ -183,6 +188,18 @@ public class BeehiveServiceImpl implements BeehiveService {
     }
 
     @Override
+    public AnnotatedImagesDto getAnnotatedImages(Long beehiveId, Long diagnosisId) {
+        List<String> urls = new ArrayList<>();
+        diagnosisRepository.findById(diagnosisId).orElseThrow(BeehiveNotFoundException::new);
+        List<AnalyzedPhoto> analyzedPhotoList = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisId(diagnosisId);
+        for (AnalyzedPhoto analyzedPhoto : analyzedPhotoList) {
+            S3FileMetadata metadata = analyzedPhoto.getS3FileMetadata();
+            urls.add(s3PresignService.generateGetUrl(metadata));
+        }
+        return new AnnotatedImagesDto(urls);
+    }
+
+    @Override
     @Transactional
     public void addTurret(Long beehiveId, TurretRequestDto turretRequestDto) {
         Beehive beehive = beehiveRepository.findById(beehiveId).orElseThrow(BeehiveNotFoundException::new);
@@ -217,8 +234,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             throw new DirectionNullException();
         }
 
-        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
 
         boolean isLocated = beehiveRepository.existsByApiaryAndDirection(
                 apiary,
@@ -243,8 +260,8 @@ public class BeehiveServiceImpl implements BeehiveService {
             throw new BeehiveNotFoundException();
         }
 
-        Members members = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
-        Apiary apiary = apiaryRepository.findByMembers(members);
+        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+        Apiary apiary = apiaryRepository.findByMember(member);
         boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
 
         if (!isExist) {

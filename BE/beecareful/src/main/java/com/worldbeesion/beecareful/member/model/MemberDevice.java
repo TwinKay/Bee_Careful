@@ -21,7 +21,7 @@ public class MemberDevice {
 
     @OneToOne
     @JoinColumn(name = "member_id", nullable = false)
-    private Members members;
+    private Member member;
 
     @Column(name = "fcm_token", nullable = false)
     private String fcmToken;

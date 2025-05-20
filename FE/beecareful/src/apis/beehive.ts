@@ -2,12 +2,20 @@ import { api } from './api';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import type { CreateBeehiveRequestType, UpdateBeehiveRequestType } from '@/types/beehive';
 import type { DiagnosisRequestType } from '@/types/diagnosis';
+import useBeehiveStore from '@/store/beehiveStore';
 
 // 전체 벌통 조회
 export function useGetBeehives() {
+  const setBeehives = useBeehiveStore((state) => state.setBeehives);
   return useQuery({
     queryKey: ['beehives'],
-    queryFn: () => api.get('/api/v1/beehives').then((res) => res.data),
+    queryFn: async () => {
+      const response = await api.get('/api/v1/beehives');
+      const data = response.data;
+      // API 호출 결과를 스토어에 저장
+      setBeehives(data);
+      return data;
+    },
   });
 }
 
@@ -15,7 +23,9 @@ export function useGetBeehives() {
 export function useCreateBeehive() {
   return useMutation({
     mutationFn: ({ nickname, xDirection, yDirection }: CreateBeehiveRequestType) =>
-      api.post('/api/v1/beehives', { nickname, xDirection, yDirection }).then((res) => res.data),
+      api.post('/api/v1/beehives', { nickname, xDirection, yDirection }).then((res) => {
+        return { beehiveId: res.data.beehiveId };
+      }),
   });
 }
 

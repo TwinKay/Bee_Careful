@@ -1,5 +1,6 @@
 package com.worldbeesion.beecareful.common.exception;
 
+import com.google.api.Http;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
@@ -34,6 +35,7 @@ public enum ErrorCode {
 
     // Turret
     ALREADY_EXIST_SERIAL(HttpStatus.BAD_REQUEST, "이미 존재하는 serial 번호 입니다."),
+    TURRET_NOT_FOUND(HttpStatus.BAD_REQUEST, "존재하지 않는 터렛입니다."),
 
 
     // Auth
