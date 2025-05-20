@@ -2,7 +2,6 @@ import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import Toggle from '@/components/common/Toggle';
 import { useMemo, useRef, useState } from 'react';
-import { TMP_DIAGNOSIS_API_DATA } from '@/config/constants';
 import DiagnosisLineChart from '@/components/diagnosis/DiagnosisLineChart';
 import CardTitle from '@/components/common/CardTitle';
 import DiagnosisList from '@/components/diagnosis/DiagnosisList';
@@ -59,11 +58,7 @@ const BeehiveDetailPage = () => {
     setShowToast(true);
   };
 
-  const {
-    data: beehiveData,
-    isError,
-    isPending,
-  } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
+  const { data: beehiveData } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
 
   // 삭제 mutate 함수
   const { mutate: deleteBeehive } = useDeleteBeehive();
@@ -139,11 +134,6 @@ const BeehiveDetailPage = () => {
           new Date(createdAt).getTime() >
           new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
       ),
-    // : TMP_DIAGNOSIS_API_DATA.diagnoses.filter(
-    //     ({ createdAt }: DiagnosisDataType) =>
-    //       new Date(createdAt).getTime() >
-    //       new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
-    //   ),
     [isToggleLeft, beehiveData],
   );
 
