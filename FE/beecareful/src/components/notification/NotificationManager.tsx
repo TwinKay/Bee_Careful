@@ -54,7 +54,6 @@ const saveNotificationToDB = async (notification: NotificationType): Promise<boo
           const store = db.createObjectStore('notifications', { keyPath: 'id' });
           store.createIndex('createdAt', 'createdAt', { unique: false });
           store.createIndex('read', 'read', { unique: false });
-          console.log('Notifications store created');
         }
       };
 
@@ -76,12 +75,10 @@ const saveNotificationToDB = async (notification: NotificationType): Promise<boo
         const putRequest = store.put(notification);
 
         putRequest.onsuccess = () => {
-          console.log('알림 저장 성공:', notification);
           resolve(true);
         };
 
         putRequest.onerror = (error) => {
-          console.error('알림 저장 실패:', error);
           reject(error);
         };
 
@@ -91,11 +88,9 @@ const saveNotificationToDB = async (notification: NotificationType): Promise<boo
       };
 
       request.onerror = (event) => {
-        console.error('IndexedDB 열기 실패:', event);
         reject(event);
       };
     } catch (error) {
-      console.error('알림 저장 중 오류:', error);
       reject(error);
     }
   });
@@ -119,7 +114,6 @@ const NotificationManager: React.FC = () => {
             const store = db.createObjectStore('notifications', { keyPath: 'id' });
             store.createIndex('createdAt', 'createdAt', { unique: false });
             store.createIndex('read', 'read', { unique: false });
-            console.log('Notifications store created');
           }
         };
 

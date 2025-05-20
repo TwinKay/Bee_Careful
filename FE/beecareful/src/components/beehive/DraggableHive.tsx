@@ -195,6 +195,7 @@ const DraggableHive: React.FC<DraggableHivePropsType> = ({
         hive={hive}
         onOpenStatusPopup={handleOpenPopup}
         collisionDetected={collisionDetected}
+        isDragging={isDragging}
       />
     </div>
   );

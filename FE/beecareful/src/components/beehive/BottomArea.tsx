@@ -92,7 +92,7 @@ const BottomArea = ({
 
   // 일반 모드일 때 UI
   const renderNormalMode = () => (
-    <section className="safe-area-bottom flex justify-between gap-4 pt-4">
+    <section className="safe-area-bottom flex justify-between gap-4 pt-6">
       <Button onClick={onDiagnosisClick} variant="success" size="fixed_xxl" fullWidth>
         질병 검사
       </Button>
