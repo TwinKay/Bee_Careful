@@ -235,7 +235,6 @@ const useMapInteractions = ({
       const triggerVibration = () => {
         if ('vibrate' in navigator) {
           navigator.vibrate(50);
-          console.log('진동 발생');
         }
       };
 
@@ -269,7 +268,7 @@ const useMapInteractions = ({
         }
 
         longPressTimeoutRef.current = null;
-      }, 500); // 롱프레스 시간을 500ms로 단축
+      }, 1000);
     },
     [hives, scale, containerRef, hiveSize, resetAllDragState],
   );
@@ -701,8 +700,7 @@ const useMapInteractions = ({
         lastZoomDirection = null;
       }
 
-      // 드래그 종료 - 즉시 handleDragEnd 함수를 호출
-      if (e.touches.length === 0 && (draggingId !== null || isLongPress)) {
+      if (draggingId !== null || isLongPress) {
         handleDragEnd();
       }
     };
