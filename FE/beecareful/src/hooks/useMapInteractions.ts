@@ -196,18 +196,13 @@ const useMapInteractions = ({
 
     // 드래그 가능 상태 활성화
     canDragRef.current = true;
-
-    console.log('모든 드래그 상태 초기화 완료');
   }, []);
 
   // 드래그 시작 핸들러
   const handleDragStart = useCallback(
     (id: number, e: React.MouseEvent | React.TouchEvent) => {
-      console.log('드래그 시작 시도:', id, '드래그 가능 상태:', canDragRef.current);
-
       // 드래그 불가능 상태면 무시
       if (!canDragRef.current) {
-        console.log('드래그 불가능 상태, 무시');
         return;
       }
 
@@ -217,7 +212,7 @@ const useMapInteractions = ({
       // 이전 상태 초기화
       resetAllDragState();
 
-      setIsDragging(true);
+      // setIsDragging(true);
       setCollisionDetected(false);
 
       const hive = hives.find((h) => h.beehiveId === id);
@@ -229,7 +224,10 @@ const useMapInteractions = ({
 
       if (longPressTimeoutRef.current !== null) {
         window.clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = null;
       }
+
+      const dragStartTime = Date.now();
 
       // 진동 함수
       const triggerVibration = () => {
@@ -269,7 +267,40 @@ const useMapInteractions = ({
 
         longPressTimeoutRef.current = null;
       }, 1000);
+
+      // 드래그 종료 핸들러 - 롱프레스 취소용
+      const handleEarlyDragEnd = () => {
+        // 리스너 제거
+        document.removeEventListener('mouseup', handleEarlyDragEnd);
+        document.removeEventListener('touchend', handleEarlyDragEnd);
+        document.removeEventListener('touchcancel', handleEarlyDragEnd);
+
+        // 롱프레스가 되기 전에 손을 떼면 타이머 취소
+        if (longPressTimeoutRef.current !== null) {
+          window.clearTimeout(longPressTimeoutRef.current);
+          longPressTimeoutRef.current = null;
+
+          // 드래그 시간 계산
+          const dragDuration = Date.now() - dragStartTime;
+
+          // 짧은 시간 내에 손을 떼고, 움직임이 작은 경우 = 클릭으로 처리
+          if (dragDuration < 1000) {
+            // 클릭 이벤트 처리를 위해 드래그 상태 초기화
+            resetAllDragState();
+
+            // 드래그 불가 상태로 짧게 설정 (팝업 열림 시간 확보)
+            canDragRef.current = false;
+            setTimeout(() => {
+              canDragRef.current = true;
+            }, 300);
+          }
+        }
+      };
+      document.addEventListener('mouseup', handleEarlyDragEnd, { once: true });
+      document.addEventListener('touchend', handleEarlyDragEnd, { once: true });
+      document.addEventListener('touchcancel', handleEarlyDragEnd, { once: true });
     },
+
     [hives, scale, containerRef, hiveSize, resetAllDragState],
   );
 
@@ -450,7 +481,6 @@ const useMapInteractions = ({
     (e: React.MouseEvent | React.TouchEvent) => {
       // 이벤트 타겟이 맵 자체인 경우에만 처리 (벌통이 아닌 경우)
       if (e.target === containerRef.current || e.currentTarget === containerRef.current) {
-        console.log('맵 빈 영역 클릭, 상태 초기화');
         resetAllDragState();
       }
     },

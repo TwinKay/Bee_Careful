@@ -53,7 +53,7 @@ const MapControls: React.FC<MapControlsPropsType> = ({
 
   return (
     <div
-      className={`absolute right-2 z-10 flex space-x-2 ${currentMode === 'normal' ? 'bottom-12' : 'bottom-32'}`}
+      className={`absolute right-2 z-10 flex space-x-2 ${currentMode === 'normal' ? 'bottom-14' : 'bottom-32'}`}
     >
       <button
         onClick={() => handleZoom(Math.min(MAX_SCALE, scale * 1.2))}
