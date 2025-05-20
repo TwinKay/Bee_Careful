@@ -23,16 +23,12 @@ const DiagnosisCreatePage = () => {
 
   const captureImage = () => {
     const fileInput = document.getElementById('capture-input') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.click();
-    }
+    if (fileInput) fileInput.click();
   };
 
   const getImages = () => {
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.click();
-    }
+    if (fileInput) fileInput.click();
   };
 
   const deleteImage = (index: number) => {
@@ -81,7 +77,6 @@ const DiagnosisCreatePage = () => {
       },
       {
         onSuccess: (urls) => {
-          console.log('Diagnosis request successful:', urls);
           uploadImages(
             {
               images,
@@ -91,15 +86,13 @@ const DiagnosisCreatePage = () => {
               onSuccess: () => {
                 setIsSuccessModalOpen(true);
               },
-              onError: (error) => {
-                console.error('Image upload failed:', error);
+              onError: () => {
                 alert('사진 업로드에 실패했습니다.');
               },
             },
           );
         },
-        onError: (error) => {
-          console.error('Diagnosis request failed:', error);
+        onError: () => {
           alert('진단 요청에 실패했습니다.');
         },
       },
@@ -115,10 +108,6 @@ const DiagnosisCreatePage = () => {
     }));
     setMetadata(newMetadata);
   }, [images]);
-
-  useEffect(() => {
-    console.log('metadata', metadata);
-  }, [metadata]);
 
   return (
     <div className="flex h-screen w-full flex-col items-center">

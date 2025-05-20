@@ -9,6 +9,10 @@ import com.worldbeesion.beecareful.beehive.model.dto.*;
 import com.worldbeesion.beecareful.beehive.model.entity.*;
 import com.worldbeesion.beecareful.beehive.repository.*;
 import com.worldbeesion.beecareful.member.exception.BadRequestException;
+import com.worldbeesion.beecareful.member.model.Member;
+import com.worldbeesion.beecareful.notification.constant.NotificationType;
+import com.worldbeesion.beecareful.notification.model.dto.NotificationRequestDto;
+import com.worldbeesion.beecareful.notification.service.FCMService;
 import com.worldbeesion.beecareful.s3.constant.S3FileStatus;
 import com.worldbeesion.beecareful.s3.model.dto.GeneratePutUrlResponse;
 import com.worldbeesion.beecareful.s3.model.entity.S3FileMetadata;
@@ -37,7 +41,9 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
     private final WebClient webClient;
 
+    private final FCMService fcmService;
     private final S3PresignService s3PresignService;
+
     private final S3FileMetadataRepository s3FileMetadataRepository;
     private final DiagnosisRepository diagnosisRepository;
     private final OriginalPhotoRepository originalPhotoRepository;
@@ -49,7 +55,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     public DiagnosisServiceImpl(
         @Value("${ai-server.diagnosis-path}") String aiDiagnosisPath,
         @Value("${ai-server.baseUrl}") String aiServerBaseUrl,
-        S3PresignService s3PresignService,
+        FCMService fcmService, S3PresignService s3PresignService,
         S3FileMetadataRepository s3FileMetadataRepository, DiagnosisRepository diagnosisRepository, OriginalPhotoRepository originalPhotoRepository,
         AnalyzedPhotoRepository analyzedPhotoRepository, AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository,
         DiseaseRepository diseaseRepository, BeehiveRepository beehiveRepository) {
@@ -58,6 +64,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             .baseUrl(aiServerBaseUrl)
             .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(128 * 1024 * 1024)) // 128MB buffer
             .build();
+        this.fcmService = fcmService;
         this.s3PresignService = s3PresignService;
         this.s3FileMetadataRepository = s3FileMetadataRepository;
         this.diagnosisRepository = diagnosisRepository;
@@ -143,6 +150,12 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         log.info("Finished diagnosis process for diagnosisId: {}", diagnosisId);
+
+        // 5. Notify user
+        Beehive beehive = diagnosis.getBeehive();
+        Member member = beehive.getApiary().getMember();
+        fcmService.alertNotificationByFCM(member, new NotificationRequestDto(beehive.getId(), "진단 완료", NotificationType.SUCCESS));
+
     }
 
     /**

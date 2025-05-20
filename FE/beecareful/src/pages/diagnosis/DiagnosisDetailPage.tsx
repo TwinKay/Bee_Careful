@@ -6,6 +6,7 @@ import RemixIcon from '@/components/common/RemixIcon';
 import DiagnosisPieChart from '@/components/diagnosis/DiagnosisPieChart';
 import type { DiagnosisDataType } from '@/types/diagnosis';
 import { getLocaleDateString } from '@/utils/getLocaleDateString';
+import { parseDiagnosisData } from '@/utils/parseDiagnosisData';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -17,67 +18,7 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
 
   const { data: images } = useGetDiagnosisImages(Number(beehiveId) || 0, data.diagnosisId);
 
-  const parsedData = useMemo(() => {
-    const result = {
-      larvaCount: data.larvaCount,
-      imagoCount: data.imagoCount,
-      imagoDisease: [
-        {
-          name: '진드기(응애)',
-          value: data.result.imago?.varroaCount,
-          ratio: data.result.imago?.varroaRatio,
-          color: '#E57373',
-        },
-        {
-          name: '날개바이러스',
-          value: data.result.imago?.dwvCount,
-          ratio: data.result.imago?.dwvRatio,
-          color: '#FFB74D',
-        },
-        {
-          name: '정상',
-          value:
-            data.imagoCount -
-            (data.result.imago?.varroaCount || 0) -
-            (data.result.imago?.dwvCount || 0),
-          ratio: 100 - (data.result.imago?.varroaRatio || 0),
-          color: '#E6E6E6',
-        },
-      ],
-      larvaDisease: [
-        {
-          name: '진드기(응애)',
-          value: data.result.larva?.varroaCount,
-          ratio: data.result.larva?.varroaRatio,
-          color: '#E57373',
-        },
-        {
-          name: '부저병',
-          value: data.result.larva?.foulBroodCount,
-          ratio: data.result.larva?.foulBroodRatio,
-          color: '#64B5F6',
-        },
-        {
-          name: '석고병',
-          value: data.result.larva?.chalkBroodCount,
-          ratio: data.result.larva?.chalkBroodRatio,
-          color: '#81C784',
-        },
-        {
-          name: '정상',
-          value:
-            data.larvaCount -
-            (data.result.larva?.varroaCount || 0) -
-            (data.result.larva?.foulBroodCount || 0) -
-            (data.result.larva?.chalkBroodCount || 0),
-          ratio: 100 - (data.result.larva?.varroaRatio || 0),
-          color: '#E6E6E6',
-        },
-      ],
-    };
-    return result;
-  }, [data]);
-  console.log(parsedData);
+  const parsedData = useMemo(() => parseDiagnosisData(data), [data]);
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-start gap-4">
@@ -131,7 +72,7 @@ const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
         <div className="flex w-full flex-col gap-2.5">
           {parsedData.imagoDisease.map((item, index) => (
             <div key={item.name}>
-              <div className="flex justify-between p-2">
+              <div key={item.name} className="flex justify-between p-2">
                 <p className="text-lg font-bold text-gray-500">{item.name}</p>
                 <div className="flex flex-col items-end">
                   <p>

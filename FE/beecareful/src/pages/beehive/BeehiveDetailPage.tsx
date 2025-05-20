@@ -2,7 +2,6 @@ import Button from '@/components/common/Button';
 import Card from '@/components/common/Card';
 import Toggle from '@/components/common/Toggle';
 import { useMemo, useRef, useState } from 'react';
-import { TMP_DIAGNOSIS_API_DATA } from '@/config/constants';
 import DiagnosisLineChart from '@/components/diagnosis/DiagnosisLineChart';
 import CardTitle from '@/components/common/CardTitle';
 import DiagnosisList from '@/components/diagnosis/DiagnosisList';
@@ -21,6 +20,7 @@ import type { ToastPositionType, ToastType } from '@/components/common/Toast';
 import { ROUTES } from '@/config/routes';
 import Toast from '@/components/common/Toast';
 import { useQueryClient } from '@tanstack/react-query';
+import useBeehiveStore from '@/store/beehiveStore';
 
 const BeehiveDetailPage = () => {
   const param = useParams();
@@ -43,6 +43,8 @@ const BeehiveDetailPage = () => {
   const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
   const [showToast, setShowToast] = useState(false);
 
+  const { selectedBeehive } = useBeehiveStore();
+
   const { mutate: mutateTurret } = useLinkTurret();
 
   const queryClient = useQueryClient();
@@ -59,11 +61,7 @@ const BeehiveDetailPage = () => {
     setShowToast(true);
   };
 
-  const {
-    data: beehiveData,
-    isError,
-    isPending,
-  } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
+  const { data: beehiveData } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
 
   // 삭제 mutate 함수
   const { mutate: deleteBeehive } = useDeleteBeehive();
@@ -97,8 +95,9 @@ const BeehiveDetailPage = () => {
       return;
     }
     // 현재 위치 정보 유지
-    const xDirection = beehiveData?.xDirection || 0;
-    const yDirection = beehiveData?.yDirection || 0;
+    const xDirection = selectedBeehive?.xDirection || 0;
+    const yDirection = selectedBeehive?.yDirection || 0;
+
     updateBeehive(
       {
         beeHiveId: Number(beehiveId),
@@ -112,6 +111,11 @@ const BeehiveDetailPage = () => {
           setIsEditNameOpen(false);
           // 변경 감지 상태 리셋
           setIsNicknameChanged(false);
+
+          // 데이터 갱신을 위해 쿼리 무효화
+          queryClient.invalidateQueries({
+            queryKey: ['beehiveRecords', Number(beehiveId), isToggleLeft ? 6 : 12],
+          });
         },
         onError: (error) => {
           console.log(error);
@@ -139,11 +143,6 @@ const BeehiveDetailPage = () => {
           new Date(createdAt).getTime() >
           new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
       ),
-    // : TMP_DIAGNOSIS_API_DATA.diagnoses.filter(
-    //     ({ createdAt }: DiagnosisDataType) =>
-    //       new Date(createdAt).getTime() >
-    //       new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
-    //   ),
     [isToggleLeft, beehiveData],
   );
 

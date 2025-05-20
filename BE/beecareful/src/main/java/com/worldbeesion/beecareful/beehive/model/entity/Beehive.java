@@ -75,4 +75,8 @@ public class Beehive {
         this.deletedAt = LocalDateTime.now();
     }
 
+    public void upHornetAppearedAt() {
+        this.hornetAppearedAt = LocalDateTime.now();
+    }
+
 }

@@ -50,8 +50,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
     WebkitBackfaceVisibility: 'hidden',
     // 아이콘이 있을 때 흐림 효과
     ...(needsDimmedSvg && {
-      filter: 'opacity(0.4) grayscale(20%)',
-      WebkitFilter: 'opacity(0.4) grayscale(20%)',
+      WebkitFilter: 'opacity(0.3) grayscale(20%)',
     }),
     pointerEvents: 'auto',
     // 충돌 시 시각적 피드백
@@ -203,8 +202,8 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       // loading
       statusIcon = (
         <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-2 shadow-sm">
-            <i className="ri-loader-4-line animate-spin text-3xl text-blue-500"></i>
+          <div className="flex items-center justify-center rounded-full p-2">
+            <i className="ri-loader-4-line animate-spin text-4xl text-blue-400"></i>
           </div>
         </div>
       );
@@ -212,8 +211,8 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       // success
       statusIcon = (
         <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
-            <i className="ri-checkbox-circle-line text-3xl text-green-500"></i>
+          <div className="flex items-center justify-center rounded-full p-1">
+            <i className="ri-checkbox-circle-line text-4xl text-green-400"></i>
           </div>
         </div>
       );
@@ -221,8 +220,8 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       // warning
       statusIcon = (
         <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white p-1 shadow-sm">
-            <i className="ri-information-line text-3xl text-red-500"></i>
+          <div className="flex items-center justify-center rounded-full p-1">
+            <i className="ri-information-line text-4xl text-red-400"></i>
           </div>
         </div>
       );
@@ -257,11 +256,9 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       }
     : {};
 
-  const containerClass = `relative rounded-xl flex flex-col items-center justify-center h-full w-full`;
-
   return (
     <div
-      className={containerClass}
+      className="relative flex h-full w-full flex-col items-center justify-center"
       style={{
         // 이미지 저장/드래그 방지를 위한 스타일
         WebkitTouchCallout: 'none',
@@ -306,7 +303,7 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       >
         {/* 벌통 SVG */}
         <div
-          className="relative flex w-full items-center justify-center"
+          className="relative flex w-full items-center justify-center bg-white"
           // 이미지 컨테이너에도 클릭 이벤트 추가
           onClick={handleClick}
           // 드래그 방지

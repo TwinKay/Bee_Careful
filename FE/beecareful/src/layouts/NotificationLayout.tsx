@@ -1,5 +1,3 @@
-'use client';
-
 import { Outlet, useNavigate } from 'react-router-dom';
 import RemixIcon from '@/components/common/RemixIcon';
 import { useState } from 'react';
