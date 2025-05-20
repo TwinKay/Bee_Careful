@@ -81,7 +81,10 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
   // 모드에 따른 클릭 처리
   const handleCellAction = () => {
     // 드래그 중이면 클릭 동작 무시
-    if (isDragging.current) return;
+    if (isDragging.current) {
+      console.log('BeehiveCell: 드래그 중 클릭 무시');
+      return;
+    }
 
     if (currentMode === 'diagnosis') {
       // 진단 모드에서는 벌통 선택/해제
@@ -91,10 +94,13 @@ const BeehiveCell: React.FC<HiveCellPropsType> = ({
       } else {
         // 새로운 벌통 선택
         setSelectedBeehive(hive);
+        console.log('BeehiveCell: 선택된 벌통', hive);
       }
     } else if (onOpenStatusPopup) {
       // 일반 모드에서는 상세 팝업 표시
       onOpenStatusPopup(hive);
+      setSelectedBeehive(hive);
+      console.log('BeehiveCell: 선택된 벌통', hive);
     }
   };
 
