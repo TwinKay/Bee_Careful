@@ -319,7 +319,7 @@ const BeehiveListPage = () => {
               currentMode === 'normal' ? 'h-[calc(100vh-200px)]' : 'h-[calc(100vh-280px)]'
             }`}
           >
-            <div className="h-full w-full overflow-hidden rounded-lg bg-white">
+            <div className="h-full w-full overflow-hidden rounded-lg bg-white shadow-sm">
               <BeehiveMap
                 ref={mapRef}
                 containerRef={containerRef}

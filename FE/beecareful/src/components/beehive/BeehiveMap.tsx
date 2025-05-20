@@ -224,7 +224,7 @@ const BeehiveMap = forwardRef<BeehiveMapRefType, BeehiveMapPropsType>(
     }
 
     return (
-      <section className="h-[80vh] px-4">
+      <section className="h-[80vh]">
         <div className="h-full w-full overflow-hidden rounded-lg bg-white">
           <div
             className="relative flex h-full w-full flex-col overflow-hidden"

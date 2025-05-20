@@ -3,11 +3,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { BeehiveType } from '@/types/beehive';
 import { useUpdateBeehive } from '@/apis/beehive';
 
-// 벌통 간 충돌 감지 함수 추가
-const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
-  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-};
-
 type UseMapInteractionsPropsType = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   hives: BeehiveType[];
@@ -15,6 +10,11 @@ type UseMapInteractionsPropsType = {
   mapWidth: number;
   mapHeight: number;
   hiveSize: number;
+};
+
+// 벌통 간 충돌 감지 함수
+const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
 
 const useMapInteractions = ({
@@ -51,6 +51,9 @@ const useMapInteractions = ({
   const MIN_SCALE = 0.5;
   const MAX_SCALE = 2;
   const MIN_HIVE_DISTANCE = 120;
+
+  // 드래그 가능 상태 추적
+  const canDragRef = useRef<boolean>(true);
 
   // 두 벌통 간의 거리 계산 함수
   const calculateDistance2 = useCallback((hive1: BeehiveType, hive2: BeehiveType): number => {
@@ -173,12 +176,47 @@ const useMapInteractions = ({
     [autoScrollThreshold, autoScrollSpeed, containerRef],
   );
 
+  // 상태 완전 초기화 함수
+  const resetAllDragState = useCallback(() => {
+    // 모든 드래그 관련 상태 초기화
+    setDraggingId(null);
+    setIsLongPress(false);
+    setIsDragging(false);
+    setCollisionDetected(false);
+    setAutoScroll({ x: 0, y: 0 });
+
+    // 타이머 정리
+    if (longPressTimeoutRef.current !== null) {
+      window.clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+
+    // 참조 초기화
+    dragEndStateRef.current = { id: null, isLongPress: false };
+
+    // 드래그 가능 상태 활성화
+    canDragRef.current = true;
+
+    console.log('모든 드래그 상태 초기화 완료');
+  }, []);
+
   // 드래그 시작 핸들러
   const handleDragStart = useCallback(
     (id: number, e: React.MouseEvent | React.TouchEvent) => {
-      e.stopPropagation();
+      console.log('드래그 시작 시도:', id, '드래그 가능 상태:', canDragRef.current);
 
-      setIsLongPress(false);
+      // 드래그 불가능 상태면 무시
+      if (!canDragRef.current) {
+        console.log('드래그 불가능 상태, 무시');
+        return;
+      }
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      // 이전 상태 초기화
+      resetAllDragState();
+
       setIsDragging(true);
       setCollisionDetected(false);
 
@@ -193,7 +231,17 @@ const useMapInteractions = ({
         window.clearTimeout(longPressTimeoutRef.current);
       }
 
+      // 진동 함수
+      const triggerVibration = () => {
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+          console.log('진동 발생');
+        }
+      };
+
       longPressTimeoutRef.current = window.setTimeout(() => {
+        console.log('롱프레스 감지됨');
+        triggerVibration();
         setIsLongPress(true);
         setDraggingId(id);
         // 드래그 상태 ref 업데이트
@@ -221,9 +269,9 @@ const useMapInteractions = ({
         }
 
         longPressTimeoutRef.current = null;
-      }, 1000);
+      }, 500); // 롱프레스 시간을 500ms로 단축
     },
-    [hives, scale, containerRef, hiveSize],
+    [hives, scale, containerRef, hiveSize, resetAllDragState],
   );
 
   // 드래그 핸들러
@@ -367,6 +415,12 @@ const useMapInteractions = ({
 
   // 드래그 종료 핸들러
   const handleDragEnd = useCallback(() => {
+    // 드래그 중이 아니면 무시
+    if (draggingId === null && !isLongPress) {
+      return;
+    }
+
+    // 타이머 정리
     if (longPressTimeoutRef.current !== null) {
       window.clearTimeout(longPressTimeoutRef.current);
       longPressTimeoutRef.current = null;
@@ -380,17 +434,29 @@ const useMapInteractions = ({
       updateBeehivePosition(id);
     }
 
-    // 상태 초기화 (이제 API 호출 후에 초기화)
-    setDraggingId(null);
-    setIsLongPress(false);
-    setAutoScroll({ x: 0, y: 0 });
-    setCollisionDetected(false);
-    dragEndStateRef.current = { id: null, isLongPress: false };
+    // 드래그 불가능 상태로 설정 (짧은 시간 동안)
+    canDragRef.current = false;
 
+    // 상태 초기화
+    resetAllDragState();
+
+    // 짧은 지연 후 드래그 가능 상태로 복원
     setTimeout(() => {
-      setIsDragging(false);
+      canDragRef.current = true;
     }, 50);
-  }, [updateBeehivePosition]);
+  }, [draggingId, isLongPress, updateBeehivePosition, resetAllDragState]);
+
+  // 맵 클릭 핸들러 - 빈 영역 클릭 시 상태 초기화
+  const handleMapClick = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      // 이벤트 타겟이 맵 자체인 경우에만 처리 (벌통이 아닌 경우)
+      if (e.target === containerRef.current || e.currentTarget === containerRef.current) {
+        console.log('맵 빈 영역 클릭, 상태 초기화');
+        resetAllDragState();
+      }
+    },
+    [resetAllDragState, containerRef],
+  );
 
   // 개선된 줌 핸들러 - 정적 줌으로 변경
   const handleZoom = useCallback(
@@ -466,7 +532,6 @@ const useMapInteractions = ({
 
     const handleWheelEvent = (e: WheelEvent) => {
       e.preventDefault();
-      console.log('handleWheelEvent called');
 
       // 디바운스 처리
       if (isZooming) {
@@ -540,10 +605,6 @@ const useMapInteractions = ({
           return;
         }
 
-        // // 너무 빠른 연속 줌 방지 (5ms 간격)
-        const now = Date.now();
-        // if (now - lastPinchTime < 5) return;
-
         // 핀치 거리 변화가 충분히 클 때만 줌 처리 (10px 이상)
         const pinchDelta = distance - lastPinchDistance;
         if (Math.abs(pinchDelta) < 10) return;
@@ -552,7 +613,7 @@ const useMapInteractions = ({
         const zoomDirection = pinchDelta > 0 ? 'in' : 'out';
 
         // 방향이 바뀌었거나 마지막 줌으로부터 충분한 시간이 지났을 때만 줌 실행
-        if (zoomDirection !== lastZoomDirection || now - lastPinchTime > 300) {
+        if (zoomDirection !== lastZoomDirection || Date.now() - lastPinchTime > 300) {
           if (zoomDirection === 'in') {
             // 줌 인 (20% 증가)
             handleZoom(scale * 1.09, centerX, centerY);
@@ -562,7 +623,7 @@ const useMapInteractions = ({
           }
 
           lastZoomDirection = zoomDirection;
-          lastPinchTime = now;
+          lastPinchTime = Date.now();
           lastPinchDistance = distance;
         }
         return;
@@ -628,17 +689,7 @@ const useMapInteractions = ({
       // 2개 손가락으로 터치했을 때 핀치 줌 시작
       if (e.touches.length === 2) {
         // 기존 벌통 드래그 취소
-        if (draggingId !== null) {
-          // 드래그 상태 ref 초기화
-          dragEndStateRef.current = { id: null, isLongPress: false };
-
-          setDraggingId(null);
-          setIsLongPress(false);
-          if (longPressTimeoutRef.current !== null) {
-            window.clearTimeout(longPressTimeoutRef.current);
-            longPressTimeoutRef.current = null;
-          }
-        }
+        resetAllDragState();
       }
     };
 
@@ -650,10 +701,17 @@ const useMapInteractions = ({
         lastZoomDirection = null;
       }
 
-      // 드래그 종료 - 상태를 초기화하지 않고 handleDragEnd 함수를 호출
-      if (e.touches.length === 0) {
-        // 여기서 상태를 초기화하지 않고 handleDragEnd 함수에서 처리
+      // 드래그 종료 - 즉시 handleDragEnd 함수를 호출
+      if (e.touches.length === 0 && (draggingId !== null || isLongPress)) {
         handleDragEnd();
+      }
+    };
+
+    // 맵 클릭 이벤트 핸들러
+    const handleMapClickInEffect = (e: MouseEvent) => {
+      // 맵 자체를 클릭한 경우에만 처리
+      if (e.target === container) {
+        resetAllDragState();
       }
     };
 
@@ -663,6 +721,7 @@ const useMapInteractions = ({
     container.addEventListener('touchstart', handleTouchStartInEffect, { passive: true });
     container.addEventListener('touchend', handleTouchEndInEffect, { passive: true });
     container.addEventListener('touchcancel', handleTouchEndInEffect, { passive: true });
+    container.addEventListener('click', handleMapClickInEffect);
 
     return () => {
       // 이벤트 리스너 제거
@@ -670,6 +729,7 @@ const useMapInteractions = ({
       container.removeEventListener('touchstart', handleTouchStartInEffect);
       container.removeEventListener('touchend', handleTouchEndInEffect);
       container.removeEventListener('touchcancel', handleTouchEndInEffect);
+      container.removeEventListener('click', handleMapClickInEffect);
     };
   }, [
     draggingId,
@@ -685,6 +745,7 @@ const useMapInteractions = ({
     detectCollision,
     checkCollisionAndAdjust,
     handleDragEnd,
+    resetAllDragState,
   ]);
 
   // 자동 스크롤 효과
@@ -836,6 +897,7 @@ const useMapInteractions = ({
     handleDragStart,
     handleDrag,
     handleDragEnd,
+    handleMapClick,
     centerToHives,
     getMapCenter,
   };
