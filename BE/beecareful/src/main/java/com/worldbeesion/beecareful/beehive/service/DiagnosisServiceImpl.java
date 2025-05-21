@@ -44,6 +44,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
     private final FCMService fcmService;
     private final S3PresignService s3PresignService;
+    private final DiagnosisFinalizerService diagnosisFinalizerService;
 
     private final S3FileMetadataRepository s3FileMetadataRepository;
     private final DiagnosisRepository diagnosisRepository;
@@ -56,7 +57,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     public DiagnosisServiceImpl(
         @Value("${ai-server.diagnosis-path}") String aiDiagnosisPath,
         @Value("${ai-server.baseUrl}") String aiServerBaseUrl,
-        FCMService fcmService, S3PresignService s3PresignService,
+        FCMService fcmService, S3PresignService s3PresignService, DiagnosisFinalizerService diagnosisFinalizerService,
         S3FileMetadataRepository s3FileMetadataRepository, DiagnosisRepository diagnosisRepository, OriginalPhotoRepository originalPhotoRepository,
         AnalyzedPhotoRepository analyzedPhotoRepository, AnalyzedPhotoDiseaseRepository analyzedPhotoDiseaseRepository,
         DiseaseRepository diseaseRepository, BeehiveRepository beehiveRepository) {
@@ -67,6 +68,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             .build();
         this.fcmService = fcmService;
         this.s3PresignService = s3PresignService;
+        this.diagnosisFinalizerService = diagnosisFinalizerService;
         this.s3FileMetadataRepository = s3FileMetadataRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.originalPhotoRepository = originalPhotoRepository;
@@ -151,67 +153,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         log.info("Finished diagnosis process for diagnosisId: {}", diagnosisId);
 
-        // 5. Update Beehive Status
-        // if any of the disease detected, update beehive.is_infected to true.
-        Beehive beehive = diagnosis.getBeehive();
-
-        // Get IDs of all analyzed photos
-        List<Long> analyzedPhotoIds = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisId(diagnosisId).stream()
-            .map(AnalyzedPhoto::getId)
-            .toList();
-        log.info("Found {} analyzed photos for diagnosisId: {}", analyzedPhotoIds.size(), diagnosisId);
-
-        // Check if any diseases were detected with count > 0
-        boolean hasDisease = false;
-        List<DiagnosisResultProjection> diagnosisResults =
-            analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(analyzedPhotoIds);
-
-        // Get total counts for Larva and Imago
-        TotalCountImagoLarvaProjection totalCounts = analyzedPhotoRepository.getTotalCountByDiagnosis(diagnosisId);
-        Long totalLarva = totalCounts.getLarvaCount();
-        Long totalImago = totalCounts.getImagoCount();
-
-        // Sum up all disease counts
-        Map<String, Long> summedDiseases = new HashMap<>(
-            Map.of("larvavarroaCount", 0L, "larvafoulBroodCount", 0L, "larvachalkBroodCount", 0L, "imagovarroaCount", 0L, "imagodwvCount", 0L)
-        );
-
-        // Sum up all disease counts
-        for (DiagnosisResultProjection result : diagnosisResults) {
-            summedDiseases.put("larvavarroaCount", summedDiseases.get("larvavarroaCount") + result.getLarvavarroaCount());
-            summedDiseases.put("larvafoulBroodCount", summedDiseases.get("larvafoulBroodCount") + result.getLarvafoulBroodCount());
-            summedDiseases.put("larvachalkBroodCount", summedDiseases.get("larvachalkBroodCount") + result.getLarvachalkBroodCount());
-            summedDiseases.put("imagovarroaCount", summedDiseases.get("imagovarroaCount") + result.getImagovarroaCount());
-            summedDiseases.put("imagodwvCount", summedDiseases.get("imagodwvCount") + result.getImagodwvCount());
-        }
-
-        log.info("Summed Result: {}", summedDiseases);
-
-        // Calculate percentages for Larvavarroa and Imagovarroa
-        double larvaVarroaPercentage = calculateDiseaseRatio(summedDiseases.get("larvavarroaCount"), totalLarva);
-        double imagoVarroaPercentage = calculateDiseaseRatio(summedDiseases.get("imagovarroaCount"), totalImago);
-
-        // Check if percentages are > 5% for varroa diseases or if count > 0 for other diseases
-        boolean hasLarvaVarroa = larvaVarroaPercentage > 5.0;
-        boolean hasImagoVarroa = imagoVarroaPercentage > 5.0;
-
-        if (hasLarvaVarroa ||
-            hasImagoVarroa ||
-            summedDiseases.get("larvafoulBroodCount") > 0 ||
-            summedDiseases.get("larvachalkBroodCount") > 0 ||
-            summedDiseases.get("imagodwvCount") > 0) {
-            hasDisease = true;
-        }
-
-        beehive.updateIsInfected(hasDisease);
-        beehiveRepository.save(beehive);
-        log.info("Updated beehive.isInfected to {} for beehiveId: {}", hasDisease, beehive.getId());
-
-        // 6. Notify user
-        Member member = beehive.getApiary().getMember();
-        fcmService.alertNotificationByFCM(member, new NotificationRequestDto(beehive.getId(), "진단 완료", NotificationType.SUCCESS));
-
-        log.info("Sent Notification for beehiveId: {}", beehive.getId());
+        // Call finishDiagnosis through the proxy
+        diagnosisFinalizerService.finishDiagnosis(diagnosisId);
     }
 
     /**
