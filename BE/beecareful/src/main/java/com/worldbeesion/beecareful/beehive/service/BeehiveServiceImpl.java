@@ -275,6 +275,7 @@ public class BeehiveServiceImpl implements BeehiveService {
     private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {
         if (totalCount == 0)
             return 0;
-        return (double)diseaseCount / totalCount * 100;
+        double ratio = (double) diseaseCount / totalCount * 100;
+        return Math.round(ratio * 100) / 100.0;
     }
 }
