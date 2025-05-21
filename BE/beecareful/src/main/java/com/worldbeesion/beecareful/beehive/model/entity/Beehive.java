@@ -79,4 +79,8 @@ public class Beehive {
         this.hornetAppearedAt = LocalDateTime.now();
     }
 
+    public void updateIsInfected(Boolean isInfected) {
+        this.isInfected = isInfected;
+    }
+
 }
