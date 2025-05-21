@@ -35,14 +35,52 @@ export const removeHyphenFromPhone = (phone: string): string => {
 };
 
 /**
- * 시간 형식을 변환하는 함수 (ISO 문자열을 "5분 전" 형식으로)
- * @param dateString ISO 문자열
+ * UTC ISO 문자열 또는 Date 객체를 로컬 시간 기준으로 변환하는 함수
+ * @param date ISO 문자열 (UTC 기준) 또는 Date 객체
+ * @returns 로컬 시간으로 변환된 Date 객체
+ */
+export const convertUTCToLocal = (date?: string | Date | null): Date | null => {
+  if (!date) return null;
+
+  // Date 객체인 경우
+  if (date instanceof Date) {
+    return new Date(date.getTime());
+  }
+
+  // 문자열인 경우
+  const utcString = date.endsWith('Z') ? date : `${date}Z`;
+  return new Date(utcString);
+};
+
+/**
+ * 날짜 차이를 일 단위로 계산
+ * @param dateString UTC ISO 문자열
+ * @returns 일 단위의 차이
+ */
+export const getDaysDifference = (dateString?: string | null): number => {
+  if (!dateString) return 0;
+
+  // UTC를 로컬 시간으로 변환
+  const date = convertUTCToLocal(dateString);
+  if (!date) return 0;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24)); // 일 단위로 변환
+};
+
+/**
+ * 시간 형식을 변환하는 함수 (UTC ISO 문자열을 로컬 시간 기준 "5분 전" 형식으로)
+ * @param dateString ISO 문자열 (UTC 기준)
  * @returns 분, 시, 일 단위의 문자열
  */
 export const formatTimeAgo = (dateString?: string | null): string => {
   if (!dateString) return '-';
 
-  const date = new Date(dateString);
+  // UTC를 로컬 시간으로 변환
+  const date = convertUTCToLocal(dateString);
+  if (!date) return '-';
+
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMinutes = Math.floor(diffMs / 60000);

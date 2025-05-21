@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BeehiveType } from '@/types/beehive';
 import Button from '@/components/common/Button';
-import { formatTimeAgo } from '@/utils/format';
+import { formatTimeAgo, getDaysDifference } from '@/utils/format';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -47,18 +47,6 @@ const StatusItem: React.FC<StatusItemPropsType> = ({
       <span className="text-xs text-gray-500">{time}</span>
     </div>
   );
-};
-
-/**
- * 날짜 차이를 일 단위로 계산
- */
-const getDaysDifference = (dateString?: string | null): number => {
-  if (!dateString) return 0;
-
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24)); // 일 단위로 변환
 };
 
 const BeehiveStatusPopup: React.FC<BeehiveStatusPopupPropsType> = ({ isOpen, onClose, hive }) => {
