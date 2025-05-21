@@ -63,11 +63,10 @@ const DiagnosisLineChart: React.FC<ChartPropsType> = ({ data }) => {
         return {
           name: `${monthDate}`,
           '진드기(응애)':
-            (item.result.larva.varroaCount + item.result.imago.varroaCount) /
+            (item.result.larva.varroaCount * item.larvaCount +
+              item.result.imago.varroaCount * item.imagoCount) /
             (item.larvaCount + item.imagoCount),
-          부저병:
-            (item.result.larva.foulBroodCount + item.result.imago.dwvCount) /
-            (item.larvaCount + item.imagoCount),
+          부저병: item.result.larva.foulBroodRatio,
           석고병: item.result.larva.chalkBroodRatio,
           날개바이러스: item.result.imago.dwvRatio,
         };
