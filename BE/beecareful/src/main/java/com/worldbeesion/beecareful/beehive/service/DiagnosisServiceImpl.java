@@ -141,21 +141,75 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         // 4. Wait for all asynchronous tasks to complete and collect results
         try {
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
             log.info("All photo processing tasks completed for diagnosisId: {}", diagnosisId);
-
         } catch (Exception e) {
             // This catch block might capture CompletionException if any future failed unexpectedly *during join*
             log.error("Error occurred while waiting for all photo processing tasks for diagnosisId: {}", diagnosisId, e);
+            throw e;
         }
 
         log.info("Finished diagnosis process for diagnosisId: {}", diagnosisId);
 
-        // 5. Notify user
+        // 5. Update Beehive Status
+        // if any of the disease detected, update beehive.is_infected to true.
         Beehive beehive = diagnosis.getBeehive();
+        List<AnalyzedPhoto> analyzedPhotos = analyzedPhotoRepository.getAnalyzedPhotosByDiagnosisId(diagnosisId);
+
+        // Get IDs of all analyzed photos
+        List<Long> analyzedPhotoIds = analyzedPhotos.stream()
+            .map(AnalyzedPhoto::getId)
+            .toList();
+
+        // Check if any diseases were detected with count > 0
+        boolean hasDisease = false;
+        if (!analyzedPhotoIds.isEmpty()) {
+            List<DiagnosisResultProjection> diagnosisResults =
+                analyzedPhotoDiseaseRepository.getDiagnosisResultByAnalyzedPhotoIds(analyzedPhotoIds);
+
+            // Get total counts for Larva and Imago
+            TotalCountImagoLarvaProjection totalCounts = analyzedPhotoRepository.getTotalCountByDiagnosis(diagnosisId);
+            Long totalLarva = totalCounts.getLarvaCount();
+            Long totalImago = totalCounts.getImagoCount();
+
+            // Sum up all disease counts using stream.collect
+            Map<String, Long> summedDiseases = new HashMap<>();
+
+            // Sum up all disease counts
+            for (DiagnosisResultProjection result : diagnosisResults) {
+                summedDiseases.put("larvavarroaCount", summedDiseases.get("larvavarroaCount") + result.getLarvavarroaCount());
+                summedDiseases.put("larvafoulBroodCount", summedDiseases.get("larvafoulBroodCount") + result.getLarvafoulBroodCount());
+                summedDiseases.put("larvachalkBroodCount", summedDiseases.get("larvachalkBroodCount") + result.getLarvachalkBroodCount());
+                summedDiseases.put("imagovarroaCount", summedDiseases.get("imagovarroaCount") + result.getImagovarroaCount());
+                summedDiseases.put("imagodwvCount", summedDiseases.get("imagodwvCount") + result.getImagodwvCount());
+            }
+
+            // Calculate percentages for Larvavarroa and Imagovarroa
+            double larvaVarroaPercentage = calculateDiseaseRatio(summedDiseases.get("larvavarroaCount"), totalLarva);
+            double imagoVarroaPercentage = calculateDiseaseRatio(summedDiseases.get("imagovarroaCount"), totalImago);
+
+            // Check if percentages are > 5% for varroa diseases or if count > 0 for other diseases
+            boolean hasLarvaVarroa = larvaVarroaPercentage > 5.0;
+            boolean hasImagoVarroa = imagoVarroaPercentage > 5.0;
+
+            if (hasLarvaVarroa ||
+                hasImagoVarroa ||
+                summedDiseases.get("larvafoulBroodCount") > 0 ||
+                summedDiseases.get("larvachalkBroodCount") > 0 ||
+                summedDiseases.get("imagodwvCount") > 0) {
+                hasDisease = true;
+            }
+        }
+
+        beehive.updateIsInfected(hasDisease);
+        beehiveRepository.save(beehive);
+        log.info("Updated beehive.isInfected to {} for beehiveId: {}", hasDisease, beehive.getId());
+
+        // 6. Notify user
         Member member = beehive.getApiary().getMember();
         fcmService.alertNotificationByFCM(member, new NotificationRequestDto(beehive.getId(), "진단 완료", NotificationType.SUCCESS));
 
+        log.info("Sent Notification for beehiveId: {}", beehive.getId());
     }
 
     /**
@@ -448,5 +502,11 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         return response;
+    }
+
+    private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {
+        if (totalCount == null || totalCount == 0)
+            return 0;
+        return (double)diseaseCount / totalCount * 100;
     }
 }
