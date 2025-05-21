@@ -1,14 +1,18 @@
 # This module contains the core logic for bee disease analysis using a YOLO model.
 
+import os
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from typing import Dict, Tuple
 import json
 
-# --- Constants ---
-MODEL_PATH = "https://huggingface.co/Twinkay/BEE_DISEASE/resolve/main/bee_disease.pt"
+# --- S3 Configuration ---
+# Read custom environment variables for AWS credentials and bucket name
+# These will be read from the actual environment, which includes .env variables if loaded.
+BEE_DISEASE_MODEL_PATH = os.environ.get("BEE_DISEASE_MODEL_PATH")
 
+# --- Constants ---
 CLASS_NAMES = [
     "유충_정상",
     "유충_응애",
@@ -31,7 +35,7 @@ SKIP_DRAW = {"유충_정상", "성충_정상"}
 
 
 # --- Model Loading ---
-def load_model(model_path: str = MODEL_PATH) -> YOLO:
+def load_model(model_path: str = BEE_DISEASE_MODEL_PATH) -> YOLO:
     """
     Loads the YOLO model from the specified path.
 
@@ -174,15 +178,24 @@ def analyze_bee_image(
 
 
 if __name__ == "__main__":
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv()
+        print("Loaded .env file.")
+    except ImportError:
+        print("Install python-dotenv for local development.")
+    except Exception as e:
+        print(f"Error loading .env file: {e}")
+
     print("Testing bee_analyzer module with batch images...")
     test_img_dir = "test_img"
     analyzed_img_dir = "analyzed_img"
 
-    import os
     os.makedirs(analyzed_img_dir, exist_ok=True)
 
     try:
-        test_model = load_model()
+        test_model = load_model(os.environ.get("BEE_DISEASE_MODEL_PATH"))
     except Exception as e:
         print(f"Failed to load model: {e}")
         exit(1)
