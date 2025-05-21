@@ -44,10 +44,6 @@ public class FCMServiceImpl implements FCMService {
 
     private void sendMessage(String token, String title, String body, NotificationRequestDto dto) {
         log.debug("Start sending message: {} {}", title, body);
-        Notification notification = Notification.builder()
-                .setTitle(title)
-                .setBody(body)
-                .build();
 
         Map<String, String> data = Map.of(
                 "beehiveId", String.valueOf(dto.beehiveId()),
@@ -57,7 +53,6 @@ public class FCMServiceImpl implements FCMService {
 
         Message message = Message.builder()
                 .setToken(token)
-                .setNotification(notification)
                 .putAllData(data)
                 .build();
 
