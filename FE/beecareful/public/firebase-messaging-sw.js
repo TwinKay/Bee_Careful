@@ -56,7 +56,7 @@ const openDatabase = () => {
 const convertMessageToNotification = (payload) => {
   // FCM 페이로드 구조에 따라 데이터 추출
   const title = payload.notification?.title || payload.data?.alertTitle || '새 알림';
-  const body = payload.notification?.body || payload.data?.alertBody || '';
+  const body = payload.notification?.body || payload.data?.alertBody || payload.data?.message || '';
 
   // 데이터 필드 생성
   let dataField = undefined;
@@ -65,7 +65,7 @@ const convertMessageToNotification = (payload) => {
     if (payload.data && typeof payload.data.beehiveId === 'string') {
       dataField = {
         beehiveId: payload.data.beehiveId,
-        message: payload.data.message || body,
+        message: body,
         status: payload.data.status || 'warning', // 'warning', 'success', 'danger' 중 하나
       };
     }
@@ -140,6 +140,12 @@ messaging.onBackgroundMessage(async (payload) => {
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  console.log('[firebase-messaging-sw.js] 알림 클릭:', event.notification);
+  event.notification.close(); // Close the notification
+  clients.openWindow('/'); // Open a specific page
 });
 
 // Service Worker 활성화 즉시 처리
