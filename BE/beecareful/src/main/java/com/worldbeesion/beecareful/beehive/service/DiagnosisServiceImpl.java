@@ -113,7 +113,6 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     @Override
-    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void runDiagnosis(Long diagnosisId) {
         log.info("Starting diagnosis process for diagnosisId: {}", diagnosisId);
 
@@ -173,16 +172,17 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         Long totalImago = totalCounts.getImagoCount();
 
         // Sum up all disease counts
-        Map<String, Long> summedDiseases = new HashMap<>();
+        Map<String, Long> summedDiseases = new HashMap<>(
+            Map.of("larvavarroaCount", 0L, "larvafoulBroodCount", 0L, "larvachalkBroodCount", 0L, "imagovarroaCount", 0L, "imagodwvCount", 0L)
+        );
 
         // Sum up all disease counts
         for (DiagnosisResultProjection result : diagnosisResults) {
-            summedDiseases.put("larvavarroaCount", summedDiseases.getOrDefault("larvavarroaCount", 0L) + result.getLarvavarroaCount());
-            summedDiseases.put("larvafoulBroodCount", summedDiseases.getOrDefault("larvafoulBroodCount", 0L) + result.getLarvafoulBroodCount());
-            summedDiseases.put("larvachalkBroodCount",
-                summedDiseases.getOrDefault("larvachalkBroodCount", 0L) + result.getLarvachalkBroodCount());
-            summedDiseases.put("imagovarroaCount", summedDiseases.getOrDefault("imagovarroaCount", 0L) + result.getImagovarroaCount());
-            summedDiseases.put("imagodwvCount", summedDiseases.getOrDefault("imagodwvCount", 0L) + result.getImagodwvCount());
+            summedDiseases.put("larvavarroaCount", summedDiseases.get("larvavarroaCount") + result.getLarvavarroaCount());
+            summedDiseases.put("larvafoulBroodCount", summedDiseases.get("larvafoulBroodCount") + result.getLarvafoulBroodCount());
+            summedDiseases.put("larvachalkBroodCount", summedDiseases.get("larvachalkBroodCount") + result.getLarvachalkBroodCount());
+            summedDiseases.put("imagovarroaCount", summedDiseases.get("imagovarroaCount") + result.getImagovarroaCount());
+            summedDiseases.put("imagodwvCount", summedDiseases.get("imagodwvCount") + result.getImagodwvCount());
         }
 
         log.info("Summed Result: {}", summedDiseases);
