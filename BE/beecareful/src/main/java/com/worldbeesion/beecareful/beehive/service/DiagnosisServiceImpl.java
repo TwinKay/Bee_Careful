@@ -288,12 +288,12 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             // Create and save AnalyzedPhoto entity
             AnalyzedPhoto analyzedPhoto = createAnalyzedPhotoEntity(originalPhoto, diagnosis, analyzedImageMetadata, diagResult);
             analyzedPhotoRepository.save(analyzedPhoto);
-            log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhoto entity with ID: {}",
-                diagnosis.getId(), photoId, analyzedPhoto.getId());
+            log.info("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhoto entity: {}",
+                diagnosis.getId(), photoId, analyzedPhoto);
 
             // Save associated disease details
             saveAnalyzedPhotoDiseases(analyzedPhoto, diagResult);
-            log.debug("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhotoDisease entities.", diagnosis.getId(), photoId);
+            log.info("[DiagnosisId: {}, PhotoId: {}] Saved AnalyzedPhotoDisease entities.", diagnosis.getId(), photoId);
 
             // Update original photo status to SUCCESS
             originalPhoto.updateStatus(DiagnosisStatus.SUCCESS);
