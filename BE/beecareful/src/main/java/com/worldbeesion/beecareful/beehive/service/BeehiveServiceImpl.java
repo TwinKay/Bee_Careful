@@ -252,25 +252,30 @@ public class BeehiveServiceImpl implements BeehiveService {
         beehive.updateDirection(beehiveUpdateDto.xDirection(), beehiveUpdateDto.yDirection());
     }
 
+
     @Override
     @Transactional
     public void deleteBeehive(Long beehiveId, UserDetailsImpl userDetails) {
-        Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
-        if (beehive == null || beehive.getDeletedAt() != null) {
-            throw new BeehiveNotFoundException();
-        }
+//        Beehive beehive = beehiveRepository.findById(beehiveId).orElse(null);
+//        if (beehive == null || beehive.getDeletedAt() != null) {
+//            throw new BeehiveNotFoundException();
+//        }
 
-        Member member = membersRepository.findById(userDetails.getMemberId()).orElseThrow(MemberNotFoundException::new);
+//        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
+//        if (!isExist) {
+//            throw new BeehiveNotFoundException();
+//        }
+
+        Member member = membersRepository.findById(userDetails.getMemberId())
+                .orElseThrow(MemberNotFoundException::new);
         Apiary apiary = apiaryRepository.findByMember(member);
-        boolean isExist = beehiveRepository.existsByIdAndApiary(beehiveId, apiary);
-
-        if (!isExist) {
-            throw new BeehiveNotFoundException();
-        }
-
-        beehive.delete();
-
+        Beehive findBeehive = beehiveRepository.findByIdAndApiaryAndDeletedAtIsNull(beehiveId, apiary)
+                .orElseThrow(BeehiveNotFoundException::new);
+        turretRepository.deleteByBeehive(findBeehive);
+        findBeehive.delete();
     }
+
+
 
     private double calculateDiseaseRatio(Long diseaseCount, Long totalCount) {
         if (totalCount == 0)

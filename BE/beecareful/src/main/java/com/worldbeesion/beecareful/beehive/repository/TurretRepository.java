@@ -24,4 +24,6 @@ public interface TurretRepository extends JpaRepository<Turret, Long> {
 
     @Query("SELECT t.beehive FROM Turret t WHERE t.id = :turretId")
     Optional<Beehive> findBeehiveByTurretId(@Param("turretId") Long turretId);
+
+    void deleteByBeehive(Beehive beehive);
 }
