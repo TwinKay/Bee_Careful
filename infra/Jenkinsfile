@@ -1,0 +1,143 @@
+pipeline {
+    agent any
+    environment {
+        SRC_REPO     = '' // source code repository 주소
+        SRC_CRED     = 'src-repository-jenkins-pat' // source code repository 접근 access token의 Jenkins credential 상 id
+        COMPOSE_FILE = 'docker-compose.app.yaml'
+    }
+
+    stages {
+        stage('Checkout src code') {
+            steps {
+                dir('src') {
+                    git branch: 'develop', url: SRC_REPO, credentialsId: SRC_CRED
+                }
+                withCredentials([file(credentialsId: 'firebase', variable: 'FIREBASE_KEY')]) {
+                    script {
+                    // Jenkins 작업 디렉토리 내에서 복사할 경로 확인
+                        sh "echo Current working directory: \$(pwd)"
+                        sh "ls -al ${WORKSPACE}/src/BE/beecareful"  // 이 부분 경로 확인
+                    
+                        // .env 파일 복사
+                        sh "cp ${FIREBASE_KEY} ${WORKSPACE}/src/BE/beecareful/src/main/resources/beecareful-firebase.json"
+                    }
+                }
+                stash name: 'source', includes: 'src/**'
+            }
+        }
+
+        stage('Prepare build dirs') {
+            steps {
+                sh 'mkdir -p build/FE build/BE'
+            }
+        }
+
+        stage('Build src') {
+            parallel {
+                stage('Build FE') {
+                    agent {
+                        docker {
+                            image 'node:20-alpine'
+                            args  "-v $HOME/.pnpm-store:/pnpm/store"
+                        }
+                    }
+                    steps {
+                        unstash 'source'
+                        dir('src/FE/beecareful') {
+                            sh '''
+                                corepack enable
+                                corepack prepare pnpm@9 --activate
+                                pnpm install --frozen-lockfile
+                                pnpm run build
+                                mkdir -p "$WORKSPACE/build/FE"
+                                cp -r dist/. "$WORKSPACE/build/FE/"
+                            '''
+                        }
+                        stash name: 'build-FE', includes: 'build/FE/**/*', allowEmpty: false
+                    }
+                }
+
+                stage('Build BE') {
+                    agent {
+                        docker {
+                            image 'gradle:8.5-jdk17-alpine'
+                            args  "-v $HOME/.gradle:/home/gradle/.gradle"
+                        }
+                    }
+                    steps {
+                        unstash 'source'
+                        dir('src/BE/beecareful') {
+                            sh '''
+                                ./gradlew clean bootJar -x test
+                                mkdir -p "$WORKSPACE/build/BE"
+                                cp build/libs/*.jar "$WORKSPACE/build/BE/"
+                            '''
+                        }
+                        stash name: 'build-BE', includes: 'build/BE/**/*', allowEmpty: false
+                    }
+                }
+
+                stage('Build AI') {
+                    steps {
+                        unstash 'source' // Unstash the full source code checked out earlier
+                        // The AI source and Dockerfile are in src/AI/diagnosis
+                        // We stash this directory to be used as the build context for the Docker image.
+                        stash name: 'ai-build-context', includes: 'src/AI/diagnosis/**/*', allowEmpty: false
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker images') {
+            parallel {
+                stage('app-nginx') {
+                    steps {
+                        unstash 'build-FE'
+                        writeFile file: 'Dockerfile.fe.tmp', text: '''
+                            FROM nginx:stable-alpine
+                            COPY app/nginx/conf.d/ /etc/nginx/conf.d/
+                            COPY build/FE/ /usr/share/nginx/html
+                        '''
+                        sh 'docker build -t app-nginx:latest -f Dockerfile.fe.tmp .'
+                        sh 'rm Dockerfile.fe.tmp'
+                    }
+                }
+                stage('app-backend') {
+                    steps {
+                        unstash 'build-BE'
+                        writeFile file: 'Dockerfile.be.tmp', text: '''
+                            FROM eclipse-temurin:17-jre-jammy
+                            WORKDIR /app
+                            COPY build/BE/*.jar ./app.jar
+                            ENTRYPOINT ["java","-jar","app.jar"]
+                        '''
+                        sh 'docker build -t app-backend:latest -f Dockerfile.be.tmp .'
+                        sh 'rm Dockerfile.be.tmp'
+                    }
+                }
+                stage('ai-server') {
+                    steps {
+                        unstash 'ai-build-context' // This unstashes src/AI/diagnosis/* into the current workspace
+                        // The context for the Docker build will be the src/AI/diagnosis directory.
+                        // It is assumed that 'Dockerfile' is present in src/AI/diagnosis.
+                        dir('src/AI/diagnosis') {
+                            sh 'docker build -t ai-server:latest -f Dockerfile .'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Restart services') {
+            steps {
+                sh "docker compose -f ${COMPOSE_FILE} up -d --remove-orphans --pull=never"
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
