@@ -1,0 +1,91 @@
+@import 'remixicon/fonts/remixicon.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#root {
+  /* 기본(모바일) 설정 */
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  font-family: Pretendard;
+  touch-action: none;
+}
+
+/* 태블릿 크기 (640px 이상) */
+@media (min-width: 640px) {
+  #root {
+    max-width: 640px;
+  }
+}
+
+/* 작은 데스크탑 크기 (768px 이상) */
+@media (min-width: 768px) {
+  #root {
+    max-width: 768px;
+  }
+}
+
+/* 큰 데스크탑 크기 (1024px 이상) */
+@media (min-width: 1024px) {
+  #root {
+    max-width: 1024px;
+  }
+}
+
+/* 더 큰 데스크탑 크기 (1280px 이상) */
+@media (min-width: 1280px) {
+  #root {
+    max-width: 1280px;
+  }
+}
+
+@font-face {
+  font-family: 'yg-jalnan';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_four@1.2/JalnanOTF00.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* 지도 컨테이너 - 스크롤바 숨기기 */
+.map-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Chrome, Safari, Edge */
+.map-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* 텍스트 선택 방지 */
+.map-container,
+.map-container * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* iOS 탭 하이라이트 제거 */
+.map-container * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 이미지 저장 방지 */
+.map-container img,
+.map-container svg {
+  -webkit-touch-callout: none;
+  touch-callout: none;
+  pointer-events: auto;
+  user-drag: none;
+  -webkit-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* 드래그 중 요소 컨테이너 */
+.hive-container {
+  touch-action: none;
+}

@@ -1,0 +1,130 @@
+import Button from '@/components/common/Button';
+import Card from '@/components/common/Card';
+import CardTitle from '@/components/common/CardTitle';
+import RemixIcon from '@/components/common/RemixIcon';
+import DiagnosisPieChart from '@/components/diagnosis/DiagnosisPieChart';
+import ResultImageModal from '@/components/diagnosis/ResultImageModal';
+import type { DiagnosisDataType } from '@/types/diagnosis';
+import { getLocaleDateString } from '@/utils/getLocaleDateString';
+import { parseDiagnosisData } from '@/utils/parseDiagnosisData';
+import { useMemo, useState } from 'react';
+
+const DiagnosisDetailPage: React.FC<DiagnosisDataType> = (data) => {
+  const parsedData = useMemo(() => parseDiagnosisData(data), [data]);
+
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-start gap-4">
+      <Card className="items-center">
+        <RemixIcon name="ri-stethoscope-fill" className="ri-3x" />
+        <CardTitle className="justify-center">검사 결과표</CardTitle>
+        <p className="text-sm font-extrabold text-gray-400">
+          {getLocaleDateString(data.createdAt)}
+        </p>
+        <Button
+          size="lg"
+          variant="success"
+          className="justify-between gap-2"
+          startIcon={<RemixIcon name="ri-image-line" className="ri-md" />}
+          endIcon={<RemixIcon name="ri-arrow-right-s-line" className="ri-md" />}
+          fullWidth
+          onClick={() => {
+            setImageModalOpen(true);
+          }}
+        >
+          <p className="ml-2 w-full text-start font-extrabold">결과 사진 상세보기</p>
+        </Button>
+        <div className="flex w-full flex-col items-start gap-4">
+          <CardTitle>검사 개체 수</CardTitle>
+          <div className="flex w-full flex-col items-start gap-1">
+            <div className="flex w-full items-end justify-between p-2">
+              <p className="text-lg font-bold text-gray-500">성충</p>
+              <p>
+                <span className="text-lg font-extrabold">{parsedData.imagoCount}</span> &nbsp;
+                <span className="font-bold text-bc-brown-10">마리</span>
+              </p>
+            </div>
+
+            <div className="h-[1px] w-full bg-gray-200"></div>
+
+            <div className="flex w-full items-end justify-between p-2">
+              <p className="text-lg font-bold text-gray-500">유충</p>
+              <p>
+                <span className="text-lg font-extrabold">{parsedData.larvaCount}</span> &nbsp;
+                <span className="font-bold text-bc-brown-10">마리</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+      <Card>
+        <CardTitle>
+          <span className="text-bc-yellow-100">성충</span>&nbsp; 질병 감염 현황
+        </CardTitle>
+        <DiagnosisPieChart data={parsedData.imagoDisease} />
+        <div className="flex w-full flex-col gap-2.5">
+          {parsedData.imagoDisease.map((item, index) => (
+            <div key={item.name}>
+              <div className="flex justify-between p-2">
+                <p className="text-lg font-bold text-gray-500">{item.name}</p>
+                <div className="flex flex-col items-end">
+                  <p>
+                    <span
+                      className={`text-lg font-extrabold ${item.name == '정상' ? 'text-gray-600' : 'text-red-500'}`}
+                    >
+                      {Number(item.ratio).toFixed(3)}%
+                    </span>
+                  </p>
+                  <p className="font-bold text-gray-400">
+                    <span className="text-sm ">{item.value}</span>
+                    <span className="text-sm">마리</span>
+                  </p>
+                </div>
+              </div>
+              {index !== parsedData.imagoDisease.length - 1 && (
+                <div className="h-[1px] w-full bg-gray-200"></div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card>
+        <CardTitle>
+          <span className="text-bc-yellow-100">유충</span>&nbsp; 질병 감염 현황
+        </CardTitle>
+        <DiagnosisPieChart data={parsedData.larvaDisease} />
+
+        <div className="flex w-full flex-col gap-2.5">
+          {parsedData.larvaDisease.map((item, index) => (
+            <div key={item.name}>
+              <div className="flex justify-between p-2">
+                <p className="text-lg font-bold text-gray-500">{item.name}</p>
+                <div className="flex flex-col items-end">
+                  <p>
+                    <span
+                      className={`text-lg font-extrabold ${item.name == '정상' ? 'text-gray-600' : 'text-red-500'}`}
+                    >
+                      {item.ratio}%
+                    </span>
+                  </p>
+                  <p className="font-bold text-gray-400">
+                    <span className="text-sm ">{item.value}</span>
+                    <span className="text-sm">마리</span>
+                  </p>
+                </div>
+              </div>
+              {index !== parsedData.larvaDisease.length - 1 && (
+                <div className="h-[1px] w-full bg-gray-200"></div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+      {imageModalOpen && (
+        <ResultImageModal diagnosisId={data.diagnosisId} onClose={() => setImageModalOpen(false)} />
+      )}
+    </div>
+  );
+};
+export default DiagnosisDetailPage;

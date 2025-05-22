@@ -25,14 +25,17 @@ bin/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-/db/master/
+
 /db/master/data/
+/redis/data/
 /grafana
-src/main/resources/firebase
+/src/main/resources/beecareful-firebase.json
 
 ### docker-compose ###
 .env
 
+### FCM ###
+src/main/resources/beecareful-firebase.json
 
 ### NetBeans ###
 /nbproject/private/
@@ -41,7 +44,10 @@ src/main/resources/firebase
 /nbdist/
 /.nb-gradle/
 
-### macOS ###
+### VS Code ###
+.vscode/
+
+### MacOS ###
 # General
 .DS_Store
 .AppleDouble
@@ -73,25 +79,3 @@ Temporary Items
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
-
-### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
-
-# Local History for Visual Studio Code
-.history/
-
-# Built Visual Studio Code Extensions
-*.vsix
-
-
-### VisualStudioCode Patch ###
-# Ignore all local history of files
-.history
-.ionide
-
-

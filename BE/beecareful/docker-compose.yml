@@ -1,9 +1,30 @@
 services:
-  becareful-db:
+  beecareful-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    image: beecareful-backend:latest
+    container_name: beecareful-backend
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATASOURCE_URL: ${MYSQL_DATASOURCE_URL}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_USER: ${MYSQL_USERNAME}
+    depends_on:
+      - beecareful-db
+    restart: always
+
+  beecareful-db:
     image: mysql:8.0
     restart: always
     ports:
       - "3306:3306"
+    container_name: beecareful-db
+    env_file:
+      - .env
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USERNAME}
@@ -16,21 +37,39 @@ services:
     volumes:
       - ./db/master/initdb.d:/docker-entrypoint-initdb.d
       - ./db/master/data:/var/lib/mysql
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#      - mysql_data:/var/lib/mysql
 
-  grafana:
-    image: grafana/grafana:latest
+  beecareful-redis:
+    image: redis:7.2-alpine
+    restart: always
     ports:
-      - "3000:3000"
+      - "6379:6379"
+    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - prometheus
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     volumes:
-      - ./grafana:/var/lib/grafana
+      - ./redis/data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+
+#volumes:
+#  mysql_data:
+#  redis_data:
+
+#  prometheus:
+#    image: prom/prometheus:latest
+#    ports:
+#      - "9090:9090"
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#
+#  grafana:
+#    image: grafana/grafana:latest
+#    ports:
+#      - "3000:3000"
+#    environment:
+#      - GF_SECURITY_ADMIN_USER=admin
+#      - GF_SECURITY_ADMIN_PASSWORD=admin
+#    depends_on:
+#      - prometheus
+#    volumes:
+#      - ./grafana:/var/lib/grafana

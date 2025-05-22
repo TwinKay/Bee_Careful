@@ -1,7 +1,9 @@
 server:
-  port: 8081
+  port: 8080
 
 spring:
+  config:
+    import: application-aws.yml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${MYSQL_DATASOURCE_URL}
@@ -9,14 +11,30 @@ spring:
     password: ${MYSQL_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+jwt:
+  secretKey: ${JWT_SECRET}
+
+aws:
+  s3:
+    bucketName: ${S3_BUCKET_NAME}
+    apiSecret: ${S3_API_SECRET}
+
+ai-server:
+  baseUrl: ${AI_BASEURL}
+  diagnosis-path: ${AI_DIAGNOSIS_PATH}
 
 logging:
   level:
-    org.springframework.security : DEBUG
-    org.springframework.web : DEBUG
-    org.ssafy.beecareful : debug
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG

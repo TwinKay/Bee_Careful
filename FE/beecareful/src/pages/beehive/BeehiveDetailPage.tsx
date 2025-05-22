@@ -1,0 +1,396 @@
+import Button from '@/components/common/Button';
+import Card from '@/components/common/Card';
+import Toggle from '@/components/common/Toggle';
+import { useMemo, useRef, useState } from 'react';
+import DiagnosisLineChart from '@/components/diagnosis/DiagnosisLineChart';
+import CardTitle from '@/components/common/CardTitle';
+import DiagnosisList from '@/components/diagnosis/DiagnosisList';
+import { useHeaderIcon } from '@/hooks/useHeaderIcon';
+import BottomSheet from '@/components/common/BottomSheet';
+import type { HeaderIconOptionType } from '@/layouts/MainLayout';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  useDeleteBeehive,
+  useGetBeehiveRecords,
+  useLinkTurret,
+  useUpdateBeehive,
+} from '@/apis/beehive';
+import type { DiagnosisDataType } from '@/types/diagnosis';
+import type { ToastPositionType, ToastType } from '@/components/common/Toast';
+import { ROUTES } from '@/config/routes';
+import Toast from '@/components/common/Toast';
+import { useQueryClient } from '@tanstack/react-query';
+import useBeehiveStore from '@/store/beehiveStore';
+
+const BeehiveDetailPage = () => {
+  const param = useParams();
+  const beehiveId = param.id;
+  const route = useNavigate();
+
+  const [isToggleLeft, setIsToggleLeft] = useState(true);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [isEditNameOpen, setIsEditNameOpen] = useState(false);
+  const [isLinkTurretOpen, setIsLinkTurretOpen] = useState(false);
+  const [isEditTurretOpen, setIsEditTurretOpen] = useState(false);
+  const [isDeleteBeehiveOpen, setIsDeleteBeehiveOpen] = useState(false);
+  const [newNickname, setNewNickname] = useState('');
+  const [isNicknameChanged, setIsNicknameChanged] = useState(false);
+  const [turretSerial, setTurretSerial] = useState('');
+
+  // Toast 상태
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<ToastType>('info');
+  const [toastPosition, setToastPosition] = useState<ToastPositionType>('top');
+  const [showToast, setShowToast] = useState(false);
+
+  const { selectedBeehive } = useBeehiveStore();
+
+  const { mutate: mutateTurret } = useLinkTurret();
+
+  const queryClient = useQueryClient();
+
+  // Toast 표시 함수
+  const showToastMessage = (
+    message: string,
+    type: ToastType = 'info',
+    position: ToastPositionType = 'top',
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastPosition(position);
+    setShowToast(true);
+  };
+
+  const { data: beehiveData } = useGetBeehiveRecords(Number(beehiveId), isToggleLeft ? 6 : 12);
+
+  // 삭제 mutate 함수
+  const { mutate: deleteBeehive } = useDeleteBeehive();
+
+  // 수정 mutate 함수
+  const { mutate: updateBeehive } = useUpdateBeehive();
+
+  // 벌통 삭제 핸들러
+  const handleDeleteHive = () => {
+    deleteBeehive(Number(beehiveId), {
+      onSuccess: () => {
+        route(ROUTES.BEEHIVES, {
+          state: {
+            showToast: true,
+            toastMessage: '벌통이 삭제되었습니다.',
+            toastType: 'success',
+          },
+        });
+      },
+      onError: (error) => {
+        console.log(error);
+        showToastMessage('벌통 삭제에 실패하였습니다.', 'warning', 'middle');
+      },
+    });
+  };
+
+  // 별명 수정 핸들러
+  const handleUpdateNickname = () => {
+    if (!newNickname.trim()) {
+      showToastMessage('벌통 별명을 입력해주세요.', 'warning', 'middle');
+      return;
+    }
+    // 현재 위치 정보 유지
+    const xDirection = selectedBeehive?.xDirection || 0;
+    const yDirection = selectedBeehive?.yDirection || 0;
+
+    updateBeehive(
+      {
+        beeHiveId: Number(beehiveId),
+        nickname: newNickname,
+        xDirection,
+        yDirection,
+      },
+      {
+        onSuccess: () => {
+          showToastMessage('벌통 별명이 수정되었습니다.', 'success', 'middle');
+          setIsEditNameOpen(false);
+          // 변경 감지 상태 리셋
+          setIsNicknameChanged(false);
+
+          // 데이터 갱신을 위해 쿼리 무효화
+          queryClient.invalidateQueries({
+            queryKey: ['beehiveRecords', Number(beehiveId), isToggleLeft ? 6 : 12],
+          });
+        },
+        onError: (error) => {
+          console.log(error);
+          showToastMessage('벌통 별명 수정에 실패하였습니다.', 'warning', 'middle');
+        },
+      },
+    );
+  };
+
+  // 입력 핸들러 추가
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+
+    if (id === 'nickname') {
+      setNewNickname(value);
+      // 원래 별명과 새 별명이 다른지 확인
+      setIsNicknameChanged(value.trim() !== beehiveData?.nickname);
+    }
+  };
+
+  const recentData = useMemo(
+    () =>
+      beehiveData?.diagnoses.filter(
+        ({ createdAt }: DiagnosisDataType) =>
+          new Date(createdAt).getTime() >
+          new Date().getTime() - (isToggleLeft ? 6 : 12) * 30 * 24 * 60 * 60 * 1000,
+      ),
+    [isToggleLeft, beehiveData],
+  );
+
+  const onIconClick = () => {
+    setIsBottomSheetOpen(true);
+  };
+
+  const headerOption = useRef<HeaderIconOptionType>({ onClick: onIconClick });
+
+  useHeaderIcon(headerOption);
+
+  // 별명 수정 바텀시트를 열 때 현재 별명으로 초기화
+  const openEditNameBottomSheet = () => {
+    if (beehiveData) {
+      setNewNickname(beehiveData.nickname || '');
+      setIsNicknameChanged(false);
+    }
+    setIsEditNameOpen(true);
+  };
+
+  if (!beehiveId) {
+    route(ROUTES.BEEHIVES);
+  }
+
+  const openLinkTurret = () => {
+    setIsEditTurretOpen(true);
+  };
+
+  const linkTurret = () => {
+    if (!beehiveId) return;
+    mutateTurret(
+      {
+        beehiveId: beehiveId,
+        serial: turretSerial,
+      },
+      {
+        onSuccess: () => {
+          showToastMessage('말벌 퇴치 장치가 연동되었습니다.', 'success', 'middle');
+          queryClient.invalidateQueries({
+            queryKey: ['beehiveRecords'],
+          });
+        },
+        onError: (error) => {
+          console.log(error);
+          showToastMessage('말벌 퇴치 장치 연동에 실패하였습니다.', 'warning', 'middle');
+        },
+      },
+    );
+  };
+
+  return (
+    <>
+      <div className="flex w-full items-center justify-between p-4">
+        <div className="flex flex-col items-start">
+          <p className="text-lg font-bold">{beehiveData?.nickname}</p>
+          <p className="font-semibold text-bc-yellow-100">벌통</p>
+        </div>
+        {beehiveData?.turretId ? (
+          <Button onClick={openLinkTurret} variant="success" className="py-2">
+            <p className="text-brown-100 font-bold">장치 연동 중</p>
+          </Button>
+        ) : (
+          <Button
+            onClick={openLinkTurret}
+            className="bg-gray-300 py-2 hover:bg-gray-300"
+            variant="text"
+          >
+            <p className="font-bold text-gray-600">장치 미연동</p>
+          </Button>
+        )}
+      </div>
+      <Card className="px-0">
+        <CardTitle className="px-6">질병 감염 통계</CardTitle>
+        <Toggle
+          onToggle={(status) => {
+            setIsToggleLeft(status);
+          }}
+          isLeft={isToggleLeft}
+          leftLabel="6개월"
+          rightLabel="1년"
+        />
+        {!(recentData?.length > 0) ? (
+          <div className="flex h-24 flex-col items-center justify-center gap-6 p-20">
+            <p className="text-gray-500">검사 내역이 없어요.</p>
+            <Button
+              variant="success"
+              onClick={() => {
+                route(ROUTES.DIAGNOSIS_CREATE(Number(beehiveId)));
+              }}
+            >
+              질병 검사하러 가기
+            </Button>
+          </div>
+        ) : (
+          <DiagnosisLineChart data={recentData} />
+        )}
+      </Card>
+      <Card>
+        <CardTitle>질병 검사 결과</CardTitle>
+        {!(recentData?.length > 0) ? (
+          <div className="flex h-24 items-center justify-center">
+            <p className="text-gray-500">검사 결과가 없어요. 🥲</p>
+          </div>
+        ) : (
+          <DiagnosisList data={recentData} />
+        )}
+      </Card>
+
+      <BottomSheet
+        isOpen={isBottomSheetOpen}
+        onClose={() => setIsBottomSheetOpen(false)}
+        title="벌통 정보 수정"
+        buttons={[
+          {
+            id: 'edit name',
+            label: '별명 수정하기',
+            variant: 'neutral',
+            onClick: () => {
+              setIsBottomSheetOpen(false);
+              openEditNameBottomSheet();
+            },
+          },
+          {
+            id: 'turret',
+            label: '말벌 장치 연동하기',
+            variant: 'success',
+            onClick: () => {
+              setIsBottomSheetOpen(false);
+              setIsLinkTurretOpen(true);
+            },
+          },
+          {
+            id: 'delete',
+            label: '벌통 삭제하기',
+            variant: 'secondary',
+            onClick: () => {
+              setIsBottomSheetOpen(false);
+              setIsDeleteBeehiveOpen(true);
+            },
+          },
+        ]}
+      />
+      <BottomSheet
+        isOpen={isEditNameOpen}
+        onClose={() => setIsEditNameOpen(false)}
+        title="별명 수정"
+        content="별명을 입력해주세요."
+        inputs={[
+          {
+            id: 'nickname',
+            placeholder: '벌통 별명',
+            type: 'text',
+            value: newNickname,
+            onChange: handleInputChange,
+          },
+        ]}
+        buttons={[
+          {
+            id: 'edit name',
+            label: '수정하기',
+            variant: 'success',
+            onClick: () => {
+              handleUpdateNickname();
+            },
+            // 별명이 변경되지 않았거나 빈 값일 경우 버튼 비활성화
+            disabled: !isNicknameChanged || !newNickname.trim(),
+          },
+        ]}
+      />
+      <BottomSheet
+        isOpen={isLinkTurretOpen}
+        onClose={() => setIsLinkTurretOpen(false)}
+        title="말벌 퇴치 장치를 연동하시겠어요?"
+        content="신규 등록 시 기존 장치와의 연동이 해제됩니다."
+        buttons={[
+          {
+            id: 'link turret',
+            label: '등록하기',
+            variant: 'success',
+            onClick: () => {
+              setIsLinkTurretOpen(false);
+              linkTurret();
+            },
+          },
+        ]}
+        inputs={[
+          {
+            id: 'turret serial',
+            placeholder: '장치 코드',
+            type: 'text',
+            value: turretSerial,
+            onChange: (e) => {
+              setTurretSerial(e.target.value);
+            },
+          },
+        ]}
+      />
+      <BottomSheet
+        isOpen={isEditTurretOpen}
+        onClose={() => setIsEditTurretOpen(false)}
+        title="말벌 퇴치 장치를 수정하시겠어요?"
+        content="신규 등록 시 기존 장치와의 연동이 해제됩니다."
+        buttons={[
+          {
+            id: 'edit turret',
+            label: '새로운 말벌 퇴치 장치 연동하기',
+            variant: 'success',
+            onClick: () => {
+              setIsEditTurretOpen(false);
+              setIsLinkTurretOpen(true);
+            },
+          },
+          {
+            id: 'delete turret',
+            label: '말벌 퇴치 장치 해제',
+            variant: 'secondary',
+            onClick: () => {
+              setIsEditTurretOpen(false);
+            },
+          },
+        ]}
+      />
+      <BottomSheet
+        isOpen={isDeleteBeehiveOpen}
+        onClose={() => setIsDeleteBeehiveOpen(false)}
+        title="벌통 삭제"
+        content="정말로 벌통을 삭제하시겠습니까?"
+        buttons={[
+          {
+            id: 'delete beehive',
+            label: '삭제하기',
+            variant: 'success',
+            onClick: () => {
+              handleDeleteHive();
+              setIsDeleteBeehiveOpen(false);
+            },
+          },
+        ]}
+      />
+      {/* Toast 컴포넌트 */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        position={toastPosition}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
+    </>
+  );
+};
+export default BeehiveDetailPage;
