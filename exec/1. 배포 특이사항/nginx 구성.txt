@@ -1,0 +1,5 @@
+infra nginx 
+
+-> app nginx 
+
+-> back or front 

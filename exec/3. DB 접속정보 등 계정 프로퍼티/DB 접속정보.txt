@@ -1,0 +1,5 @@
+MYSQL_DATABASE=beecareful
+MYSQL_USERNAME=beecareful
+MYSQL_PASSWORD=beecareful
+MYSQL_ROOT_PASSWORD=beecareful
+MYSQL_DATASOURCE_URL=jdbc:mysql://beecareful-db:3306/beecareful?serverTimezone=Asia/Seoul

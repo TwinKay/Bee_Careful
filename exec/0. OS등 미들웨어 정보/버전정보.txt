@@ -1,0 +1,20 @@
+OS : Ubuntu 22.04.4 LTS
+JVM :  java17 
+IDE : vscode, (Intellij 23.3.8)
+
+Spring Boot 3.4
+React 19, React Router DOM 7
+
+
+
+Jenkins
+: jenkins/jenkins:lts-jdk17
+
+nginx
+: nginx:stable-alpine
+
+mysql
+: mysql:8.0
+
+redis
+: redis:7.2-alpine
