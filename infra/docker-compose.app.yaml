@@ -1,0 +1,36 @@
+name: world-beesion-app
+
+services:
+  app-nginx:
+    image: app-nginx:latest
+    container_name: world-beesion-app-nginx
+    restart: always
+    env_file:
+      - .env
+    networks: 
+      - world-beesion
+    depends_on:
+      - app-backend
+  app-backend:
+    image: app-backend:latest
+    container_name: world-beesion-app-backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - world-beesion
+  
+  ai-server:
+    image: ai-server:latest
+    container_name: world-beesion-ai-server
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - world-beesion
+
+networks:
+  world-beesion:
+    external: true

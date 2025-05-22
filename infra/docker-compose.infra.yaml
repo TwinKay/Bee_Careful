@@ -1,0 +1,89 @@
+name: world-beesion-infra
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    user: root
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/project/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /usr/libexec/docker/cli-plugins:/usr/lib/docker/cli-plugins:ro
+    group_add:
+      - "${DOCKER_GID:-998}"
+    networks:
+      - world-beesion
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    container_name: world-beesion-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    environment:
+      SERVER_NAME: k12a203.p.ssafy.io
+      TZ: "Asia/Seoul"
+    volumes:
+      # - ./infra/nginx/conf.d:/etc/nginx/conf.d
+      - ./infra/nginx/templates:/etc/nginx/templates:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - world-beesion
+    depends_on:
+      - jenkins
+
+  beecareful-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    container_name: beecareful-db
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USERNAME}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: "Asia/Seoul"
+    env_file:
+      - .env
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - /home/ubuntu/project/mysql/master/data:/var/lib/mysql
+      - /home/ubuntu/project/mysql/master/config:/etc/mysql/conf.d
+      # - ./infra/mysql/master/data:/var/lib/mysql
+
+    networks:
+      - world-beesion
+
+  beecareful-redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    container_name: beecareful-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    environment:
+      TZ: "Asia/Seoul"
+      REDIS_PASSWORD : ${REDIS_PASSWORD}
+    env_file:
+      - .env
+    volumes:
+      - /home/ubuntu/project/redis/data:/data
+      # - ./infra/redis/data:/data
+      - /home/ubuntu/project/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      # - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - world-beesion
+
+volumes:
+  jenkins_home:
+    external: true
+
+networks:
+  world-beesion:
+    external: true
