@@ -1,0 +1,17 @@
+normalization1 = normalization([0.0, 0.0, 0.0], [255.0, 255.0, 255.0])
+
+model_optimization_flavor(optimization_level=4, compression_level=0)
+
+change_output_activation(conv42, sigmoid)
+change_output_activation(conv53, sigmoid)
+change_output_activation(conv63, sigmoid)
+quantization_param([conv42, conv53, conv63], force_range_out=[0.0, 1.0])
+
+performance_param(compiler_optimization_level=max)
+# platform_param(hints=[low_pcie_bandwidth])
+# allocator_param(automatic_ddr=False)
+
+nms_postprocess("/home/j-k12a203/hornet/hailo/postprocess_config/custom_yolov8n_nms_config_1280.json", meta_arch=yolov8, engine=cpu)
+
+model_optimization_config(calibration, batch_size=16, calibset_size=5623)
+post_quantization_optimization(finetune, policy=enabled, dataset_size=5623)
