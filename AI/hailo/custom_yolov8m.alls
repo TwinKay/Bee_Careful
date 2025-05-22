@@ -1,0 +1,15 @@
+normalization1: normalization([0.0, 0.0, 0.0], [255.0, 255.0, 255.0])
+
+model_optimization_flavor(optimization_level=4, compression_level=0)
+
+change_output_activation(conv72, sigmoid)
+change_output_activation(conv83, sigmoid)
+change_output_activation(conv93, sigmoid)
+quantization_param([conv72, conv83, conv93], force_range_out=[0.0, 1.0])
+
+performance_param(compiler_optimization_level=max)
+
+nms_postprocess("/home/j-k12a203/hornet/hailo/postprocess_config/custom_yolov8m_nms_config_1280.json", meta_arch=yolov8, engine=cpu)
+
+model_optimization_config(calibration, batch_size=16, calibset_size=5623)
+post_quantization_optimization(finetune, policy=enabled, dataset_size=5623)
