@@ -61,7 +61,7 @@ export const getDaysDifference = (dateString?: string | null): number => {
   if (!dateString) return 0;
 
   // UTC를 로컬 시간으로 변환
-  const date = convertUTCToLocal(dateString);
+  const date = new Date(dateString);
   if (!date) return 0;
 
   const now = new Date();
@@ -78,7 +78,7 @@ export const formatTimeAgo = (dateString?: string | null): string => {
   if (!dateString) return '-';
 
   // UTC를 로컬 시간으로 변환
-  const date = convertUTCToLocal(dateString);
+  const date = new Date(dateString);
   if (!date) return '-';
 
   const now = new Date();
