@@ -169,7 +169,7 @@ def analyze_bee_image(
         color = COLOR_MAP.get(
             cls_name, (255, 255, 255)
         )  # Default to white if color not mapped
-        cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, 2)
+        cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, 6)
         # Optionally, add text (label) - uncomment if needed
         # cv2.putText(annotated_img, cls_name, (x1, y1 - 8),
         #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
