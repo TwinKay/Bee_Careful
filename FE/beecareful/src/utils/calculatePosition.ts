@@ -7,11 +7,8 @@ import type { BeehiveType } from '@/types/beehive';
 export const MIN_DISTANCE = 120; // 벌통 크기(100) + 여백(20)
 
 // 두 벌통 간의 거리 계산
-export const calculateDistance = (hive1: BeehiveType, hive2: BeehiveType): number => {
-  return Math.sqrt(
-    Math.pow(hive1.xDirection - hive2.xDirection, 2) +
-      Math.pow(hive1.yDirection - hive2.yDirection, 2),
-  );
+export const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
 
 // 위치가 다른 벌통과 충돌하는지 확인
@@ -28,7 +25,7 @@ export const isPositionOccupied = (
     }
 
     // 두 지점 간의 거리 계산
-    const distance = Math.sqrt(Math.pow(hive.xDirection - x, 2) + Math.pow(hive.yDirection - y, 2));
+    const distance = calculateDistance(hive.xDirection, hive.yDirection, x, y);
 
     // 최소 거리보다 가까우면 충돌로 판단
     return distance < MIN_DISTANCE;
