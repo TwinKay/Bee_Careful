@@ -2,6 +2,7 @@ import type React from 'react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { BeehiveType } from '@/types/beehive';
 import { useUpdateBeehive } from '@/apis/beehive';
+import { calculateDistance } from '@/utils/calculatePosition';
 
 type UseMapInteractionsPropsType = {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -10,11 +11,6 @@ type UseMapInteractionsPropsType = {
   mapWidth: number;
   mapHeight: number;
   hiveSize: number;
-};
-
-// 벌통 간 충돌 감지 함수
-const calculateDistance = (x1: number, y1: number, x2: number, y2: number): number => {
-  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 };
 
 const useMapInteractions = ({
@@ -55,13 +51,6 @@ const useMapInteractions = ({
   // 드래그 가능 상태 추적
   const canDragRef = useRef<boolean>(true);
 
-  // 두 벌통 간의 거리 계산 함수
-  const calculateDistance2 = useCallback((hive1: BeehiveType, hive2: BeehiveType): number => {
-    const dx = hive1.xDirection - hive2.xDirection;
-    const dy = hive1.yDirection - hive2.yDirection;
-    return Math.sqrt(dx * dx + dy * dy);
-  }, []);
-
   // 충돌 감지 함수
   const detectCollision = useCallback(
     (hiveId: number, newX: number, newY: number): boolean => {
@@ -91,7 +80,8 @@ const useMapInteractions = ({
           const adjustedX = otherHive.xDirection + Math.cos(angle) * MIN_HIVE_DISTANCE;
           const adjustedY = otherHive.yDirection + Math.sin(angle) * MIN_HIVE_DISTANCE;
 
-          return { x: adjustedX, y: adjustedY };
+          newX = adjustedX;
+          newY = adjustedY;
         }
       }
 
@@ -855,7 +845,12 @@ const useMapInteractions = ({
           for (let j = i + 1; j < hives.length; j++) {
             const hive1 = hives[i];
             const hive2 = hives[j];
-            const distance = calculateDistance2(hive1, hive2);
+            const distance = calculateDistance(
+              hive1.xDirection,
+              hive1.yDirection,
+              hive2.xDirection,
+              hive2.yDirection,
+            );
 
             if (distance < MIN_HIVE_DISTANCE) {
               hasCollisions = true;

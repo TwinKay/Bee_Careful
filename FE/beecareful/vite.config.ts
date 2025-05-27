@@ -56,5 +56,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     publicDir: 'public',
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: '/src/config/test.ts',
+    },
   };
 });
