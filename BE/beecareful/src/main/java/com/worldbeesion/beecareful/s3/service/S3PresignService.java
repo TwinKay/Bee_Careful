@@ -100,8 +100,7 @@ public class S3PresignService {
             .getObjectRequest(getObjectRequest)
         );
         String getUrl = presignedGetRequest.url().toString();
-        redisTemplate.opsForValue().set(cacheKey, getUrl);
-        // TODO: is redis expiration setting aligned with s3 url expiration?
+        redisTemplate.opsForValue().set(cacheKey, getUrl, GET_EXPIRATION);
 
         return getUrl;
     }
